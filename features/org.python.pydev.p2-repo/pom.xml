@@ -60,7 +60,9 @@
         <executions>
           <execution>
             <goals>
+              <!--
               <goal>eclipse-run</goal>
+              -->
             </goals>
             <phase>package</phase>
           </execution>
