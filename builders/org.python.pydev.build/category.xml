@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site>
+   <feature url="features/org.python.pydev.feature_0.0.0.qualifier.jar" id="org.python.pydev.feature" version="0.0.0"/>
+</site>

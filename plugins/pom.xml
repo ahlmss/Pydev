@@ -23,6 +23,11 @@
   <name>Pydev Plugins Parent</name>
   <packaging>pom</packaging>
   <modules>
+    <!-- Build output: p2 repository -->
+    <module>../builders/org.python.pydev.build</module>
+    <!-- Features -->
+    <module>../features/org.python.pydev.feature</module>
+    <!-- Plugins -->
     <module>com.python.pydev</module>
     <module>com.python.pydev.analysis</module>
     <module>com.python.pydev.codecompletion</module>

@@ -68,3 +68,8 @@ Desktop DB
 .syncinfo
 .TemporaryItems
 report/
+
+plugins/*/.settings
+# Add Maven bits
+*/*/target
+*/*/*.jar
