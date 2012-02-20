@@ -246,6 +246,18 @@ if __name__ == '__main__':
     except Exception as ex:
         sys.stderr.write('Unable to initialise AHL logging framework: %s' % ex)
 
+    # http://jira.maninvestments.com/jira/browse/AHLRAP-1421
+    import time
+    def exit_on_parent_death():
+        while True:
+            time.sleep(5)
+            # http://stackoverflow.com/questions/269494/how-can-i-cause-a-child-process-to-exit-when-the-parent-does
+            if os.getppid() == 1:
+                _DoExit()
+    exit_on_parent_death_thread = threading.Thread(target=exit_on_parent_death)
+    exit_on_parent_death_thread.daemon = True
+    exit_on_parent_death_thread.start()
+
     port, client_port = sys.argv[1:3]
     import pydev_localhost
     server, exec_queue, interpreter, client_server = StartServer(pydev_localhost.get_localhost(), int(port), int(client_port))
