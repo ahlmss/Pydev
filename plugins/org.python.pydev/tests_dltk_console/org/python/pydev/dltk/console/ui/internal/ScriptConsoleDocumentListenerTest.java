@@ -14,6 +14,7 @@ import junit.framework.TestCase;
 import org.eclipse.debug.ui.console.IConsoleLineTracker;
 import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
+import org.eclipse.jface.text.contentassist.ICompletionProposal;
 import org.python.pydev.editor.autoedit.PyAutoIndentStrategy;
 import org.python.pydev.editor.autoedit.TestIndentPrefs;
 import org.python.pydev.shared_core.callbacks.ICallback;
@@ -58,6 +59,18 @@ public class ScriptConsoleDocumentListenerTest extends TestCase {
                     public void setCaretOffset(int length, boolean async) {
                         //do nothing
                     }
+
+                    public int getCommandLineOffset() {
+                        return 0;
+                    }
+
+                    public int getConsoleWidthInCharacters() {
+                        return 0;
+                    }
+
+                    public int getCaretOffset() {
+                        return 0;
+                    }
                 },
 
                 new ICommandHandler() {
@@ -66,6 +79,10 @@ public class ScriptConsoleDocumentListenerTest extends TestCase {
                             ICallback<Object, InterpreterResponse> onResponseReceived) {
                         commandsHandled.add(userInput);
                         onResponseReceived.call(new InterpreterResponse(false, false));
+                    }
+
+                    public ICompletionProposal[] getCompletions(String commandLine, int cursorPosition) {
+                        return null;
                     }
                 },
 
