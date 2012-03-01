@@ -62,4 +62,10 @@ public interface IScriptConsoleCommunication extends IStreamMonitor {
      */
     public void linkWithDebugSelection(boolean isLinkedWithDebug);
 
+    /**
+     * Interrupt the console process
+     * @throws Exception
+     */
+    void interrupt() throws Exception;
+
 }

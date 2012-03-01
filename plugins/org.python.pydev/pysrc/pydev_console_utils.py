@@ -107,15 +107,14 @@ class StdIn(BaseStdIn):
 # BaseInterpreterInterface
 #=======================================================================================================================
 class BaseInterpreterInterface:
-    def __init__(self, server):
+    def __init__(self, server, exec_queue):
         self.server = server
+        self.exec_queue = exec_queue
     
     def createStdIn(self):
         return StdIn(self, self.host, self.client_port)
 
-    def addExec(self, line):
-        #f_opened = open('c:/temp/a.txt', 'a')
-        #f_opened.write(line+'\n')
+    def callExec(self, callable):
         original_in = sys.stdin
         try:
             help = None
@@ -132,7 +131,6 @@ class BaseInterpreterInterface:
             #Just ignore any error here
             pass
             
-        more = False
         try:
             sys.stdin = self.createStdIn()
             try:
@@ -152,7 +150,7 @@ class BaseInterpreterInterface:
                             import traceback;traceback.print_exc()
                 
                 try:
-                    more = self.doAddExec(line)
+                    callable()
                 finally:
                     if help is not None:
                         try:
@@ -170,6 +168,8 @@ class BaseInterpreterInterface:
         except:
             import traceback;traceback.print_exc()
         
+    def addExec(self, line):
+        more = self.doAddExec(line)
         #it's always false at this point
         need_input = False
         return more, need_input
@@ -314,17 +314,21 @@ class BaseInterpreterInterface:
             As with IPython, enabling multiple GUIs isn't an error, but
             only the last one's main loop runs and it may not work
         '''
-        from pydev_versioncheck import versionok_for_gui
-        if versionok_for_gui():
-            try:
-                from pydev_ipython.inputhook import enable_gui
-                enable_gui(guiname)
-            except:
-                sys.stderr.write("Failed to enable GUI event loop integration for '%s'\n" % guiname)
-                import traceback;traceback.print_exc()
-        elif guiname not in ['none', '', None]:
-            # Only print a warning if the guiname was going to do something
-            sys.stderr.write("PyDev console: Python version does not support GUI event loop integration for '%s'\n" % guiname)
+        def cb_enable_gui():
+            from pydev_versioncheck import versionok_for_gui
+            if versionok_for_gui():
+                try:
+                    from pydev_ipython.inputhook import enable_gui
+                    enable_gui(guiname)
+                    sys.stderr.write("Enabled GUI event loop integration for '%s'\n" % guiname)
+                except:
+                    sys.stderr.write("Failed to enable GUI event loop integration for '%s'\n" % guiname)
+                    import traceback;traceback.print_exc()
+            elif guiname not in ['none', '', None]:
+                # Only print a warning if the guiname was going to do something
+                sys.stderr.write("PyDev console: Python version does not support GUI event loop integration for '%s'\n" % guiname)
+        # enable_gui needs to be run in the main thread
+        self.exec_queue.put(cb_enable_gui)
         # Return value does not matter, so return back what was sent
         return guiname
 

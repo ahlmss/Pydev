@@ -251,6 +251,10 @@ public class PydevConsoleInterpreter implements IScriptConsoleInterpreter {
         this.closeRunnables = null;
     }
 
+    public void interrupt() throws Exception {
+        consoleCommunication.interrupt();
+    }
+
     /*
      * (non-Javadoc)
      * @see com.aptana.interactive_console.console.IConsoleRequest#setConsoleCommunication(com.aptana.interactive_console.console.IScriptConsoleCommunication)

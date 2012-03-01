@@ -185,6 +185,10 @@ public class PydevDebugConsoleCommunication implements IScriptConsoleCommunicati
         //Do nothing on console close.
     }
 
+    public void interrupt() throws Exception {
+        // TODO
+    }
+
     public void addListener(IStreamListener listener) {
         streamMonitor.addListener(listener);
     }
