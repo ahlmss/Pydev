@@ -944,6 +944,31 @@ public class ScriptConsoleDocumentListener implements IDocumentListener, IStream
         doc.replace(getCommandLineOffset(), getCommandLineLength(), command);
     }
 
+    public void discardCommandLine() {
+        if (!prompt.getNeedInput()) {
+            final String commandLine = getCommandLine();
+            if (!commandLine.isEmpty()) {
+                history.commit();
+            } else if (prompt.getMode()) {
+                return; // no command line; nothing to do
+            }
+        }
+        startDisconnected();
+        try {
+            try {
+                doc.replace(doc.getLength(), 0, "\n");
+            } catch (BadLocationException e) {
+                Log.log(e);
+            }
+            offset = 0;
+            viewer.setCaretOffset(doc.getLength(), false);
+        } finally {
+            stopDisconnected();
+        }
+        prompt.setMode(true);
+        prompt.setNeedInput(false);
+    }
+
     /**
      * Applies the new text from the input stream to the console. This must run
      * in the UI thread as it's updating a widget.

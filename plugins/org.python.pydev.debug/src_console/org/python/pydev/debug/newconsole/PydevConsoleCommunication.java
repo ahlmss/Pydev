@@ -10,6 +10,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.Thread.State;
 import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -160,6 +161,37 @@ public class PydevConsoleCommunication implements IScriptConsoleCommunication, X
     }
 
     /**
+     * Instructs the client to raise KeyboardInterrupt and return to a clean command prompt.  This can be
+     * called to terminate:
+     * - infinite or excessively long processing loops (CPU bound)
+     * - I/O wait (e.g. urlopen, time.sleep)
+     * - asking for input from the console i.e. input(); this is a special case of the above because PyDev
+     *   is involved
+     * - command prompt continuation processing, so that the user doesn't have to work out the exact
+     *   sequence of close brackets required to get the prompt back
+     * This requires the cooperation of the client (the call to interrupt must be processed by the XMLRPC
+     * server) but in most cases is better than just terminating the process.
+     */
+    public void interrupt() throws Exception {
+        Job job = new Job("Interrupt console process") {
+            @Override
+            protected IStatus run(IProgressMonitor monitor) {
+                try {
+                    PydevConsoleCommunication.this.client.execute("interrupt", new Object[0]);
+                    if (PydevConsoleCommunication.this.waitingForInput) {
+                        PydevConsoleCommunication.this.inputReceived = "";
+                        PydevConsoleCommunication.this.waitingForInput = false;
+                    }
+                } catch (Exception e) {
+                    Log.log(IStatus.ERROR, "Problem interrupting python process", e);
+                }
+                return Status.OK_STATUS;
+            }
+        };
+        job.schedule();
+    }
+
+    /**
      * Variables that control when we're expecting to give some input to the server or when we're
      * adding some line to be executed
      */
@@ -175,19 +207,14 @@ public class PydevConsoleCommunication implements IScriptConsoleCommunication, X
     private volatile String inputReceived;
 
     /**
-     * Response that should be sent back to the shell.
+     * Shell callback to call when the server either finishes processing or asks for input
      */
-    private volatile InterpreterResponse nextResponse;
+    private volatile ICallback<Object, InterpreterResponse> onResponseReceived;
 
     /**
      * Helper to keep on busy loop.
      */
     private volatile Object lock = new Object();
-
-    /**
-     * Helper to keep on busy loop.
-     */
-    private volatile Object lock2 = new Object();
 
     /**
      * Keeps a flag indicating that we were able to communicate successfully with the shell at least once
@@ -211,6 +238,8 @@ public class PydevConsoleCommunication implements IScriptConsoleCommunication, X
             return requestInput();
         } else if ("OpenEditor".equals(methodName)) {
             return openEditor(request);
+        } else if ("PromptReady".equals(methodName)) {
+            return promptReady(request);
         }
         Log.log("Unexpected call to execute for method name: " + methodName);
         return null;
@@ -252,8 +281,7 @@ public class PydevConsoleCommunication implements IScriptConsoleCommunication, X
         inputReceived = null;
         boolean needInput = true;
 
-        //let the busy loop from execInterpreter free and enter a busy loop
-        //in this function until execInterpreter gives us an input
+        // enter a busy loop in this function until execInterpreter gives us an input
         setNextResponse(new InterpreterResponse(false, needInput));
 
         //busy loop until we have an input
@@ -269,6 +297,11 @@ public class PydevConsoleCommunication implements IScriptConsoleCommunication, X
         return inputReceived;
     }
 
+    private Object promptReady(XmlRpcRequest request) {
+        setNextResponse(new InterpreterResponse(false, false));
+        return "";
+    }
+
     /**
      * Executes a given line in the interpreter.
      *
@@ -276,93 +309,47 @@ public class PydevConsoleCommunication implements IScriptConsoleCommunication, X
      */
     public void execInterpreter(final String command, final ICallback<Object, InterpreterResponse> onResponseReceived) {
         setNextResponse(null);
+        this.onResponseReceived = onResponseReceived;
         if (waitingForInput) {
             inputReceived = command;
             waitingForInput = false;
-            //the thread that we started in the last exec is still alive if we were waiting for an input.
         } else {
-            //create a thread that'll keep locked until an answer is received from the server.
-            Job job = new Job("PyDev Console Communication") {
+            final boolean needInput = false;
+            try {
+                if (!firstCommWorked) {
+                    throw new Exception("hello must be called successfully before execInterpreter can be used.");
+                }
+                if (client == null) {
+                    throw new Exception("PydevConsoleCommunication.client is null (cannot communicate with server).");
+                }
 
-                /**
-                 * Executes the needed command
-                 *
-                 * @return more
-                 *
-                 * @throws Exception
-                 */
-                private Boolean exec() throws Exception {
+                Object[] execute = (Object[]) client.execute("addExec", new Object[] { command });
+                Object object = execute[0];
+                boolean more;
+                if (object instanceof Boolean) {
+                    more = (Boolean) object;
+                } else {
+                    String str = object.toString();
 
-                    if (client == null) {
-                        throw new Exception("PydevConsoleCommunication.client is null (cannot communicate with server).");
-                    }
-
-                    Object[] execute = (Object[]) client.execute("addExec", new Object[] { command });
-
-                    Object object = execute[0];
-                    boolean more;
-
-                    if (object instanceof Boolean) {
-                        more = (Boolean) object;
-
+                    String lower = str.toLowerCase();
+                    if (lower.equals("true") || lower.equals("1")) {
+                        more = true;
+                    } else if (lower.equals("false") || lower.equals("0")) {
+                        more = false;
                     } else {
-                        String str = object.toString();
-
-                        String lower = str.toLowerCase();
-                        if (lower.equals("true") || lower.equals("1")) {
-                            more = true;
-                        } else if (lower.equals("false") || lower.equals("0")) {
-                            more = false;
-                        } else {
-                            throw new Exception("Unexpected response from server: " + str);
-                        }
+                        throw new Exception("Unexpected response from server: " + str);
                     }
-                    return more;
                 }
-
-                @Override
-                protected IStatus run(IProgressMonitor monitor) {
-                    final boolean needInput = false;
-                    try {
-                        if (!firstCommWorked) {
-                            throw new Exception("hello must be called successfully before execInterpreter can be used.");
-                        }
-
-                        Boolean more = exec();
-
-                        setNextResponse(new InterpreterResponse(more, needInput));
-
-                    } catch (Exception e) {
-                        Log.log(e);
-                        setNextResponse(new InterpreterResponse(false, needInput));
-                    }
-                    return Status.OK_STATUS;
+                if (more) {
+                    setNextResponse(new InterpreterResponse(more, needInput));
+                } else {
+                    // waiting for processing
                 }
-            };
-
-            job.schedule();
-
-        }
-
-        int i = 500; //only get contents each 500 millis...
-
-        //busy loop until we have a response
-        while (nextResponse == null) {
-            synchronized (lock2) {
-                try {
-                    lock2.wait(20);
-                } catch (InterruptedException e) {
-                    //                    Log.log(e);
-                }
-            }
-
-            i -= 20;
-
-            if (i <= 0 && nextResponse == null) {
-                i = 250; //after the first, get it each 250 millis
+            } catch (Exception e) {
+                Log.log(e);
+                setNextResponse(new InterpreterResponse(false, needInput));
             }
         }
-        onResponseReceived.call(nextResponse);
     }
 
     /**
@@ -528,14 +515,17 @@ public class PydevConsoleCommunication implements IScriptConsoleCommunication, X
      * @param nextResponse new next response
      */
     private void setNextResponse(InterpreterResponse nextResponse) {
-        this.nextResponse = nextResponse;
-        updateDebugTarget();
+        if (nextResponse != null && onResponseReceived != null) {
+            onResponseReceived.call(nextResponse);
+            onResponseReceived = null;
+        }
+        updateDebugTarget(nextResponse);
     }
 
     /**
      * Update the debug target (if non-null) of suspended state of console.
      */
-    private void updateDebugTarget() {
+    private void updateDebugTarget(InterpreterResponse nextResponse) {
         if (debugTarget != null) {
             if (nextResponse == null || nextResponse.need_input == true) {
                 debugTarget.setSuspended(false);

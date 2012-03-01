@@ -149,6 +149,10 @@ public class ConsoleCompletionsPageParticipant implements IConsolePageParticipan
             throw new RuntimeException("Not implemented");
         }
 
+        public void interrupt() throws Exception {
+            throw new RuntimeException("Not implemented");
+        }
+
         /**
          * Received when the completions command receives a response (ICommandResponseListener)
          * Converts the xml to completions.
