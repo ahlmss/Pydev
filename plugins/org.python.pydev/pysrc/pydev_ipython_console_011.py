@@ -16,6 +16,7 @@
 from __future__ import print_function
 
 import os
+import sys
 from functools import partial
 
 from IPython.core.error import UsageError
@@ -31,6 +32,9 @@ except ImportError:
     # Versions of IPython [0.11,1.0) had an extra hierarchy level
     from IPython.frontend.terminal.interactiveshell import TerminalInteractiveShell
 from IPython.utils.traitlets import CBool, Unicode
+from IPython.utils import io
+original_stdout = sys.stdout
+original_stderr = sys.stderr
 
 from pydev_imports import xmlrpclib
 
@@ -297,6 +301,10 @@ class PyDevFrontEnd:
     def __init__(self, pydev_host, pydev_client_port, exec_queue, *args, **kwarg):
         self.exec_queue = exec_queue
 
+        # Store certain global objects that IPython modifies
+        _displayhook = sys.displayhook
+        _excepthook = sys.excepthook
+
         # Create and initialize our IPython instance.
         self.ipython = PyDevTerminalInteractiveShell.instance()
 
@@ -311,6 +319,27 @@ class PyDevFrontEnd:
         # Display the IPython banner, this has version info and
         # help info
         self.ipython.show_banner()
+
+        # IPython is ready, now clean up some global state...
+
+        # Deactivate the various python system hooks added by ipython for
+        # interactive convenience so we don't confuse the doctest system
+        sys.displayhook = _displayhook
+        sys.excepthook = _excepthook
+
+        # So that ipython magics and aliases can be doctested (they work by making
+        # a call into a global _ip object).  Also make the top-level get_ipython
+        # now return this without recursively calling here again.
+        try:
+            import __builtin__
+        except:
+            import builtins as __builtin__
+        __builtin__._ip = self.ipython
+        __builtin__.get_ipython = self.ipython.get_ipython
+
+        # We want to print to stdout/err as usual.
+        io.stdout = original_stdout
+        io.stderr = original_stderr
 
     def complete(self, string):
         return self.ipython.complete(None, line=string)
