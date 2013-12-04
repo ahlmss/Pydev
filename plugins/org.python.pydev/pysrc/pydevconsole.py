@@ -240,6 +240,12 @@ def StartServer(host, port, client_port):
 #=======================================================================================================================
 if __name__ == '__main__':
     sys.stdin = BaseStdIn()
+
+    try:
+        import ahl.logging
+    except Exception as ex:
+        sys.stderr.write('Unable to initialise AHL logging framework: %s' % ex)
+
     port, client_port = sys.argv[1:3]
     import pydev_localhost
     server, exec_queue, interpreter, client_server = StartServer(pydev_localhost.get_localhost(), int(port), int(client_port))
