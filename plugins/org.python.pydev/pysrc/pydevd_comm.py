@@ -690,8 +690,9 @@ class ReloadCodeCommand:
                     module_name = new_module_name
 
         if not DictContains(sys.modules, module_name):
-            sys.stderr.write('pydev debugger: Unable to find module to reload: "' + module_name + '".\n')
-            sys.stderr.write('pydev debugger: This usually means you are trying to reload the __main__ module (which cannot be reloaded).\n')
+            # sys.stderr.write('pydev debugger: Unable to find module to reload: "' + module_name + '".\n')
+            # sys.stderr.write('pydev debugger: This usually means you are trying to reload the __main__ module (which cannot be reloaded).\n')
+            pass
 
         else:
             sys.stderr.write('pydev debugger: Start reloading module: "' + module_name + '" ... ')
