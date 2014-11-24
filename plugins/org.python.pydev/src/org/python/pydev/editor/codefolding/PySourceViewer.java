@@ -46,8 +46,15 @@ public class PySourceViewer extends BaseSourceViewer implements IAdaptable, ICom
     private WeakReference<PyEdit> projection;
 
     public PySourceViewer(Composite parent, IVerticalRuler ruler, IOverviewRuler overviewRuler,
-            boolean showsAnnotationOverview, int styles, PyEditProjection projection) {
-        super(parent, ruler, overviewRuler, showsAnnotationOverview, styles);
+            boolean showsAnnotationOverview, int styles, final PyEditProjection projection) {
+        super(parent, ruler, overviewRuler, showsAnnotationOverview, styles,
+                new PyAbstractIndentGuidePreferencesProvider() {
+
+                    @Override
+                    public int getTabWidth() {
+                        return ((PyEdit) projection).getIndentPrefs().getTabWidth();
+                    }
+                });
         this.projection = new WeakReference<PyEdit>((PyEdit) projection);
     }
 

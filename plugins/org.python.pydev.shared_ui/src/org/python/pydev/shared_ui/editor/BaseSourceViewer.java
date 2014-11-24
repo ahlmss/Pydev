@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2014 by Brainwy Software LTDA. All Rights Reserved.
+ * Licensed under the terms of the Eclipse Public License (EPL).
+ * Please see the license.txt included with this distribution for details.
+ * Any modifications to this file must keep this entire header intact.
+ */
 package org.python.pydev.shared_ui.editor;
 
 import org.eclipse.jface.text.source.IOverviewRuler;
@@ -11,13 +17,21 @@ import org.python.pydev.overview_ruler.MinimapOverviewRulerPreferencesPage;
 import org.python.pydev.overview_ruler.StyledTextWithoutVerticalBar;
 import org.python.pydev.shared_core.log.Log;
 
-public class BaseSourceViewer extends ProjectionViewer implements ITextViewerExtensionAutoEditions {
+public abstract class BaseSourceViewer extends ProjectionViewer implements ITextViewerExtensionAutoEditions {
 
     private boolean autoEditionsEnabled = true;
+    private VerticalIndentGuidesPainter verticalLinesPainter;
 
     public BaseSourceViewer(Composite parent, IVerticalRuler verticalRuler, IOverviewRuler overviewRuler,
-            boolean showAnnotationsOverview, int styles) {
+            boolean showAnnotationsOverview, int styles, IVerticalIndentGuidePreferencesProvider verticalIndentPrefs) {
         super(parent, verticalRuler, overviewRuler, showAnnotationsOverview, styles);
+
+        verticalLinesPainter = new VerticalIndentGuidesPainter(
+                getIndentGuide(verticalIndentPrefs));
+        StyledText styledText = this.getTextWidget();
+        verticalLinesPainter.setStyledText(styledText);
+        styledText.addPaintListener(verticalLinesPainter);
+        styledText.setLeftMargin(Math.max(styledText.getLeftMargin(), 2));
     }
 
     @Override
@@ -28,6 +42,15 @@ public class BaseSourceViewer extends ProjectionViewer implements ITextViewerExt
     @Override
     public void setAutoEditionsEnabled(boolean b) {
         this.autoEditionsEnabled = b;
+    }
+
+    @Override
+    protected void handleDispose() {
+        try {
+            super.handleDispose();
+        } finally {
+            this.verticalLinesPainter.dispose();
+        }
     }
 
     @Override
@@ -47,10 +70,15 @@ public class BaseSourceViewer extends ProjectionViewer implements ITextViewerExt
         };
     }
 
+    protected IVerticalLinesIndentGuideComputer getIndentGuide(
+            IVerticalIndentGuidePreferencesProvider verticalIndentPrefs) {
+        return new TextVerticalLinesIndentGuide(verticalIndentPrefs);
+    }
+
     @Override
     protected StyledText createTextWidget(Composite parent, int styles) {
         StyledTextWithoutVerticalBar styledText = new StyledTextWithoutVerticalBar(parent, styles);
-        styledText.setLeftMargin(Math.max(styledText.getLeftMargin(), 2));
+
         if (!MinimapOverviewRulerPreferencesPage.getShowVerticalScrollbar()) {
             ScrollBar verticalBar = styledText.getVerticalBar();
             if (verticalBar != null) {
