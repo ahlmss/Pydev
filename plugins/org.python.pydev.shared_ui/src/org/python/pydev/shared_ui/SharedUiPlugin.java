@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2013 by Brainwy Software Ltda, Inc. All Rights Reserved.
+ * Copyright (c) 2013-2015 by Brainwy Software Ltda, Inc. All Rights Reserved.
  * Licensed under the terms of the Eclipse Public License (EPL).
  * Please see the license.txt included with this distribution for details.
  * Any modifications to this file must keep this entire header intact.
@@ -8,6 +8,8 @@ package org.python.pydev.shared_ui;
 
 import java.lang.reflect.Field;
 
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
 import org.eclipse.e4.ui.css.swt.theme.IThemeEngine;
 import org.eclipse.e4.ui.services.IStylingEngine;
 import org.eclipse.jface.resource.ImageDescriptor;
@@ -129,5 +131,16 @@ public class SharedUiPlugin extends AbstractUIPlugin {
         } catch (Exception e) {
             Log.log(e);
         }
+    }
+
+    public static IStatus makeErrorStatus(Exception e, boolean useErrorMessage) {
+        String message = "";
+        if (useErrorMessage) {
+            message = e.getMessage();
+            if (message == null) {
+                message = "null";
+            }
+        }
+        return new Status(IStatus.ERROR, PLUGIN_ID, IStatus.ERROR, message, e);
     }
 }

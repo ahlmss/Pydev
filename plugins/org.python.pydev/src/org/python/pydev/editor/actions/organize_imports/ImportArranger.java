@@ -37,6 +37,8 @@ import org.python.pydev.ui.importsconf.ImportsPreferencesPage;
 
 public class ImportArranger {
 
+    public boolean addNewLinesToImports = false;
+
     private final class FromImportEntries {
         private final List<ImportHandleInfo> containedImports = new ArrayList<>();
 
@@ -201,8 +203,8 @@ public class ImportArranger {
     /**
      * @return true if the imports should be split with parenthesis (instead of escaping)
      */
-    private static boolean getBreakImportsWithParenthesis() {
-        String breakIportMode = ImportsPreferencesPage.getBreakIportMode();
+    private static boolean getBreakImportsWithParenthesis(IPyFormatStdProvider edit) {
+        String breakIportMode = ImportsPreferencesPage.getBreakIportMode(edit);
         boolean breakWithParenthesis = true;
         if (!breakIportMode.equals(ImportsPreferencesPage.BREAK_IMPORTS_MODE_PARENTHESIS)) {
             breakWithParenthesis = false;
@@ -214,24 +216,30 @@ public class ImportArranger {
     protected final String endLineDelim;
     private final String indentStr;
     private int lineForNewImports = -1;
-    private final boolean multilineImports = ImportsPreferencesPage.getMultilineImports();
-    private final boolean sortNamesGrouped = ImportsPreferencesPage.getSortNamesGrouped();
-    private int maxCols = getMaxCols(multilineImports);
-    private final boolean breakWithParenthesis = getBreakImportsWithParenthesis();
+    private final boolean multilineImports;
+    private final boolean sortNamesGrouped;
+    private int maxCols;
+    private final boolean breakWithParenthesis;
     private final boolean removeUnusedImports;
     private final boolean automatic;
+    protected final IPyFormatStdProvider edit;
 
     public ImportArranger(IDocument doc, boolean removeUnusedImports, String endLineDelim, String indentStr,
-            boolean automatic) {
+            boolean automatic, IPyFormatStdProvider edit) {
         this.doc = doc;
         this.endLineDelim = endLineDelim;
         this.indentStr = indentStr;
         this.removeUnusedImports = removeUnusedImports;
         this.automatic = automatic;
+        this.edit = edit;
+        multilineImports = ImportsPreferencesPage.getMultilineImports(edit);
+        sortNamesGrouped = ImportsPreferencesPage.getSortNamesGrouped(edit);
+        breakWithParenthesis = getBreakImportsWithParenthesis(edit);
+        maxCols = getMaxCols(multilineImports);
     }
 
-    public void perform(IPyFormatStdProvider edit) {
-        perform(ImportsPreferencesPage.getGroupImports(), edit);
+    public void perform() {
+        perform(ImportsPreferencesPage.getGroupImports(edit), edit);
     }
 
     protected void perform(boolean groupFromImports, IPyFormatStdProvider edit) {
@@ -311,6 +319,13 @@ public class ImportArranger {
             PySelection ps = new PySelection(psDoc);
             std.applyFormatAction(edit, ps, regionsToFormat, throwSyntaxError, selectionProvider);
             finalStr = psDoc.get();
+            if (addNewLinesToImports) {
+                // Leave 2 empty new lines separating imports from code 
+                String expectedEnd = endLineDelim + endLineDelim + endLineDelim;
+                while (!finalStr.endsWith(expectedEnd)) {
+                    finalStr += endLineDelim;
+                }
+            }
         } catch (Exception e) {
             Log.log(e);
         }

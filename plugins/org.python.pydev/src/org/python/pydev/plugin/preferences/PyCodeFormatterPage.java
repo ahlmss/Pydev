@@ -11,8 +11,8 @@
  */
 package org.python.pydev.plugin.preferences;
 
+import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.jface.preference.BooleanFieldEditor;
-import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.jface.preference.StringFieldEditor;
 import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.swt.SWT;
@@ -23,30 +23,30 @@ import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 import org.eclipse.ui.preferences.IWorkbenchPreferenceContainer;
 import org.python.pydev.editor.StyledTextForShowingCodeFactory;
-import org.python.pydev.editor.actions.PyFormatStd;
 import org.python.pydev.editor.actions.PyFormatStd.FormatStd;
+import org.python.pydev.editor.preferences.PyScopedPreferences;
 import org.python.pydev.plugin.PydevPlugin;
 import org.python.pydev.shared_core.structure.Tuple;
 import org.python.pydev.shared_ui.field_editors.BooleanFieldEditorCustom;
+import org.python.pydev.shared_ui.field_editors.ComboFieldEditor;
 import org.python.pydev.shared_ui.field_editors.LinkFieldEditor;
-import org.python.pydev.utils.ComboFieldEditor;
+import org.python.pydev.shared_ui.field_editors.ScopedFieldEditorPreferencePage;
+import org.python.pydev.shared_ui.field_editors.ScopedPreferencesFieldEditor;
 
 /**
  * @author Fabio Zadrozny
  */
-public class PyCodeFormatterPage extends FieldEditorPreferencePage implements IWorkbenchPreferencePage {
+public class PyCodeFormatterPage extends ScopedFieldEditorPreferencePage implements IWorkbenchPreferencePage {
 
     public static final String FORMAT_WITH_AUTOPEP8 = "FORMAT_WITH_AUTOPEP8";
     public static final boolean DEFAULT_FORMAT_WITH_AUTOPEP8 = false;
 
     public static final String AUTOPEP8_PARAMETERS = "AUTOPEP8_PARAMETERS";
-
-    public static final String AUTO_FORMAT_ONLY_WORKSPACE_FILES = "AUTO_FORMAT_ONLY_WORKSPACE_FILES";
-    public static final boolean DEFAULT_AUTO_FORMAT_ONLY_WORKSPACE_FILES = true;
 
     public static final String FORMAT_ONLY_CHANGED_LINES = "FORMAT_ONLY_CHANGED_LINES";
     public static final boolean DEFAULT_FORMAT_ONLY_CHANGED_LINES = false;
@@ -100,6 +100,7 @@ public class PyCodeFormatterPage extends FieldEditorPreferencePage implements IW
     private Composite fieldParent;
     private StringFieldEditor autopep8Parameters;
     private LinkFieldEditor autopep8Link;
+    private boolean disposed = false;
 
     public PyCodeFormatterPage() {
         super(GRID);
@@ -145,10 +146,6 @@ public class PyCodeFormatterPage extends FieldEditorPreferencePage implements IW
                     public void widgetDefaultSelected(SelectionEvent e) {
                     }
                 }));
-
-        addField(createBooleanFieldEditorCustom(AUTO_FORMAT_ONLY_WORKSPACE_FILES,
-                "Auto-format only files in the workspace?",
-                p));
 
         formatWithAutoPep8 = createBooleanFieldEditorCustom(FORMAT_WITH_AUTOPEP8,
                 "Use autopep8.py for code formatting?", p);
@@ -218,7 +215,7 @@ public class PyCodeFormatterPage extends FieldEditorPreferencePage implements IW
         GridData layoutData = new GridData(SWT.FILL, SWT.CENTER, true, false, 2, 1);
         labelExample.setLayoutData(layoutData);
 
-        updateLabelExample(PyFormatStd.getFormat());
+        addField(new ScopedPreferencesFieldEditor(p, PydevPlugin.DEFAULT_PYDEV_SCOPE, this));
     }
 
     @Override
@@ -239,6 +236,9 @@ public class PyCodeFormatterPage extends FieldEditorPreferencePage implements IW
             }
         });
         updateState();
+
+        // And update the example when it's already there
+        updateLabelExampleNow(this.getFormatFromEditorContents());
     }
 
     private void updateState() {
@@ -276,7 +276,35 @@ public class PyCodeFormatterPage extends FieldEditorPreferencePage implements IW
         return new BooleanFieldEditorCustom(name, label, BooleanFieldEditor.SEPARATE_LABEL, parent);
     }
 
-    private void updateLabelExample(FormatStd formatStd) {
+    // Note: no locking is needed since we're doing everything in the UI thread.
+    private Runnable currentRunnable;
+
+    private void updateLabelExample(final FormatStd formatStd) {
+        if (!disposed) {
+            Runnable runnable = new Runnable() {
+
+                @Override
+                public void run() {
+                    if (disposed) {
+                        currentRunnable = null;
+                        return;
+                    }
+
+                    if (currentRunnable == this) {
+                        updateLabelExampleNow(formatStd);
+                        currentRunnable = null;
+                    }
+                }
+            };
+            currentRunnable = runnable;
+            // Give a timeout before updating (otherwise when changing the text for the autopep8 integration
+            // it becomes slow).
+            Display.getCurrent().timerExec(400, runnable);
+        }
+    }
+
+    private void updateLabelExampleNow(FormatStd formatStd) {
+
         String str = "class Example(object):             \n" +
                 "                                   \n" +
                 "    def Call(self, param1=None):   \n" +
@@ -296,6 +324,17 @@ public class PyCodeFormatterPage extends FieldEditorPreferencePage implements IW
     @Override
     public void propertyChange(PropertyChangeEvent event) {
         super.propertyChange(event);
+        updateLabelExample(getFormatFromEditorContents());
+    }
+
+    @Override
+    protected void performDefaults() {
+        super.performDefaults();
+        updateLabelExample(getFormatFromEditorContents());
+        updateState();
+    }
+
+    private FormatStd getFormatFromEditorContents() {
         FormatStd formatStd = new FormatStd();
         formatStd.assignWithSpaceInsideParens = this.assignWithSpaceInsideParentesis.getBooleanValue();
         formatStd.operatorsWithSpace = operatorsWithSpace.getBooleanValue();
@@ -307,9 +346,9 @@ public class PyCodeFormatterPage extends FieldEditorPreferencePage implements IW
         formatStd.spacesBeforeComment = Integer.parseInt(spacesBeforeComment.getComboValue());
         formatStd.spacesInStartComment = Integer.parseInt(spacesInStartComment.getComboValue());
         formatStd.formatWithAutopep8 = this.formatWithAutoPep8.getBooleanValue();
-        formatStd.autopep8Parameters = PyCodeFormatterPage.getAutopep8Parameters();
+        formatStd.autopep8Parameters = this.autopep8Parameters.getStringValue();
         formatStd.updateAutopep8();
-        updateLabelExample(formatStd);
+        return formatStd;
     }
 
     /**
@@ -318,71 +357,68 @@ public class PyCodeFormatterPage extends FieldEditorPreferencePage implements IW
     public void init(IWorkbench workbench) {
     }
 
-    public static boolean getFormatWithAutopep8() {
-        return PydevPrefs.getPreferences().getBoolean(FORMAT_WITH_AUTOPEP8);
+    public static boolean getFormatWithAutopep8(IAdaptable projectAdaptable) {
+        return getBoolean(FORMAT_WITH_AUTOPEP8, projectAdaptable);
     }
 
-    public static String getAutopep8Parameters() {
-        return PydevPrefs.getPreferences().getString(AUTOPEP8_PARAMETERS);
+    public static boolean getBoolean(String setting, IAdaptable projectAdaptable) {
+        return PyScopedPreferences.getBoolean(setting, projectAdaptable);
     }
 
-    public static boolean getAutoformatOnlyWorkspaceFiles() {
-        return PydevPrefs.getPreferences().getBoolean(AUTO_FORMAT_ONLY_WORKSPACE_FILES);
+    protected static String getString(String setting, IAdaptable projectAdaptable) {
+        return PyScopedPreferences.getString(setting, projectAdaptable);
     }
 
-    public static boolean getFormatOnlyChangedLines() {
-        if (getFormatWithAutopep8()) {
+    public static String getAutopep8Parameters(IAdaptable projectAdaptable) {
+        return getString(AUTOPEP8_PARAMETERS, projectAdaptable);
+    }
+
+    public static boolean getFormatOnlyChangedLines(IAdaptable projectAdaptable) {
+        if (getFormatWithAutopep8(projectAdaptable)) {
             return false; //i.e.: not available with autopep8.
         }
-        return PydevPrefs.getPreferences().getBoolean(FORMAT_ONLY_CHANGED_LINES);
+        return getBoolean(FORMAT_ONLY_CHANGED_LINES, projectAdaptable);
     }
 
-    public static boolean getAddNewLineAtEndOfFile() {
-        return PydevPrefs.getPreferences().getBoolean(ADD_NEW_LINE_AT_END_OF_FILE);
+    public static boolean getAddNewLineAtEndOfFile(IAdaptable projectAdaptable) {
+        return getBoolean(ADD_NEW_LINE_AT_END_OF_FILE, projectAdaptable);
     }
 
-    public static boolean getTrimLines() {
-        return PydevPrefs.getPreferences().getBoolean(TRIM_LINES);
+    public static boolean getTrimLines(IAdaptable projectAdaptable) {
+        return getBoolean(TRIM_LINES, projectAdaptable);
     }
 
-    public static boolean getTrimMultilineLiterals() {
-        return PydevPrefs.getPreferences().getBoolean(TRIM_MULTILINE_LITERALS);
+    public static boolean getTrimMultilineLiterals(IAdaptable projectAdaptable) {
+        return getBoolean(TRIM_MULTILINE_LITERALS, projectAdaptable);
     }
 
-    public static boolean useSpaceAfterComma() {
-        return PydevPrefs.getPreferences().getBoolean(USE_SPACE_AFTER_COMMA);
+    public static boolean useSpaceAfterComma(IAdaptable projectAdaptable) {
+        return getBoolean(USE_SPACE_AFTER_COMMA, projectAdaptable);
     }
 
-    public static boolean useSpaceForParentesis() {
-        return PydevPrefs.getPreferences().getBoolean(USE_SPACE_FOR_PARENTESIS);
+    public static boolean useSpaceForParentesis(IAdaptable projectAdaptable) {
+        return getBoolean(USE_SPACE_FOR_PARENTESIS, projectAdaptable);
     }
 
-    public static boolean useAssignWithSpacesInsideParenthesis() {
-        return PydevPrefs.getPreferences().getBoolean(USE_ASSIGN_WITH_PACES_INSIDER_PARENTESIS);
+    public static boolean useAssignWithSpacesInsideParenthesis(IAdaptable projectAdaptable) {
+        return getBoolean(USE_ASSIGN_WITH_PACES_INSIDER_PARENTESIS, projectAdaptable);
     }
 
-    public static boolean useOperatorsWithSpace() {
-        return PydevPrefs.getPreferences().getBoolean(USE_OPERATORS_WITH_SPACE);
+    public static boolean useOperatorsWithSpace(IAdaptable projectAdaptable) {
+        return getBoolean(USE_OPERATORS_WITH_SPACE, projectAdaptable);
     }
 
-    public static int getSpacesBeforeComment() {
-        int spaces = PydevPrefs.getPreferences().getInt(SPACES_BEFORE_COMMENT);
-        if (spaces < FormatStd.DONT_HANDLE_SPACES) {
-            spaces = FormatStd.DONT_HANDLE_SPACES;
-        }
-        return spaces;
+    public static int getSpacesBeforeComment(IAdaptable projectAdaptable) {
+        return PyScopedPreferences.getInt(SPACES_BEFORE_COMMENT, projectAdaptable, FormatStd.DONT_HANDLE_SPACES);
     }
 
-    public static int getSpacesInStartComment() {
-        int spaces = PydevPrefs.getPreferences().getInt(SPACES_IN_START_COMMENT);
-        if (spaces < FormatStd.DONT_HANDLE_SPACES) {
-            spaces = FormatStd.DONT_HANDLE_SPACES;
-        }
-        return spaces;
+    public static int getSpacesInStartComment(IAdaptable projectAdaptable) {
+        return PyScopedPreferences.getInt(SPACES_IN_START_COMMENT, projectAdaptable, FormatStd.DONT_HANDLE_SPACES);
     }
 
     @Override
     public void dispose() {
+        disposed = true;
         super.dispose();
         formatAndStyleRangeHelper.dispose();
     }

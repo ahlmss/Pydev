@@ -104,7 +104,6 @@ import org.python.pydev.editor.actions.PyMoveLineUpAction;
 import org.python.pydev.editor.actions.PyOpenAction;
 import org.python.pydev.editor.actions.PyOrganizeImports;
 import org.python.pydev.editor.actions.PyPeerLinker;
-import org.python.pydev.editor.autoedit.DefaultIndentPrefs;
 import org.python.pydev.editor.autoedit.PyAutoIndentStrategy;
 import org.python.pydev.editor.codecompletion.revisited.CompletionCache;
 import org.python.pydev.editor.codecompletion.revisited.CompletionStateFactory;
@@ -333,7 +332,7 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
 
             editConfiguration = new PyEditConfiguration(colorCache, this, PydevPrefs.getChainedPrefStore());
             setSourceViewerConfiguration(editConfiguration);
-            indentStrategy = editConfiguration.getPyAutoIndentStrategy();
+            indentStrategy = editConfiguration.getPyAutoIndentStrategy(this);
             setRangeIndicator(new DefaultRangeIndicator()); // enables standard
             // vertical ruler
 
@@ -464,7 +463,7 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
     }
 
     /**
-     * Overriden becaus pydev already handles spaces -> tabs
+     * Overriden because pydev already handles spaces -> tabs
      */
     @Override
     protected void installTabsToSpacesConverter() {
@@ -560,8 +559,9 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
                         if (sourceViewer == null) {
                             return;
                         }
-                        editor.getIndentPrefs().regenerateIndentString();
-                        sourceViewer.getTextWidget().setTabs(DefaultIndentPrefs.getStaticTabWidth());
+                        IIndentPrefs indentPrefs = editor.getIndentPrefs();
+                        indentPrefs.regenerateIndentString();
+                        sourceViewer.getTextWidget().setTabs(indentPrefs.getTabWidth());
                         editor.resetIndentPrefixes();
 
                     } else if (property.equals(PydevEditorPrefs.SUBSTITUTE_TABS)) {
@@ -725,22 +725,39 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
     protected void performSave(boolean overwrite, IProgressMonitor progressMonitor) {
         final IDocument document = getDocument();
 
-        //Before saving, let's see if the auto-code formatting is turned on.
+        boolean keepOn;
         try {
-            boolean keepOn = true;
-            if (PyCodeFormatterPage.getAutoformatOnlyWorkspaceFiles()) {
+            keepOn = true;
+            if (PydevSaveActionsPrefPage.getAutoformatOnlyWorkspaceFiles(this)) {
                 if (getIFile() == null) { //not a workspace file and user has chosen to only auto-format workspace files.
                     keepOn = false;
                 }
             }
+        } catch (Exception e1) {
+            Log.log(e1);
+            // Shouldn't happen: let's skip the save actions...
+            keepOn = false;
+        }
+
+        // Save actions before code-formatting (so that we apply the formatting to it afterwards).
+        try {
+            if (keepOn) {
+                executeSaveActions(document);
+            }
+        } catch (final Throwable e) {
+            Log.log(e);
+        }
+
+        //Before saving, let's see if the auto-code formatting is turned on.
+        try {
 
             //TODO CYTHON: support code-formatter.
-            if (keepOn && PydevSaveActionsPrefPage.getFormatBeforeSaving() && !isCythonFile()) {
+            if (keepOn && PydevSaveActionsPrefPage.getFormatBeforeSaving(this) && !isCythonFile()) {
                 IStatusLineManager statusLineManager = this.getStatusLineManager();
                 IDocumentProvider documentProvider = getDocumentProvider();
                 int[] regionsForSave = null;
 
-                if (PyCodeFormatterPage.getFormatOnlyChangedLines()) {
+                if (PyCodeFormatterPage.getFormatOnlyChangedLines(this)) {
                     if (documentProvider instanceof PyDocumentProvider) {
                         PyDocumentProvider pyDocumentProvider = (PyDocumentProvider) documentProvider;
                         ITextFileBuffer fileBuffer = pyDocumentProvider.getFileBuffer(getEditorInput());
@@ -785,20 +802,14 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
             Log.log(e);
         }
 
-        try {
-            executeSaveActions(document);
-        } catch (final Throwable e) {
-            Log.log(e);
-        }
-
         //will provide notifications
         super.performSave(overwrite, progressMonitor);
     }
 
     private void executeSaveActions(IDocument document) throws BadLocationException {
-        if (PydevSaveActionsPrefPage.getDateFieldActionEnabled()) {
+        if (PydevSaveActionsPrefPage.getDateFieldActionEnabled(this)) {
             final String contents = document.get();
-            final String fieldName = PydevSaveActionsPrefPage.getDateFieldName();
+            final String fieldName = PydevSaveActionsPrefPage.getDateFieldName(this);
             final String fieldPattern = String
                     .format("^%s(\\s*)=(\\s*[ur]{0,2}['\"]{1,3})(.+?)(['\"]{1,3})", fieldName);
             final Pattern pattern = Pattern.compile(fieldPattern, Pattern.MULTILINE);
@@ -810,7 +821,7 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
                     final String spAfterQuoteBegin = matchResult.group(2);
                     final String dateStr = matchResult.group(3);
                     final String quoteEnd = matchResult.group(4);
-                    final String dateFormat = PydevSaveActionsPrefPage.getDateFieldFormat();
+                    final String dateFormat = PydevSaveActionsPrefPage.getDateFieldFormat(this);
                     final Date nowDate = new Date();
                     final SimpleDateFormat ft = new SimpleDateFormat(dateFormat);
                     try {
@@ -829,7 +840,7 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
             }
         }
 
-        if (PydevSaveActionsPrefPage.getSortImportsOnSave()) {
+        if (PydevSaveActionsPrefPage.getSortImportsOnSave(this)) {
             boolean automatic = true;
             PyOrganizeImports organizeImports = new PyOrganizeImports(automatic);
             try {
@@ -1099,6 +1110,10 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
                 }
             }
             return fOfflineActionTarget;
+        }
+
+        if (IProject.class.equals(adapter)) {
+            return this.getProject();
         }
 
         if (ICodeScannerKeywords.class.equals(adapter)) {
@@ -1571,7 +1586,7 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
     }
 
     public FormatStd getFormatStd() {
-        return PyFormatStd.getFormat();
+        return PyFormatStd.getFormat(this);
     }
 
     /**
