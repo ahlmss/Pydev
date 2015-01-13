@@ -961,7 +961,7 @@
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration">
       </key>
       <key
-            sequence="F2"
+            sequence="F1"
             contextId="org.python.pydev.ui.editor.scope"
             commandId="org.python.pydev.editor.actions.execLineInConsole"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration">
