@@ -86,6 +86,7 @@ import org.python.pydev.core.IIndentPrefs;
 import org.python.pydev.core.IModulesManager;
 import org.python.pydev.core.IPyEdit;
 import org.python.pydev.core.IPythonNature;
+import org.python.pydev.core.ITabChangedListener;
 import org.python.pydev.core.MisconfigurationException;
 import org.python.pydev.core.NotConfiguredInterpreterException;
 import org.python.pydev.core.docutils.PyPartitionScanner;
@@ -140,6 +141,7 @@ import org.python.pydev.plugin.preferences.CheckDefaultPreferencesDialog;
 import org.python.pydev.plugin.preferences.PyCodeFormatterPage;
 import org.python.pydev.plugin.preferences.PydevPrefs;
 import org.python.pydev.shared_core.callbacks.CallbackWithListeners;
+import org.python.pydev.shared_core.callbacks.ICallback;
 import org.python.pydev.shared_core.callbacks.ICallbackWithListeners;
 import org.python.pydev.shared_core.model.ErrorDescription;
 import org.python.pydev.shared_core.model.ISimpleNode;
@@ -188,7 +190,7 @@ import org.python.pydev.ui.filetypes.FileTypesPreferencesPage;
  *
  */
 public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersionProvider,
-        IPySyntaxHighlightingAndCodeCompletionEditor, IParserObserver3 {
+        IPySyntaxHighlightingAndCodeCompletionEditor, IParserObserver3, ITabChangedListener {
 
     static {
         ParseException.verboseExceptions = true;
@@ -393,8 +395,9 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
             return;
         }
 
-        if (!PydevPrefs.getPreferences().getBoolean(PydevEditorPrefs.GUESS_TAB_SUBSTITUTION)) {
-            getIndentPrefs().setForceTabs(false);
+        IIndentPrefs indentPrefs = getIndentPrefs();
+        if (!indentPrefs.getGuessTabSubstitution()) {
+            indentPrefs.setForceTabs(false);
             return;
         }
 
@@ -421,7 +424,7 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
             }
             i++;
         }
-        getIndentPrefs().setForceTabs(forceTabs);
+        indentPrefs.setForceTabs(forceTabs);
         editConfiguration.resetIndentPrefixes();
         // display a message in the status line
         if (forceTabs) {
@@ -521,6 +524,7 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
 
             // listen to changes in TAB_WIDTH preference
             prefListener = createPrefChangeListener(this);
+            this.getIndentPrefs().addTabChangedListener(this);
             resetForceTabs();
             PydevPrefs.getChainedPrefStore().addPropertyChangeListener(prefListener);
 
@@ -546,6 +550,23 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
         }
     }
 
+    @Override
+    public void onTabSettingsChanged(IIndentPrefs prefs) {
+        onTabSettingsChanged(this);
+    }
+
+    private static void onTabSettingsChanged(final IPySyntaxHighlightingAndCodeCompletionEditor editor) {
+        ISourceViewer sourceViewer = editor.getEditorSourceViewer();
+        if (sourceViewer == null) {
+            return;
+        }
+        IIndentPrefs indentPrefs = editor.getIndentPrefs();
+        indentPrefs.regenerateIndentString();
+        sourceViewer.getTextWidget().setTabs(indentPrefs.getTabWidth());
+        editor.resetForceTabs();
+        editor.resetIndentPrefixes();
+    }
+
     public static IPropertyChangeListener createPrefChangeListener(
             final IPySyntaxHighlightingAndCodeCompletionEditor editor) {
         return new IPropertyChangeListener() {
@@ -555,23 +576,14 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
                     String property = event.getProperty();
                     //tab width
                     if (property.equals(PydevEditorPrefs.TAB_WIDTH)) {
-                        ISourceViewer sourceViewer = editor.getEditorSourceViewer();
-                        if (sourceViewer == null) {
-                            return;
-                        }
-                        IIndentPrefs indentPrefs = editor.getIndentPrefs();
-                        indentPrefs.regenerateIndentString();
-                        sourceViewer.getTextWidget().setTabs(indentPrefs.getTabWidth());
-                        editor.resetIndentPrefixes();
+                        onTabSettingsChanged(editor);
 
                     } else if (property.equals(PydevEditorPrefs.SUBSTITUTE_TABS)) {
-                        editor.getIndentPrefs().regenerateIndentString();
-                        editor.resetIndentPrefixes();
+                        onTabSettingsChanged(editor);
 
                         //auto adjust for file tabs
                     } else if (property.equals(PydevEditorPrefs.GUESS_TAB_SUBSTITUTION)) {
-                        editor.resetForceTabs();
-                        editor.resetIndentPrefixes();
+                        onTabSettingsChanged(editor);
 
                         //colors and styles
                     } else if (ColorAndStyleCache.isColorOrStyleProperty(property)) {
@@ -1570,15 +1582,33 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
         }
     }
 
-    public static boolean isEditorOpenForResource(IResource r) {
+    public static Object iterOpenEditorsUntilFirstReturn(ICallback<Object, PyEdit> callback) {
+        HashSet<PyEdit> hashSet;
         synchronized (currentlyOpenedEditorsLock) {
-            for (PyEdit edit : currentlyOpenedEditors) {
-                IEditorInput input = edit.getEditorInput();
-                if (input != null) {
-                    Object adapter = input.getAdapter(IResource.class);
-                    if (adapter != null && r.equals(adapter)) {
-                        return true;
-                    }
+            hashSet = new HashSet<>(currentlyOpenedEditors);
+        }
+        // Iterate in unsynchronized copy
+        for (PyEdit edit : hashSet) {
+            Object ret = callback.call(edit);
+            if (ret != null) {
+                return ret;
+            }
+        }
+        return null;
+    }
+
+    public static boolean isEditorOpenForResource(IResource r) {
+        HashSet<PyEdit> hashSet;
+        synchronized (currentlyOpenedEditorsLock) {
+            hashSet = new HashSet<>(currentlyOpenedEditors);
+        }
+        // Iterate in unsynchronized copy
+        for (PyEdit edit : hashSet) {
+            IEditorInput input = edit.getEditorInput();
+            if (input != null) {
+                Object adapter = input.getAdapter(IResource.class);
+                if (adapter != null && r.equals(adapter)) {
+                    return true;
                 }
             }
         }

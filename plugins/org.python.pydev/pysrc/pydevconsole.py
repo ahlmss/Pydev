@@ -39,10 +39,13 @@ from pydev_console_utils import BaseInterpreterInterface, BaseStdIn
 from pydev_console_utils import CodeFragment
 
 IS_PYTHON_3K = False
+IS_PY24 = False
 
 try:
     if sys.version_info[0] == 3:
         IS_PYTHON_3K = True
+    elif sys.version_info[0] == 2 and sys.version_info[1] == 4:
+        IS_PY24 = True
 except:
     #That's OK, not all versions of python have sys.version_info
     pass
@@ -58,14 +61,14 @@ class Command:
         self.code_fragment = code_fragment
         self.more = None
 
-    
+
     def symbol_for_fragment(code_fragment):
         if code_fragment.is_single_line:
             symbol = 'single'
         else:
             symbol = 'exec' # Jython doesn't support this
         return symbol
-    symbol_for_fragment = staticmethod(symbol_for_fragment) 
+    symbol_for_fragment = staticmethod(symbol_for_fragment)
 
     def run(self):
         text = self.code_fragment.text
@@ -101,7 +104,7 @@ class InterpreterInterface(BaseInterpreterInterface):
         The methods in this class should be registered in the xml-rpc server.
     '''
 
-    def __init__(self, host, client_port, mainThread):
+    def __init__(self, host, client_port, mainThread, show_banner=True):
         BaseInterpreterInterface.__init__(self, mainThread)
         self.client_port = client_port
         self.host = host
@@ -170,6 +173,12 @@ def process_exec_queue(interpreter):
         return False
 
     set_return_control_callback(return_control)
+
+    from pydev_import_hook import import_hook_manager
+    from pydev_ipython.matplotlibtools import activate_matplotlib, activate_pylab, activate_pyplot
+    import_hook_manager.add_module_name("matplotlib", activate_matplotlib(interpreter))
+    import_hook_manager.add_module_name("pylab", activate_pylab)
+    import_hook_manager.add_module_name("pyplot", activate_pyplot)
 
     while 1:
         # Running the request may have changed the inputhook in use
@@ -266,10 +275,13 @@ def start_server(host, port, interpreter):
     from pydev_imports import SimpleXMLRPCServer as XMLRPCServer  #@Reimport
 
     try:
-        server = XMLRPCServer((host, port), logRequests=False, allow_none=True)
+        if IS_PY24:
+            server = XMLRPCServer((host, port), logRequests=False)
+        else:
+            server = XMLRPCServer((host, port), logRequests=False, allow_none=True)
 
     except:
-        sys.stderr.write('Error starting server with host: %s, port: %s, client_port: %s\n' % (host, port, client_port))
+        sys.stderr.write('Error starting server with host: %s, port: %s, client_port: %s\n' % (host, port, interpreter.client_port))
         raise
 
     # Tell UMD the proper default namespace
@@ -297,14 +309,28 @@ def start_server(host, port, interpreter):
         (h, port) = server.socket.getsockname()
 
         print(port)
-        print(client_port)
+        print(interpreter.client_port)
 
 
     sys.stderr.write(interpreter.get_greeting_msg())
     sys.stderr.flush()
 
-    server.serve_forever()
-
+    while True:
+        try:
+            server.serve_forever()
+        except:
+            # Ugly code to be py2/3 compatible
+            # https://sw-brainwy.rhcloud.com/tracker/PyDev/534:
+            # Unhandled "interrupted system call" error in the pydevconsol.py
+            e = sys.exc_info()[1]
+            retry = False
+            try:
+                retry = e.args[0] == 4 #errno.EINTR
+            except:
+                pass
+            if not retry:
+                raise
+            # Otherwise, keep on going
     return server
 
 
@@ -324,7 +350,12 @@ def get_interpreter():
     try:
         interpreterInterface = getattr(__builtin__, 'interpreter')
     except AttributeError:
-        interpreterInterface = InterpreterInterface(None, None, threading.currentThread(), show_banner=False)
+        # fake return_controll_callback function just to prevent exception in PyCharm debug console
+        from pydev_ipython.inputhook import set_return_control_callback
+        set_return_control_callback(lambda x: True)
+
+        interpreterInterface = InterpreterInterface(
+            None, None, threading.currentThread(), show_banner=False)
         setattr(__builtin__, 'interpreter', interpreterInterface)
 
     return interpreterInterface
@@ -460,7 +491,7 @@ if __name__ == '__main__':
     #Important: don't use this module directly as the __main__ module, rather, import itself as pydevconsole
     #so that we don't get multiple pydevconsole modules if it's executed directly (otherwise we'd have multiple
     #representations of its classes).
-    #See: https://sw-brainwy.rhcloud.com/tracker/PyDev/446: 
+    #See: https://sw-brainwy.rhcloud.com/tracker/PyDev/446:
     #'Variables' and 'Expressions' views stopped working when debugging interactive console
     import pydevconsole
     sys.stdin = pydevconsole.BaseStdIn()
