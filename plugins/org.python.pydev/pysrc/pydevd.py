@@ -170,11 +170,10 @@ if IS_PY3K:
 
 
 # Cache (full path => boolean). If true, all code within this file is not traced through upon debugging.
-_filenames_to_skip_tracing = {}
+_should_skip_tracing = {}
 
 def reset_donttrace_cache():
-    global _filenames_to_skip_tracing
-    _filenames_to_skip_tracing = {}
+    _should_skip_tracing.clear()
 
 
 connected = False
@@ -1492,13 +1491,13 @@ class PyDB:
             filename, base = GetFilenameAndBase(frame)
 
             # we don't want to debug threading or anything related to pydevd
-            if not filename in _filenames_to_skip_tracing:
-                _filenames_to_skip_tracing[filename] = (DictContains(DONT_TRACE, base) or
-                                                        any(func(filename) for func in DONT_TRACE
-                                                            if hasattr(func, '__call__')))
+            if not filename in _should_skip_tracing:
+                _should_skip_tracing[filename] = (DictContains(DONT_TRACE, base) or
+                                                  any(func(filename) for func in DONT_TRACE
+                                                      if hasattr(func, '__call__')))
 
             #print('trace_dispatch', base, frame.f_lineno, event, frame.f_code.co_name, is_file_to_ignore)
-            if _filenames_to_skip_tracing[filename]:
+            if _should_skip_tracing[filename]:
                 return None
 
             try:
