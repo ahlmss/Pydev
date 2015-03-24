@@ -39,8 +39,8 @@ import org.python.pydev.core.IToken;
 import org.python.pydev.core.MisconfigurationException;
 import org.python.pydev.core.ModulesKey;
 import org.python.pydev.core.ModulesKeyForZip;
-import org.python.pydev.core.ObjectsPool;
-import org.python.pydev.core.ObjectsPool.ObjectsPoolMap;
+import org.python.pydev.core.ObjectsInternPool;
+import org.python.pydev.core.ObjectsInternPool.ObjectsPoolMap;
 import org.python.pydev.core.cache.CompleteIndexKey;
 import org.python.pydev.core.cache.DiskCache;
 import org.python.pydev.core.docutils.PySelection;
@@ -297,12 +297,16 @@ public abstract class AbstractAdditionalDependencyInfo extends AbstractAdditiona
         addAstInfo(astFactory.createModule(body), newKey, false);
     }
 
+    static interface IBufferFiller {
+        void fillBuffer(FastStringBuffer buf);
+    }
+
     /**
      * Note: if it's a name with dots, we'll split it and search for each one.
      */
     @Override
     public List<ModulesKey> getModulesWithToken(IProject project, String token, IProgressMonitor monitor) {
-        ArrayList<ModulesKey> ret = new ArrayList<ModulesKey>();
+        final List<ModulesKey> ret = new ArrayList<ModulesKey>();
         NullProgressMonitor nullMonitor = new NullProgressMonitor();
         if (monitor == null) {
             monitor = nullMonitor;
@@ -319,25 +323,17 @@ public abstract class AbstractAdditionalDependencyInfo extends AbstractAdditiona
                         "Token: %s is not a valid token to search for.", token));
             }
         }
-        //Note: not synchronized with lock because we don't do anything with our own keys 
-        FastStringBuffer bufProgress = new FastStringBuffer();
-
-        //This buffer will be used as we load file by file.
-        FastStringBuffer bufFileContents = new FastStringBuffer();
-
         Set<String> pythonPathFolders = this.getPythonPathFolders();
-        long last = System.currentTimeMillis();
-        int worked = 0;
-
         LinkedBlockingQueue<Command> queue = new LinkedBlockingQueue<>();
 
-        int searchers = 2;
+        int searchers = Runtime.getRuntime().availableProcessors();
         //The 'ret' should be filled with the module keys where the tokens are found.
+        final Object retLock = new Object();
 
         // Create 2 consumers
         Thread[] threads = new Thread[searchers];
         for (int i = 0; i < searchers; i++) {
-            Searcher searcher = new Searcher(queue, StringUtils.dotSplit(token), ret);
+            Searcher searcher = new Searcher(queue, StringUtils.dotSplit(token), ret, retLock);
             //Spawn a thread to do the search while we load the contents.
             Thread t = new Thread(searcher);
             threads[i] = t;
@@ -345,7 +341,6 @@ public abstract class AbstractAdditionalDependencyInfo extends AbstractAdditiona
         }
 
         try {
-
             PythonPathHelper pythonPathHelper = new PythonPathHelper();
             pythonPathHelper.setPythonPath(new ArrayList<String>(pythonPathFolders));
             ModulesFoundStructure modulesFound = pythonPathHelper.getModulesFoundStructure(project, nullMonitor);
@@ -365,15 +360,22 @@ public abstract class AbstractAdditionalDependencyInfo extends AbstractAdditiona
                     System.out.println("Loading: " + entry);
                 }
 
-                try (FileInputStream stream = new FileInputStream(entry.file)) {
-                    fill(bufFileContents, stream);
-                    queue.put(new Command(entry, bufFileContents
-                            .toCharArray()));
-                } catch (Exception e) {
+                final File file = entry.file;
+                try {
+                    queue.put(new Command(entry, new IBufferFiller() {
+
+                        @Override
+                        public void fillBuffer(FastStringBuffer bufFileContents) {
+                            try (FileInputStream stream = new FileInputStream(file)) {
+                                fill(bufFileContents, stream);
+                            } catch (Exception e) {
+                                Log.log(e);
+                            }
+                        }
+                    }));
+                } catch (InterruptedException e) {
                     Log.log(e);
                 }
-
-                last = setProgress(monitor, bufProgress, last, worked++, entry.name);
             }
 
             //Get from zip files found
@@ -393,20 +395,24 @@ public abstract class AbstractAdditionalDependencyInfo extends AbstractAdditiona
                         if (monitor.isCanceled()) {
                             break;
                         }
-                        ModulesKeyForZip z = (ModulesKeyForZip) entry;
+                        final ModulesKeyForZip z = (ModulesKeyForZip) entry;
                         if (!z.isFile) {
                             continue;
                         }
 
-                        try (InputStream stream = zipFile.getInputStream(zipFile.getEntry(z.zipModulePath))) {
-                            fill(bufFileContents, stream);
-                            queue.put(new Command(entry, bufFileContents.toCharArray()));
-                        } catch (Exception e) {
-                            Log.log(e);
-                        }
+                        queue.put(new Command(entry, new IBufferFiller() {
+
+                            @Override
+                            public void fillBuffer(FastStringBuffer bufFileContents) {
+                                try (InputStream stream = zipFile.getInputStream(zipFile.getEntry(z.zipModulePath))) {
+                                    fill(bufFileContents, stream);
+                                } catch (Exception e) {
+                                    Log.log(e);
+                                }
+                            }
+                        }));
                     }
 
-                    last = setProgress(monitor, bufProgress, last, worked++, zipContents.zipFile.getName());
                 } catch (Exception e) {
                     Log.log(e);
                 }
@@ -416,14 +422,27 @@ public abstract class AbstractAdditionalDependencyInfo extends AbstractAdditiona
             for (int i = 0; i < searchers; i++) {
                 queue.add(new Command()); // add it to wait for the thread to finish.
             }
-            monitor.done();
         }
-        try {
+        int j = 0;
+        while (true) {
+            j++;
+            boolean liveFound = false;
             for (Thread t : threads) {
-                t.join();
+                if (t.isAlive()) {
+                    liveFound = true;
+                    break;
+                }
             }
-        } catch (InterruptedException e) {
-            Log.log("Not expecting to be interrupted! Results of getting tokens may be wrong.", e);
+            if (liveFound) {
+
+                if (j % 50 == 0) {
+                    monitor.setTaskName("Searching references...");
+                    monitor.worked(1);
+                }
+                Thread.yield();
+            } else {
+                break;
+            }
         }
         return ret;
     }
@@ -458,33 +477,21 @@ public abstract class AbstractAdditionalDependencyInfo extends AbstractAdditiona
         FileUtils.fillBufferWithStream(stream, null, new NullProgressMonitor(), bufFileContents);
     }
 
-    public long setProgress(IProgressMonitor monitor, FastStringBuffer bufProgress, long last, int worked,
-            String currModName) {
-        long current = System.currentTimeMillis();
-        if (last + 200 < current) {
-            last = current;
-            monitor.setTaskName(bufProgress.clear().append("Searching: ").append(currModName)
-                    .toString());
-            monitor.worked(worked);
-        }
-        return last;
-    }
-
     private class Command {
 
         public final boolean finish;
-        public final char[] charArray;
+        public final IBufferFiller bufferFiller;
         public final ModulesKey modulesKey;
 
-        public Command(ModulesKey modulesKey, char[] charArray) {
-            this.charArray = charArray;
+        public Command(ModulesKey modulesKey, IBufferFiller bufferFiller) {
             this.modulesKey = modulesKey;
+            this.bufferFiller = bufferFiller;
             this.finish = false;
         }
 
         public Command() {
             this.modulesKey = null;
-            this.charArray = null;
+            this.bufferFiller = null;
             this.finish = true;
         }
 
@@ -494,10 +501,12 @@ public abstract class AbstractAdditionalDependencyInfo extends AbstractAdditiona
 
         private final BlockingQueue<Command> queue;
         private final Collection<String> searchTokens;
-        private final ArrayList<ModulesKey> ret;
+        private final List<ModulesKey> ret;
         private final FastStringBuffer temp = new FastStringBuffer();
+        private final Object retLock;
 
-        public Searcher(BlockingQueue<Command> linkedBlockingQueue, Collection<String> token, ArrayList<ModulesKey> ret) {
+        public Searcher(BlockingQueue<Command> linkedBlockingQueue, Collection<String> token,
+                List<ModulesKey> ret, Object retLock) {
             this.queue = linkedBlockingQueue;
             if (token.size() == 1) {
                 final String searchfor = token.iterator().next();
@@ -520,11 +529,13 @@ public abstract class AbstractAdditionalDependencyInfo extends AbstractAdditiona
             } else {
                 this.searchTokens = new HashSet<String>(token);
             }
+            this.retLock = retLock;
             this.ret = ret;
         }
 
         @Override
         public void run() {
+            FastStringBuffer buf = new FastStringBuffer();
             while (true) {
                 Command cmd;
                 try {
@@ -532,7 +543,8 @@ public abstract class AbstractAdditionalDependencyInfo extends AbstractAdditiona
                     if (cmd.finish) {
                         break;
                     }
-                    this.search(cmd.modulesKey, cmd.charArray);
+                    cmd.bufferFiller.fillBuffer(buf.clear());
+                    this.search(cmd.modulesKey, buf);
                 } catch (InterruptedException e) {
                     Log.log("Not expecting to be interrupted in searcher. Results may be wrong.", e);
                     break;
@@ -540,17 +552,18 @@ public abstract class AbstractAdditionalDependencyInfo extends AbstractAdditiona
             }
         }
 
-        private void search(ModulesKey modulesKey, char[] bufFileContents) {
+        private void search(ModulesKey modulesKey, FastStringBuffer bufFileContents) {
             temp.clear();
-            int length = bufFileContents.length;
+            int length = bufFileContents.length();
+            char[] internalCharsArray = bufFileContents.getInternalCharsArray();
             for (int i = 0; i < length; i++) {
-                char c = bufFileContents[i];
+                char c = internalCharsArray[i];
                 if (Character.isJavaIdentifierStart(c)) {
                     temp.clear();
                     temp.append(c);
                     i++;
                     for (; i < length; i++) {
-                        c = bufFileContents[i];
+                        c = internalCharsArray[i];
                         if (c == ' ' || c == '\t' || c == '\r' || c == '\n') {
                             break; //Fast forward through the most common case...
                         }
@@ -568,7 +581,9 @@ public abstract class AbstractAdditionalDependencyInfo extends AbstractAdditiona
                         if (DEBUG) {
                             System.out.println("Found in: " + modulesKey);
                         }
-                        ret.add(modulesKey);
+                        synchronized (retLock) {
+                            ret.add(modulesKey);
+                        }
                         break;
                     }
                 }
@@ -694,7 +709,7 @@ public abstract class AbstractAdditionalDependencyInfo extends AbstractAdditiona
             InputStreamReader reader = new InputStreamReader(fileInputStream);
             FastBufferedReader bufferedReader = new FastBufferedReader(reader);
             FastStringBuffer string = bufferedReader.readLine();
-            ObjectsPoolMap objectsPoolMap = new ObjectsPool.ObjectsPoolMap();
+            ObjectsPoolMap objectsPoolMap = new ObjectsInternPool.ObjectsPoolMap();
             if (string != null && string.startsWith("-- VERSION_")) {
                 Tuple<Tuple3<Object, Object, Object>, Object> tupWithResults = new Tuple<Tuple3<Object, Object, Object>, Object>(
                         new Tuple3<Object, Object, Object>(

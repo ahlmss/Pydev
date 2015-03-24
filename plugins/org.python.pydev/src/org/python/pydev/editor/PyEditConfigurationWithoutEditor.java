@@ -15,7 +15,6 @@ import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IInformationControlCreator;
 import org.eclipse.jface.text.ITextDoubleClickStrategy;
 import org.eclipse.jface.text.presentation.IPresentationReconciler;
-import org.eclipse.jface.text.presentation.PresentationReconciler;
 import org.eclipse.jface.text.reconciler.IReconciler;
 import org.eclipse.jface.text.reconciler.IReconcilingStrategy;
 import org.eclipse.jface.text.reconciler.MonoReconciler;
@@ -24,6 +23,7 @@ import org.eclipse.jface.text.source.ISourceViewer;
 import org.eclipse.ui.editors.text.EditorsUI;
 import org.eclipse.ui.editors.text.TextSourceViewerConfiguration;
 import org.eclipse.ui.texteditor.spelling.SpellingService;
+import org.python.pydev.core.IGrammarVersionProvider;
 import org.python.pydev.core.IIndentPrefs;
 import org.python.pydev.core.IPythonPartitions;
 import org.python.pydev.core.log.Log;
@@ -42,7 +42,7 @@ public class PyEditConfigurationWithoutEditor extends TextSourceViewerConfigurat
 
     private String[] indentPrefixes = { "    ", "\t", "" };
 
-    private PresentationReconciler reconciler;
+    private PyPresentationReconciler reconciler;
 
     private PyCodeScanner codeScanner;
 
@@ -50,13 +50,21 @@ public class PyEditConfigurationWithoutEditor extends TextSourceViewerConfigurat
 
     private PyStringScanner stringScanner;
 
+    private PyUnicodeScanner unicodeScanner;
+
+    private PyBytesOrUnicodeScanner bytesOrUnicodeScanner;
+
     public PyContentAssistant pyContentAssistant = new PyContentAssistant();
 
     private final Object lock = new Object();
 
-    public PyEditConfigurationWithoutEditor(ColorAndStyleCache colorManager, IPreferenceStore preferenceStore) {
+    private IGrammarVersionProvider grammarVersionProvider;
+
+    public PyEditConfigurationWithoutEditor(ColorAndStyleCache colorManager, IPreferenceStore preferenceStore,
+            IGrammarVersionProvider grammarVersionProvider) {
         super(preferenceStore);
         colorCache = colorManager;
+        this.grammarVersionProvider = grammarVersionProvider;
     }
 
     /**
@@ -66,10 +74,26 @@ public class PyEditConfigurationWithoutEditor extends TextSourceViewerConfigurat
      */
     @Override
     public String[] getConfiguredContentTypes(ISourceViewer sourceViewer) {
-        return new String[] { IDocument.DEFAULT_CONTENT_TYPE, IPythonPartitions.PY_COMMENT,
-                IPythonPartitions.PY_BACKQUOTES, IPythonPartitions.PY_SINGLELINE_STRING1,
-                IPythonPartitions.PY_SINGLELINE_STRING2, IPythonPartitions.PY_MULTILINE_STRING1,
-                IPythonPartitions.PY_MULTILINE_STRING2 };
+        return new String[] {
+                IDocument.DEFAULT_CONTENT_TYPE,
+                IPythonPartitions.PY_COMMENT,
+                IPythonPartitions.PY_BACKQUOTES,
+
+                IPythonPartitions.PY_SINGLELINE_BYTES1,
+                IPythonPartitions.PY_SINGLELINE_BYTES2,
+                IPythonPartitions.PY_MULTILINE_BYTES1,
+                IPythonPartitions.PY_MULTILINE_BYTES2,
+
+                IPythonPartitions.PY_SINGLELINE_UNICODE1,
+                IPythonPartitions.PY_SINGLELINE_UNICODE2,
+                IPythonPartitions.PY_MULTILINE_UNICODE1,
+                IPythonPartitions.PY_MULTILINE_UNICODE2,
+
+                IPythonPartitions.PY_SINGLELINE_BYTES_OR_UNICODE1,
+                IPythonPartitions.PY_SINGLELINE_BYTES_OR_UNICODE2,
+                IPythonPartitions.PY_MULTILINE_BYTES_OR_UNICODE1,
+                IPythonPartitions.PY_MULTILINE_BYTES_OR_UNICODE2
+        };
     }
 
     @Override
@@ -186,7 +210,7 @@ public class PyEditConfigurationWithoutEditor extends TextSourceViewerConfigurat
 
         synchronized (lock) {
             if (reconciler == null) {
-                reconciler = new PresentationReconciler();
+                reconciler = new PyPresentationReconciler();
                 reconciler.setDocumentPartitioning(IPythonPartitions.PYTHON_PARTITION_TYPE);
 
                 DefaultDamagerRepairer dr;
@@ -214,14 +238,39 @@ public class PyEditConfigurationWithoutEditor extends TextSourceViewerConfigurat
                 // Strings have uniform color
                 stringScanner = new PyStringScanner(colorCache);
                 dr = new DefaultDamagerRepairer(stringScanner);
-                reconciler.setDamager(dr, IPythonPartitions.PY_SINGLELINE_STRING1);
-                reconciler.setRepairer(dr, IPythonPartitions.PY_SINGLELINE_STRING1);
-                reconciler.setDamager(dr, IPythonPartitions.PY_SINGLELINE_STRING2);
-                reconciler.setRepairer(dr, IPythonPartitions.PY_SINGLELINE_STRING2);
-                reconciler.setDamager(dr, IPythonPartitions.PY_MULTILINE_STRING1);
-                reconciler.setRepairer(dr, IPythonPartitions.PY_MULTILINE_STRING1);
-                reconciler.setDamager(dr, IPythonPartitions.PY_MULTILINE_STRING2);
-                reconciler.setRepairer(dr, IPythonPartitions.PY_MULTILINE_STRING2);
+                reconciler.setDamager(dr, IPythonPartitions.PY_SINGLELINE_BYTES1);
+                reconciler.setRepairer(dr, IPythonPartitions.PY_SINGLELINE_BYTES1);
+                reconciler.setDamager(dr, IPythonPartitions.PY_SINGLELINE_BYTES2);
+                reconciler.setRepairer(dr, IPythonPartitions.PY_SINGLELINE_BYTES2);
+
+                reconciler.setDamager(dr, IPythonPartitions.PY_MULTILINE_BYTES1);
+                reconciler.setRepairer(dr, IPythonPartitions.PY_MULTILINE_BYTES1);
+                reconciler.setDamager(dr, IPythonPartitions.PY_MULTILINE_BYTES2);
+                reconciler.setRepairer(dr, IPythonPartitions.PY_MULTILINE_BYTES2);
+
+                unicodeScanner = new PyUnicodeScanner(colorCache);
+                dr = new DefaultDamagerRepairer(unicodeScanner);
+                reconciler.setDamager(dr, IPythonPartitions.PY_SINGLELINE_UNICODE1);
+                reconciler.setRepairer(dr, IPythonPartitions.PY_SINGLELINE_UNICODE1);
+                reconciler.setDamager(dr, IPythonPartitions.PY_SINGLELINE_UNICODE2);
+                reconciler.setRepairer(dr, IPythonPartitions.PY_SINGLELINE_UNICODE2);
+
+                reconciler.setDamager(dr, IPythonPartitions.PY_MULTILINE_UNICODE1);
+                reconciler.setRepairer(dr, IPythonPartitions.PY_MULTILINE_UNICODE1);
+                reconciler.setDamager(dr, IPythonPartitions.PY_MULTILINE_UNICODE2);
+                reconciler.setRepairer(dr, IPythonPartitions.PY_MULTILINE_UNICODE2);
+
+                bytesOrUnicodeScanner = new PyBytesOrUnicodeScanner(colorCache, grammarVersionProvider, reconciler);
+                dr = new DefaultDamagerRepairer(bytesOrUnicodeScanner);
+                reconciler.setDamager(dr, IPythonPartitions.PY_SINGLELINE_BYTES_OR_UNICODE1);
+                reconciler.setRepairer(dr, IPythonPartitions.PY_SINGLELINE_BYTES_OR_UNICODE1);
+                reconciler.setDamager(dr, IPythonPartitions.PY_SINGLELINE_BYTES_OR_UNICODE2);
+                reconciler.setRepairer(dr, IPythonPartitions.PY_SINGLELINE_BYTES_OR_UNICODE2);
+
+                reconciler.setDamager(dr, IPythonPartitions.PY_MULTILINE_BYTES_OR_UNICODE1);
+                reconciler.setRepairer(dr, IPythonPartitions.PY_MULTILINE_BYTES_OR_UNICODE1);
+                reconciler.setDamager(dr, IPythonPartitions.PY_MULTILINE_BYTES_OR_UNICODE2);
+                reconciler.setRepairer(dr, IPythonPartitions.PY_MULTILINE_BYTES_OR_UNICODE2);
 
                 // Default content is code, we need syntax highlighting
                 ICodeScannerKeywords codeScannerKeywords = null;
@@ -285,6 +334,14 @@ public class PyEditConfigurationWithoutEditor extends TextSourceViewerConfigurat
 
                 if (stringScanner != null) {
                     stringScanner.updateColorAndStyle();
+                }
+
+                if (unicodeScanner != null) {
+                    unicodeScanner.updateColorAndStyle();
+                }
+
+                if (bytesOrUnicodeScanner != null) {
+                    bytesOrUnicodeScanner.updateColorAndStyle();
                 }
 
                 if (backquotesScanner != null) {

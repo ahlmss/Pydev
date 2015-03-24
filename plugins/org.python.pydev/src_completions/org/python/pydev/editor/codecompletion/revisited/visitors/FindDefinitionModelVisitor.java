@@ -141,6 +141,7 @@ public class FindDefinitionModelVisitor extends AbstractVisitor {
     /**
      * @see org.python.pydev.parser.jython.ast.VisitorBase#unhandled_node(org.python.pydev.parser.jython.SimpleNode)
      */
+    @Override
     protected Object unhandled_node(SimpleNode node) throws Exception {
         return null;
     }
@@ -148,6 +149,7 @@ public class FindDefinitionModelVisitor extends AbstractVisitor {
     /**
      * @see org.python.pydev.parser.jython.ast.VisitorBase#traverse(org.python.pydev.parser.jython.SimpleNode)
      */
+    @Override
     public void traverse(SimpleNode node) throws Exception {
         node.traverse(this);
     }
@@ -155,6 +157,7 @@ public class FindDefinitionModelVisitor extends AbstractVisitor {
     /**
      * @see org.python.pydev.parser.jython.ast.VisitorBase#visitClassDef(org.python.pydev.parser.jython.ast.ClassDef)
      */
+    @Override
     public Object visitClassDef(ClassDef node) throws Exception {
         globalDeclarationsStack.push(new HashSet<String>());
         defsStack.push(node);
@@ -171,6 +174,7 @@ public class FindDefinitionModelVisitor extends AbstractVisitor {
     /**
      * @see org.python.pydev.parser.jython.ast.VisitorBase#visitFunctionDef(org.python.pydev.parser.jython.ast.FunctionDef)
      */
+    @Override
     public Object visitFunctionDef(FunctionDef node) throws Exception {
         globalDeclarationsStack.push(new HashSet<String>());
         defsStack.push(node);
@@ -253,12 +257,14 @@ public class FindDefinitionModelVisitor extends AbstractVisitor {
                     definitionFound = new KeywordParameterDefinition(line, node.beginColumn, rep, node, scope,
                             module.get(), this.call.peek());
                     definitions.add(definitionFound);
-                    throw new StopVisitingException();
+                    throw STOP_VISITING_EXCEPTION;
                 }
             }
         }
         return null;
     }
+
+    private static final StopVisitingException STOP_VISITING_EXCEPTION = new StopVisitingException();
 
     /**
      * @param node the declaration node we're interested in (class or function)
@@ -301,8 +307,14 @@ public class FindDefinitionModelVisitor extends AbstractVisitor {
     /**
      * @see org.python.pydev.parser.jython.ast.VisitorBase#visitAssign(org.python.pydev.parser.jython.ast.Assign)
      */
+    @Override
     public Object visitAssign(Assign node) throws Exception {
+        return this.visitAssign(node, -1);
+    }
+
+    public Object visitAssign(Assign node, int unpackPos) throws Exception {
         ILocalScope scope = new LocalScope(this.defsStack);
+        scope.setFoundAtASTNode(node);
         if (foundAsDefinition && !scope.equals(definitionFound.scope)) { //if it is found as a definition it is an 'exact' match, so, we do not keep checking it
             return null;
         }
@@ -319,14 +331,14 @@ public class FindDefinitionModelVisitor extends AbstractVisitor {
                 Tuple targetTuple = (Tuple) target;
                 if (node.value instanceof Tuple) {
                     Tuple valueTuple = (Tuple) node.value;
-                    checkTupleAssignTarget(targetTuple, valueTuple.elts);
+                    checkTupleAssignTarget(targetTuple, valueTuple.elts, false);
 
                 } else if (node.value instanceof org.python.pydev.parser.jython.ast.List) {
                     org.python.pydev.parser.jython.ast.List valueList = (org.python.pydev.parser.jython.ast.List) node.value;
-                    checkTupleAssignTarget(targetTuple, valueList.elts);
+                    checkTupleAssignTarget(targetTuple, valueList.elts, false);
 
                 } else {
-                    checkTupleAssignTarget(targetTuple, new exprType[] { node.value });
+                    checkTupleAssignTarget(targetTuple, new exprType[] { node.value }, true);
                 }
 
             } else {
@@ -344,7 +356,7 @@ public class FindDefinitionModelVisitor extends AbstractVisitor {
                     int col = NodeUtils.getColDefinition(target);
 
                     AssignDefinition definition = new AssignDefinition(value, rep, i, node, line, col, scope,
-                            module.get(), nodeValue);
+                            module.get(), nodeValue, unpackPos);
 
                     //mark it as global (if it was found as global in some of the previous contexts).
                     for (Set<String> globals : globalDeclarationsStack) {
@@ -363,20 +375,22 @@ public class FindDefinitionModelVisitor extends AbstractVisitor {
 
     /**
      * Analyze an assign that has the target as a tuple and the multiple elements in the other side.
-     * 
+     *
      * E.g.: www, yyy = 1, 2
-     * 
+     *
      * @param targetTuple the target in the assign
      * @param valueElts the values that are being assigned
+     * @param unpackElements
      */
-    private void checkTupleAssignTarget(Tuple targetTuple, exprType[] valueElts) throws Exception {
+    private void checkTupleAssignTarget(Tuple targetTuple, exprType[] valueElts, boolean unpackElements)
+            throws Exception {
         if (valueElts == null || valueElts.length == 0) {
             return; //nothing to do if we don't have any values
         }
 
         for (int i = 0; i < targetTuple.elts.length; i++) {
             int j = i;
-            //that's if the number of values is less than the number of assigns (actually, that'd 
+            //that's if the number of values is less than the number of assigns (actually, that'd
             //probably be an error, but let's go on gracefully, as the user can be in an invalid moment
             //in his code)
             if (j >= valueElts.length) {
@@ -385,7 +399,13 @@ public class FindDefinitionModelVisitor extends AbstractVisitor {
             Assign assign = new Assign(new exprType[] { targetTuple.elts[i] }, valueElts[j]);
             assign.beginLine = targetTuple.beginLine;
             assign.beginColumn = targetTuple.beginColumn;
-            visitAssign(assign);
+            if (unpackElements) {
+                visitAssign(assign, i);
+
+            } else {
+                visitAssign(assign);
+
+            }
         }
     }
 }

@@ -724,6 +724,9 @@
 <extension point="org.python.pydev.pydev_pyedit_listener">
 	<pyedit_listener_participant class="org.python.pydev.debug.model.PyReloadCode"/>
 </extension>
+<extension point="org.python.pydev.pydev_pyedit_listener">
+	<pyedit_listener_participant class="org.python.pydev.debug.newconsole.prefs.InteractiveConsoleCommandsSyncListener"/>
+</extension>
 
 
 
@@ -770,6 +773,12 @@
            class="org.python.pydev.debug.newconsole.prefs.InteractiveConsoleUMDPrefs"
            id="org.python.pydev.debug.newconsole.prefs.UMD"
            name="User Module Deleter (UMD)">
+     </page>
+     <page
+           category="org.python.pydev.debug.newconsole.prefs.InteractiveConsolePrefs"
+           class="org.python.pydev.debug.newconsole.prefs.InteractiveConsoleCommandsPreferencesPage"
+           id="org.python.pydev.debug.newconsole.prefs.InteractiveConsoleCommandsPreferencesPage"
+           name="User commands">
      </page>
   </extension>
   <extension

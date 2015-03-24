@@ -89,12 +89,13 @@ import org.python.pydev.core.IPythonNature;
 import org.python.pydev.core.ITabChangedListener;
 import org.python.pydev.core.MisconfigurationException;
 import org.python.pydev.core.NotConfiguredInterpreterException;
-import org.python.pydev.core.docutils.PyPartitionScanner;
 import org.python.pydev.core.docutils.PySelection;
 import org.python.pydev.core.docutils.PythonPairMatcher;
 import org.python.pydev.core.docutils.SyntaxErrorException;
 import org.python.pydev.core.log.Log;
+import org.python.pydev.core.partition.PyPartitionScanner;
 import org.python.pydev.editor.actions.FirstCharAction;
+import org.python.pydev.editor.actions.IExecuteLineAction;
 import org.python.pydev.editor.actions.OfflineAction;
 import org.python.pydev.editor.actions.OfflineActionTarget;
 import org.python.pydev.editor.actions.PyBackspace;
@@ -191,6 +192,8 @@ import org.python.pydev.ui.filetypes.FileTypesPreferencesPage;
  */
 public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersionProvider,
         IPySyntaxHighlightingAndCodeCompletionEditor, IParserObserver3, ITabChangedListener {
+
+    public static final String PYDEV_EDITOR_KEYBINDINGS_CONTEXT_ID = "org.python.pydev.ui.editor.scope";
 
     static {
         ParseException.verboseExceptions = true;
@@ -689,7 +692,7 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
 
                 PyParserManager.getPyParserManager(PydevPrefs.getPreferences()).attachParserTo(this);
                 if (document != null) {
-                    PyPartitionScanner.checkPartitionScanner(document);
+                    PyPartitionScanner.checkPartitionScanner(document, this.getGrammarVersionProvider());
                 }
             }
 
@@ -1078,7 +1081,7 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
 
     @Override
     protected void initializeKeyBindingScopes() {
-        setKeyBindingScopes(new String[] { "org.python.pydev.ui.editor.scope" }); //$NON-NLS-1$
+        setKeyBindingScopes(new String[] { PYDEV_EDITOR_KEYBINDINGS_CONTEXT_ID });
     }
 
     /**
@@ -1290,6 +1293,10 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
         }
 
         fireModelChanged(ast);
+        invalidateTextPresentationAsync();
+    }
+
+    private void invalidateTextPresentationAsync() {
         //Trying to fix issue where it seems that the text presentation is not properly updated after markers are
         //changed (i.e.: red lines remain there when they shouldn't).
         //I couldn't really reproduce this issue, so, this may not fix it...
@@ -1725,6 +1732,13 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
      */
     public Class<PythonCorrectionProcessor> getPythonCorrectionProcessorClass() {
         return PythonCorrectionProcessor.class;
+    }
+
+    /**
+     * Important: keep for scripting
+     */
+    public Class<IExecuteLineAction> getIExecuteLineActionClass() {
+        return IExecuteLineAction.class;
     }
 
     /**

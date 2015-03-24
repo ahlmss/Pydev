@@ -6,10 +6,10 @@
  */
 /*
  * Created on Jun 27, 2005
- * 
+ *
  * @author Fabio Zadrozny
  */
-package org.python.pydev.core.docutils;
+package org.python.pydev.core.partition;
 
 import org.eclipse.jface.text.rules.IPartitionTokenScanner;
 
@@ -22,7 +22,7 @@ public final class PyPartitioner extends org.eclipse.jface.text.rules.FastPartit
      * @param scanner
      * @param legalContentTypes
      */
-    public PyPartitioner(IPartitionTokenScanner scanner, String[] legalContentTypes) {
+    public PyPartitioner(PyPartitionScanner scanner, String[] legalContentTypes) {
         super(scanner, legalContentTypes);
     }
 
