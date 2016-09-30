@@ -88,7 +88,7 @@ public class DebuggerReader implements Runnable {
     public void addToResponseQueue(AbstractDebuggerCommand cmd) {
         int sequence = cmd.getSequence();
         synchronized (responseQueue) {
-            responseQueue.put(new Integer(sequence), cmd);
+            responseQueue.put(sequence, cmd);
         }
     }
 
@@ -129,6 +129,7 @@ public class DebuggerReader implements Runnable {
      * 
      * @see java.lang.Runnable#run()
      */
+    @Override
     public void run() {
         while (!done) {
             try {

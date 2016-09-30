@@ -16,7 +16,7 @@ import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.ui.progress.UIJob;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.shared_core.callbacks.ICallback0;
-
+import org.python.pydev.shared_core.structure.LinkedListWarningOnSlowOperations;
 
 /**
  * Used to properly pass notifications in the UI thread to the PyUnitView.
@@ -28,7 +28,7 @@ final class PyUnitViewServerListener implements IPyUnitServerListener {
     private PyUnitView view;
     private Object lockView = new Object();
 
-    private LinkedList<ICallback0<Object>> notifications = new LinkedList<ICallback0<Object>>();
+    private LinkedList<ICallback0<Object>> notifications = new LinkedListWarningOnSlowOperations<ICallback0<Object>>();
 
     private Job updateJob = new UIJob("Update unittest view") {
 
@@ -52,22 +52,28 @@ final class PyUnitViewServerListener implements IPyUnitServerListener {
 
     private final PyUnitTestRun testRun;
 
-    public PyUnitViewServerListener(IPyUnitServer pyUnitServer, IPyUnitLaunch pyUnitLaunch) {
-        this.testRun = new PyUnitTestRun(pyUnitLaunch);
+    public PyUnitViewServerListener(IPyUnitServer pyUnitServer, PyUnitTestRun testRun) {
+        this.testRun = testRun;
         pyUnitServer.registerOnNotifyTest(this);
         updateJob.setPriority(JOBS_PRIORITY);
         updateJob.setSystem(true);
+    }
+
+    public PyUnitViewServerListener(IPyUnitServer pyUnitServer, IPyUnitLaunch pyUnitLaunch) {
+        this(pyUnitServer, new PyUnitTestRun(pyUnitLaunch));
     }
 
     public static int TIMEOUT = 25;
     public static int JOBS_PRIORITY = Job.SHORT;
     private boolean finishedNotified = false;
 
+    @Override
     public void notifyTest(final String status, final String location, final String test, final String capturedOutput,
             final String errorContents, final String time) {
         synchronized (notifications) {
             notifications.add(new ICallback0<Object>() {
 
+                @Override
                 public Object call() {
                     PyUnitTestResult result = new PyUnitTestResult(testRun, status, location, test, capturedOutput,
                             errorContents, time);
@@ -84,10 +90,12 @@ final class PyUnitViewServerListener implements IPyUnitServerListener {
         updateJob.schedule(TIMEOUT);
     }
 
+    @Override
     public void notifyStartTest(final String location, final String test) {
         synchronized (notifications) {
             notifications.add(new ICallback0<Object>() {
 
+                @Override
                 public Object call() {
                     PyUnitTestStarted result = new PyUnitTestStarted(testRun, location, test);
                     testRun.addStartTest(result);
@@ -103,12 +111,14 @@ final class PyUnitViewServerListener implements IPyUnitServerListener {
         updateJob.schedule(TIMEOUT);
     }
 
+    @Override
     public void notifyFinished(final String totalTime) {
         synchronized (notifications) {
             if (!finishedNotified) {
                 finishedNotified = true;
                 notifications.add(new ICallback0<Object>() {
 
+                    @Override
                     public Object call() {
                         testRun.setFinished(true);
                         if (totalTime != null) {
@@ -127,6 +137,7 @@ final class PyUnitViewServerListener implements IPyUnitServerListener {
         updateJob.schedule(TIMEOUT);
     }
 
+    @Override
     public void notifyDispose() {
         notifyFinished(null);
     }
@@ -147,6 +158,7 @@ final class PyUnitViewServerListener implements IPyUnitServerListener {
         return testRun;
     }
 
+    @Override
     public void notifyTestsCollected(String totalTestsCount) {
         testRun.setTotalNumberOfRuns(totalTestsCount);
         synchronized (lockView) {

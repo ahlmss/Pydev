@@ -19,58 +19,57 @@ import junit.framework.TestCase;
  *
  */
 public class LowMemoryArrayListTest extends TestCase {
-    @SuppressWarnings("unchecked")
     public void testArrayList() throws Exception {
-        List array = new LowMemoryArrayList();
+        List<Integer> array = new LowMemoryArrayList<Integer>();
         assertEquals(0, array.size());
         assertTrue(array.isEmpty());
 
-        array.add(new Integer(0));
-        array.add(0, new Integer(1));
-        array.add(1, new Integer(2));
-        array.add(new Integer(3));
-        array.add(new Integer(1));
+        array.add(0);
+        array.add(0, 1);
+        array.add(1, 2);
+        array.add(3);
+        array.add(1);
 
         assertEquals(5, array.size());
         assertFalse(array.isEmpty());
 
-        assertEquals(1, ((Integer) array.get(0)).intValue());
-        assertEquals(2, ((Integer) array.get(1)).intValue());
-        assertEquals(0, ((Integer) array.get(2)).intValue());
-        assertEquals(3, ((Integer) array.get(3)).intValue());
-        assertEquals(1, ((Integer) array.get(4)).intValue());
+        assertEquals(1, array.get(0).intValue());
+        assertEquals(2, array.get(1).intValue());
+        assertEquals(0, array.get(2).intValue());
+        assertEquals(3, array.get(3).intValue());
+        assertEquals(1, array.get(4).intValue());
 
         assertFalse(array.contains(null));
-        assertTrue(array.contains(new Integer(2)));
-        assertEquals(0, array.indexOf(new Integer(1)));
-        assertEquals(4, array.lastIndexOf(new Integer(1)));
-        assertTrue(array.indexOf(new Integer(5)) < 0);
-        assertTrue(array.lastIndexOf(new Integer(5)) < 0);
+        assertTrue(array.contains(2));
+        assertEquals(0, array.indexOf(1));
+        assertEquals(4, array.lastIndexOf(1));
+        assertTrue(array.indexOf(5) < 0);
+        assertTrue(array.lastIndexOf(5) < 0);
 
         array.remove(1);
         array.remove(1);
 
         assertEquals(3, array.size());
         assertFalse(array.isEmpty());
-        assertEquals(1, ((Integer) array.get(0)).intValue());
-        assertEquals(3, ((Integer) array.get(1)).intValue());
-        assertEquals(1, ((Integer) array.get(2)).intValue());
+        assertEquals(1, array.get(0).intValue());
+        assertEquals(3, array.get(1).intValue());
+        assertEquals(1, array.get(2).intValue());
 
         assertFalse(array.contains(null));
-        assertFalse(array.contains(new Integer(2)));
-        assertEquals(0, array.indexOf(new Integer(1)));
-        assertEquals(2, array.lastIndexOf(new Integer(1)));
-        assertTrue(array.indexOf(new Integer(5)) < 0);
-        assertTrue(array.lastIndexOf(new Integer(5)) < 0);
+        assertFalse(array.contains(2));
+        assertEquals(0, array.indexOf(1));
+        assertEquals(2, array.lastIndexOf(1));
+        assertTrue(array.indexOf(5) < 0);
+        assertTrue(array.lastIndexOf(5) < 0);
 
         array.clear();
 
         assertEquals(0, array.size());
         assertTrue(array.isEmpty());
-        assertTrue(array.indexOf(new Integer(5)) < 0);
-        assertTrue(array.lastIndexOf(new Integer(5)) < 0);
+        assertTrue(array.indexOf(5) < 0);
+        assertTrue(array.lastIndexOf(5) < 0);
 
-        List al = new LowMemoryArrayList();
+        List<Comparable<?>> al = new LowMemoryArrayList<Comparable<?>>();
 
         assertFalse(al.remove(null));
         assertFalse(al.remove("string"));
@@ -83,8 +82,8 @@ public class LowMemoryArrayListTest extends TestCase {
 
         List<Integer> asList = Arrays.asList(1, 2);
 
-        al = new LowMemoryArrayList();
-        Iterator iterator = al.iterator();
+        al = new LowMemoryArrayList<Comparable<?>>();
+        Iterator<Comparable<?>> iterator = al.iterator();
         assertTrue(!iterator.hasNext());
 
         al.addAll(asList);

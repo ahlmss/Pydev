@@ -1,6 +1,7 @@
 import os
 import sys
 import shutil
+import datetime
 
 args = sys.argv[1:]
 this_script_path = sys.argv[0]
@@ -11,8 +12,22 @@ for arg in args:
         version = arg[len('--version='):]
         LAST_VERSION_TAG = version
 else:
-    LAST_VERSION_TAG = '3.9.2'  # Not specified (let's leave one there)
+    LAST_VERSION_TAG = '5.2.0'  # Not specified (let's leave one there)
+    
+CURRENT_DATE = datetime.datetime.now()
 
+update_site_versions = [
+    '5.2.0',
+    '5.1.2',
+    '5.1.1',
+    '5.0.0',
+    '4.5.5',
+    '4.5.4',
+    '4.5.3',
+    '4.5.1',
+    '4.5.0',
+    'old',
+]
 
 import build_python_code_block
 
@@ -106,6 +121,16 @@ def BuildFromRst(source_filename, is_new_homepage=False):
     f.close()
 
 
+HTACCESS_CONTENTS = '''RewriteEngine On
+RewriteBase /
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ https://dl.bintray.com/fabioz/pydev/{version}/$1 [R]
+'''
+
+INDEX_CONTENTS = '''Nothing to see here (this is just a dummy link to be redirected to
+<a href="https://dl.bintray.com/fabioz/pydev/{version}">https://dl.bintray.com/fabioz/pydev/{version}</a>)'''
+
 #=======================================================================================================================
 # GenerateRstInDir
 #=======================================================================================================================
@@ -125,6 +150,22 @@ if __name__ == '__main__':
     # Copy the update site redirections
     shutil.rmtree(os.path.join('final', 'updates'), ignore_errors=True)
     shutil.copytree('updates', os.path.join('final', 'updates'))
+
+    for filename in ('.htaccess', 'index.html'):
+        with open(os.path.join('final', 'updates', filename), 'r') as stream:
+            contents = stream.read()
+        with open(os.path.join('final', 'updates', filename), 'w') as stream:
+            stream.write(contents.replace('{version}', LAST_VERSION_TAG))
+
+    for update_site_version in update_site_versions:
+        try:
+            os.mkdir(os.path.join('final', 'update_sites', update_site_version))
+        except:
+            pass
+        with open(os.path.join('final', 'update_sites', update_site_version, '.htaccess'), 'w') as stream:
+            stream.write(HTACCESS_CONTENTS.replace('{version}', update_site_version))
+        with open(os.path.join('final', 'update_sites', update_site_version, 'index.html'), 'w') as stream:
+            stream.write(INDEX_CONTENTS.replace('{version}', update_site_version))
 
     shutil.rmtree(os.path.join('final', 'nightly'), ignore_errors=True)
     shutil.copytree('nightly', os.path.join('final', 'nightly'))
@@ -146,7 +187,9 @@ if __name__ == '__main__':
     os.chdir(os.path.join(this_script_dir, 'merged_homepage', 'scripts'))
     import build_merged  # @UnresolvedImport
     os.chdir(os.path.join(this_script_dir, 'merged_homepage'))
+
     build_merged.LAST_VERSION_TAG = LAST_VERSION_TAG
+    build_merged.CURRENT_DATE = CURRENT_DATE
     build_merged.DoIt()
 
     sys.stdout.write('Finished\n')

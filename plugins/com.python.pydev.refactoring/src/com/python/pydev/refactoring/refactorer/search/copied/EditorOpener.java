@@ -23,9 +23,9 @@ import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.ide.IDE;
 import org.eclipse.ui.part.FileEditorInput;
 import org.eclipse.ui.texteditor.ITextEditor;
+import org.python.pydev.shared_ui.search.SearchMessages;
 
 import com.python.pydev.PydevPlugin;
-import com.python.pydev.ui.search.SearchMessages;
 
 public class EditorOpener {
 
@@ -124,8 +124,8 @@ public class EditorOpener {
         try {
             marker = file.createMarker(NewSearchUI.SEARCH_MARKER);
             HashMap attributes = new HashMap(4);
-            attributes.put(IMarker.CHAR_START, new Integer(offset));
-            attributes.put(IMarker.CHAR_END, new Integer(offset + length));
+            attributes.put(IMarker.CHAR_START, offset);
+            attributes.put(IMarker.CHAR_END, offset + length);
             marker.setAttributes(attributes);
             IDE.gotoMarker(editor, marker);
         } catch (CoreException e) {

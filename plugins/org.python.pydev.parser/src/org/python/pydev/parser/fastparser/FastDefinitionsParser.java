@@ -6,12 +6,14 @@
  */
 package org.python.pydev.parser.fastparser;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.python.pydev.core.ObjectsInternPool;
 import org.python.pydev.core.ObjectsInternPool.ObjectsPoolMap;
 import org.python.pydev.core.docutils.ParsingUtils;
+import org.python.pydev.core.docutils.PySelection;
 import org.python.pydev.core.docutils.SyntaxErrorException;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.parser.jython.SimpleNode;
@@ -28,6 +30,7 @@ import org.python.pydev.shared_core.callbacks.ICallback;
 import org.python.pydev.shared_core.string.FastStringBuffer;
 import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_core.structure.FastStack;
+import org.python.pydev.shared_core.structure.LowMemoryArrayList;
 import org.python.pydev.shared_core.structure.Tuple;
 
 /**
@@ -41,9 +44,64 @@ import org.python.pydev.shared_core.structure.Tuple;
  * classes, functions, class attributes, instance attributes -- basically the tokens that provide a
  * definition that can be 'globally' accessed.
  *
+ * This should work the following way:
+ *
+ * We should have a single stack where all the statements we find are added. When we find a column
+ * which indicates a new statement, we close any statement with a column > than the new statement
+ * and in the process add those statements to the parent statement as needed (or in some cases,
+ * discard it -- i.e.: method inside method is discarded, but attribute inside method is not).
+ *
+ * This means that we usually do not put the final element there, but a wrapper which has a body
+ * where we can add elements (i.e.: array list), which is converted to a body when its own scope ends.
+ *
  * @author Fabio
  */
 public final class FastDefinitionsParser {
+
+    private static class NodeEntry {
+
+        public final stmtType node;
+        public final List<SimpleNode> body = new LowMemoryArrayList<>();
+
+        public final int logicalColumn;
+
+        /**
+         * leadingTabs: how many cols in node.beginColumn were found as tabs.
+         */
+        public NodeEntry(stmtType stmt, int leadingTabs) {
+            this.node = stmt;
+            this.logicalColumn = (stmt.beginColumn - leadingTabs) + (leadingTabs * 8);
+        }
+
+        /**
+         * Assign the body if we have something.
+         */
+        public void onEndScope() {
+            if (body.size() > 0) {
+                stmtType[] array = body.toArray(new stmtType[body.size()]);
+                if (this.node instanceof ClassDef) {
+                    ClassDef classDef = (ClassDef) this.node;
+                    classDef.body = array;
+
+                } else if (this.node instanceof FunctionDef) {
+                    FunctionDef functionDef = (FunctionDef) this.node;
+                    functionDef.body = array;
+
+                } else {
+                    String msg = "Assign statement is not expected to have body!";
+                    if (throwErrorOnWarnings) {
+                        throw new RuntimeException(msg);
+
+                    } else {
+                        Log.log(msg);
+
+                    }
+                    return;
+                }
+            }
+        }
+
+    }
 
     /**
      * Set and kept in the constructor
@@ -53,6 +111,11 @@ public final class FastDefinitionsParser {
      * The chars we should iterate through.
      */
     final private char[] cs;
+
+    /**
+     * May be null (just used for reporting errors).
+     */
+    final private File file;
 
     /**
      * The length of the buffer we're iterating.
@@ -68,6 +131,11 @@ public final class FastDefinitionsParser {
      * The current column
      */
     private int col;
+
+    /**
+     * How many leading tabs we've found.
+     */
+    private int leadingTabsInLine;
 
     /**
      * The current row
@@ -88,25 +156,24 @@ public final class FastDefinitionsParser {
      * Holds a stack of classes so that we create a new one in each new scope to be filled and when the scope is ended,
      * it should have its body filled with the stackBody contents related to each
      */
-    private final FastStack<SimpleNode> stack = new FastStack<SimpleNode>(20);
-
-    /**
-     * For each item in the stack, there's a stackBody that has the contents to be added later to that class.
-     */
-    private final FastStack<List<stmtType>> stackBody = new FastStack<List<stmtType>>(20);
+    private final FastStack<NodeEntry> stack = new FastStack<NodeEntry>(10);
 
     /**
      * Buffer with the contents of a line.
      */
     private final FastStringBuffer lineBuffer = new FastStringBuffer();
 
+    private final String moduleName;
+
+    public static boolean throwErrorOnWarnings = false;
+
     /**
      * Should we debug?
      */
     private final static boolean DEBUG = false;
 
-    private FastDefinitionsParser(char[] cs) {
-        this(cs, cs.length);
+    private FastDefinitionsParser(char[] cs, String moduleName, File f) {
+        this(cs, cs.length, moduleName, f);
     }
 
     /**
@@ -115,9 +182,11 @@ public final class FastDefinitionsParser {
      * @param cs array of chars that should be considered.
      * @param len the number of chars to be used (usually cs.length).
      */
-    private FastDefinitionsParser(char[] cs, int len) {
+    private FastDefinitionsParser(char[] cs, int len, String moduleName, File f) {
         this.cs = cs;
         this.length = len;
+        this.moduleName = moduleName;
+        this.file = f;
     }
 
     /**
@@ -195,7 +264,8 @@ public final class FastDefinitionsParser {
                     break;
 
                 case '=':
-                    if (currIndex < length - 1 && cs[currIndex + 1] != '=') {
+                    if ((currIndex < length - 1 && cs[currIndex + 1] != '=' && currIndex > 0
+                            && cs[currIndex - 1] != '=')) {
                         //should not be ==
                         //other cases such as !=, +=, -= are already treated because they don't constitute valid
                         //chars for an identifier.
@@ -214,48 +284,52 @@ public final class FastDefinitionsParser {
                         updateCountRow(initialIndex, currIndex);
 
                         String equalsLine = lineBuffer.toString().trim();
-                        lineBuffer.clear();
+                        if (!PySelection.startsWithIndentToken(equalsLine)) {
 
-                        final List<String> splitted = StringUtils.split(equalsLine, '=');
-                        final int splittedLen = splitted.size();
-                        ArrayList<exprType> targets = new ArrayList<exprType>(2);
+                            lineBuffer.clear();
 
-                        for (int j = 0; j < splittedLen - 1 || (splittedLen == 1 && j == 0); j++) { //we don't want to get the last one.
-                            String lineContents = splitted.get(j).trim();
-                            if (lineContents.length() == 0) {
-                                continue;
-                            }
-                            boolean add = true;
-                            for (int i = 0; i < lineContents.length(); i++) {
-                                char lineC = lineContents.charAt(i);
-                                //can only be made of valid java chars (no spaces or similar things)
-                                if (lineC != '.' && !Character.isJavaIdentifierPart(lineC)) {
-                                    add = false;
-                                    break;
+                            final List<String> splitted = StringUtils.split(equalsLine, '=');
+                            final int splittedLen = splitted.size();
+                            ArrayList<exprType> targets = new ArrayList<exprType>(2);
+
+                            for (int j = 0; j < splittedLen - 1 || (splittedLen == 1 && j == 0); j++) { //we don't want to get the last one.
+                                String lineContents = splitted.get(j).trim();
+                                if (lineContents.length() == 0) {
+                                    continue;
                                 }
-                            }
-                            if (add) {
-                                //only add if it was something valid
-                                if (lineContents.indexOf('.') != -1) {
-                                    List<String> dotSplit = StringUtils.dotSplit(lineContents);
-                                    if (dotSplit.size() == 2 && dotSplit.get(0).equals("self")) {
-                                        Attribute attribute = new Attribute(new Name("self", Name.Load, false),
-                                                new NameTok(dotSplit.get(1), NameTok.Attrib), Attribute.Load);
-                                        targets.add(attribute);
+                                boolean add = true;
+                                int lineContentsLen = lineContents.length();
+                                for (int i = 0; i < lineContentsLen; i++) {
+                                    char lineC = lineContents.charAt(i);
+                                    //can only be made of valid java chars (no spaces or similar things)
+                                    if (lineC != '.' && !Character.isJavaIdentifierPart(lineC)) {
+                                        add = false;
+                                        break;
                                     }
+                                }
+                                if (add) {
+                                    //only add if it was something valid
+                                    if (lineContents.indexOf('.') != -1) {
+                                        List<String> dotSplit = StringUtils.dotSplit(lineContents);
+                                        if (dotSplit.size() == 2 && dotSplit.get(0).equals("self")) {
+                                            Attribute attribute = new Attribute(new Name("self", Name.Load, false),
+                                                    new NameTok(dotSplit.get(1), NameTok.Attrib), Attribute.Load);
+                                            targets.add(attribute);
+                                        }
 
-                                } else {
-                                    Name name = new Name(lineContents, Name.Store, false);
-                                    targets.add(name);
+                                    } else {
+                                        Name name = new Name(lineContents, Name.Store, false);
+                                        targets.add(name);
+                                    }
                                 }
                             }
-                        }
 
-                        if (targets.size() > 0) {
-                            Assign assign = new Assign(targets.toArray(new exprType[targets.size()]), null);
-                            assign.beginColumn = this.firstCharCol;
-                            assign.beginLine = this.row;
-                            addToPertinentScope(assign);
+                            if (targets.size() > 0) {
+                                Assign assign = new Assign(targets.toArray(new exprType[targets.size()]), null);
+                                assign.beginColumn = this.firstCharCol;
+                                assign.beginLine = this.row;
+                                stack.push(new NodeEntry(assign, leadingTabsInLine));
+                            }
                         }
                     }
                     //No default
@@ -263,7 +337,7 @@ public final class FastDefinitionsParser {
             lineBuffer.append(c);
         }
 
-        endScopesInStack();
+        endScopesInStack(0);
     }
 
     public void updateCountRow(int initialIndex, int currIndex) {
@@ -298,6 +372,7 @@ public final class FastDefinitionsParser {
         }
 
         col = 1;
+        leadingTabsInLine = 0;
         row++;
         if (DEBUG) {
             System.out.println("Handling new line:" + row);
@@ -309,9 +384,17 @@ public final class FastDefinitionsParser {
         while (currIndex < length - 1 && Character.isWhitespace(c) && c != '\r' && c != '\n') {
             currIndex++;
             col++;
+            if (c == '\t') {
+                leadingTabsInLine++;
+            }
             c = cs[currIndex];
         }
 
+        if (!Character.isWhitespace(c) && c != '#') {
+            endScopesInStack((col - leadingTabsInLine) + (leadingTabsInLine * 8));
+        }
+
+        int funcDefIndex = -1;
         if (c == 'c' && matchClass()) {
             int startClassCol = col;
             currIndex += 6;
@@ -320,17 +403,21 @@ public final class FastDefinitionsParser {
             if (this.length <= currIndex) {
                 return;
             }
-            startClass(getNextIdentifier(c), row, startClassCol);
+            startClass(getNextIdentifier(c), row, startClassCol, leadingTabsInLine);
 
-        } else if (c == 'd' && matchFunction()) {
+        } else if ((c == 'd' && (funcDefIndex = matchFunction()) != -1) ||
+                (c == 'a' && (funcDefIndex = matchAsyncFunction()) != -1)) {
+            if (DEBUG) {
+                System.out.println("Found method");
+            }
             int startMethodCol = col;
-            currIndex += 4;
-            col += 4;
+            currIndex = funcDefIndex + 1;
+            col = funcDefIndex + 1;
 
             if (this.length <= currIndex) {
                 return;
             }
-            startMethod(getNextIdentifier(c), row, startMethodCol);
+            startMethod(getNextIdentifier(c), row, startMethodCol, leadingTabsInLine);
         }
         firstCharCol = col;
         if (currIndex < length) {
@@ -366,6 +453,7 @@ public final class FastDefinitionsParser {
                         if (c == ':') {
                             tempIndex++;
 
+                            tempIndex = skipWhitespaces(tempIndex);
                             if (tempIndex < length) {
                                 c = cs[tempIndex];
                                 if (c != '\r' && c != '\n') {
@@ -443,7 +531,8 @@ public final class FastDefinitionsParser {
             }
             c = this.cs[currIndex];
         }
-        return ObjectsInternPool.internLocal(interned, new String(this.cs, currClassNameCol, currIndex - currClassNameCol));
+        return ObjectsInternPool.internLocal(interned,
+                new String(this.cs, currClassNameCol, currIndex - currClassNameCol));
     }
 
     private final ObjectsPoolMap interned = new ObjectsPoolMap();
@@ -453,19 +542,13 @@ public final class FastDefinitionsParser {
      * @param startMethodRow the row where the scope should start
      * @param startMethodCol the column where the scope should start
      */
-    private void startMethod(String name, int startMethodRow, int startMethodCol) {
-        if (startMethodCol == 1) {
-            endScopesInStack();
-        }
+    private void startMethod(String name, int startMethodRow, int startMethodCol, int leadingTabs) {
         NameTok nameTok = new NameTok(name, NameTok.ClassName);
-        FunctionDef functionDef = new FunctionDef(nameTok, null, null, null, null);
+        FunctionDef functionDef = new FunctionDef(nameTok, null, null, null, null, false);
         functionDef.beginLine = startMethodRow;
         functionDef.beginColumn = startMethodCol;
 
-        addToPertinentScope(functionDef);
-        if (stack.size() == 0) {
-            stack.push(functionDef);
-        }
+        stack.push(new NodeEntry(functionDef, leadingTabs));
     }
 
     /**
@@ -473,131 +556,58 @@ public final class FastDefinitionsParser {
      * @param startClassRow the row where the scope should start
      * @param startClassCol the column where the scope should start
      */
-    private void startClass(String name, int startClassRow, int startClassCol) {
-        if (startClassCol == 1) {
-            endScopesInStack();
-        }
+    private void startClass(String name, int startClassRow, int startClassCol, int leadingTabs) {
         NameTok nameTok = new NameTok(name, NameTok.ClassName);
         ClassDef classDef = new ClassDef(nameTok, null, null, null, null, null, null);
 
         classDef.beginLine = startClassRow;
         classDef.beginColumn = startClassCol;
 
-        stack.push(classDef);
-        stackBody.push(new ArrayList<stmtType>(10));
+        stack.push(new NodeEntry(classDef, leadingTabs));
     }
 
-    private void endScopesInStack() {
+    private void endScopesInStack(int currLogicalCol) {
         while (stack.size() > 0) {
-            endScope();
-        }
-    }
+            NodeEntry peek = stack.peek();
+            if (peek.logicalColumn < currLogicalCol) {
+                break;
+            }
+            NodeEntry currNode = stack.pop();
+            currNode.onEndScope();
 
-    /**
-     * Finish the current scope in the stack.
-     *
-     * May close many scopes in a single call depending on where the class should be added to.
-     */
-    private void endScope() {
-        SimpleNode pop = stack.pop();
-        if (!(pop instanceof ClassDef)) {
-            return;
-        }
-        ClassDef def = (ClassDef) pop;
-        List<stmtType> body = stackBody.pop();
-        def.body = body.toArray(new stmtType[body.size()]);
-        addToPertinentScope(def);
-    }
-
-    /**
-     * This is the definition to be added to a given scope.
-     *
-     * It'll find a correct scope based on the column it has to be added to.
-     *
-     * @param newStmt the definition to be added
-     */
-    private void addToPertinentScope(stmtType newStmt) {
-        //see where it should be added (global or class scope)
-        while (stack.size() > 0) {
-            SimpleNode parent = stack.peek();
-            if (parent.beginColumn < newStmt.beginColumn) {
-                if (parent instanceof FunctionDef) {
-                    return;
-                }
-                List<stmtType> peek = stackBody.peek();
-
-                if (newStmt instanceof FunctionDef) {
-                    int size = peek.size();
-                    if (size > 0) {
-                        stmtType existing = peek.get(size - 1);
-                        if (existing.beginColumn < newStmt.beginColumn) {
-                            //we don't want to add a method inside a method at this point.
-                            //all the items added should have the same column.
-                            return;
-                        }
-                    }
-                } else if (newStmt instanceof Assign) {
-                    Assign assign = (Assign) newStmt;
-                    exprType target = assign.targets[0];
-
-                    //an assign could be in a method or in a class depending on where we're right now...
-                    int size = peek.size();
-                    if (size > 0) {
-                        stmtType existing = peek.get(size - 1);
-                        if (existing.beginColumn < assign.beginColumn) {
-                            //add the assign to the correct place
-                            if (existing instanceof FunctionDef) {
-                                FunctionDef functionDef = (FunctionDef) existing;
-
-                                if (target instanceof Attribute) {
-                                    addAssignToFunctionDef(assign, functionDef);
+            if (stack.size() > 0) {
+                NodeEntry parentNode = stack.peek();
+                if (parentNode.node instanceof FunctionDef) {
+                    // Inside a function def, only deal with attributes (if func inside class)
+                    if (currNode.node instanceof Assign) {
+                        if (stack.size() > 1) {
+                            Assign assign = (Assign) currNode.node;
+                            exprType target = assign.targets[0];
+                            if (target instanceof Attribute) {
+                                NodeEntry parentParents = stack.peek(1);
+                                if (parentParents.node instanceof ClassDef) {
+                                    parentNode.body.add(currNode.node);
                                 }
-                                return;
                             }
                         }
                     }
+                } else if (parentNode.node instanceof ClassDef) {
+                    parentNode.body.add(currNode.node);
+                } else {
+                    String msg = "Did not expect to find item below node: " + parentNode.node + " (module: "
+                            + this.moduleName + " file: " + this.file + " row: " + row
+                            + ").";
+                    if (throwErrorOnWarnings) {
+                        throw new RuntimeException(msg);
 
-                    //if it still hasn't returned and it's a name, add it to the global scope.
-                    if (target instanceof Name) {
+                    } else {
+                        Log.log(msg);
 
                     }
                 }
-                peek.add(newStmt);
-                return;
             } else {
-                endScope();
+                body.add(currNode.node);
             }
-        }
-        //if it still hasn't returned, add it to the global
-        this.body.add(newStmt);
-    }
-
-    /**
-     * Adds an assign statement to the given function definition.
-     *
-     * @param assign the assign to be added
-     * @param functionDef the function definition where it should be added
-     */
-    private void addAssignToFunctionDef(Assign assign, FunctionDef functionDef) {
-        //if it's an attribute at this point, it'll always start with self!
-        if (functionDef.body == null) {
-            if (functionDef.specialsAfter == null) {
-                functionDef.specialsAfter = new ArrayList<Object>(3);
-            }
-            functionDef.body = new stmtType[10];
-            functionDef.body[0] = assign;
-            functionDef.specialsAfter.add(1); //real len
-        } else {
-            //already exists... let's add it... as it's an array, we may have to reallocate it
-            Integer currLen = (Integer) functionDef.specialsAfter.get(0);
-            currLen += 1;
-            functionDef.specialsAfter.set(0, currLen);
-            if (functionDef.body.length < currLen) {
-                stmtType[] newBody = new stmtType[functionDef.body.length * 2];
-                System.arraycopy(functionDef.body, 0, newBody, 0, functionDef.body.length);
-                functionDef.body = newBody;
-            }
-            functionDef.body[currLen - 1] = assign;
         }
     }
 
@@ -615,12 +625,41 @@ public final class FastDefinitionsParser {
     /**
      * @return true if we have a match for 'def' in the current index (the 'd' must be already matched at this point)
      */
-    private boolean matchFunction() {
+    private int matchFunction() {
         if (currIndex + 3 >= this.length) {
-            return false;
+            return -1;
         }
-        return (this.cs[currIndex + 1] == 'e' && this.cs[currIndex + 2] == 'f' && Character
-                .isWhitespace(this.cs[currIndex + 3]));
+        if (this.cs[currIndex + 1] == 'e' && this.cs[currIndex + 2] == 'f' && Character
+                .isWhitespace(this.cs[currIndex + 3])) {
+            return currIndex + 3;
+        }
+        return -1;
+    }
+
+    /**
+     * @return true if we have a match for 'async def' in the current index (the 'a' must be already matched at this point)
+     */
+    private int matchAsyncFunction() {
+
+        if (currIndex + 5 >= this.length) {
+            return -1;
+        }
+        if (this.cs[currIndex + 1] == 's' && this.cs[currIndex + 2] == 'y'
+                && this.cs[currIndex + 3] == 'n' && this.cs[currIndex + 4] == 'c' && Character
+                        .isWhitespace(this.cs[currIndex + 5])) {
+            int i = currIndex + 6;
+            while (i < this.length && Character.isWhitespace(this.cs[i])) {
+                i += 1;
+            }
+            if (i + 3 >= this.length) {
+                return -1;
+            }
+            if (this.cs[i] == 'd' && this.cs[i + 1] == 'e' && this.cs[i + 2] == 'f' && Character
+                    .isWhitespace(this.cs[i + 3])) {
+                return i + 3;
+            }
+        }
+        return -1;
     }
 
     /**
@@ -633,8 +672,8 @@ public final class FastDefinitionsParser {
      * @param s the string to be parsed
      * @return a Module node with the structure found
      */
-    public static SimpleNode parse(String s, String moduleName) {
-        return parse(s.toCharArray(), moduleName);
+    public static SimpleNode parse(String s, String moduleName, File f) {
+        return parse(s.toCharArray(), moduleName, f);
     }
 
     /**
@@ -642,19 +681,20 @@ public final class FastDefinitionsParser {
      * @param cs the char array to be parsed
      * @return a Module node with the structure found
      */
-    public static SimpleNode parse(char[] cs, String moduleName) {
-        return parse(cs, moduleName, cs.length);
+    public static SimpleNode parse(char[] cs, String moduleName, File f) {
+        return parse(cs, moduleName, cs.length, f);
     }
 
-    public static SimpleNode parse(char[] cs, String moduleName, int len) {
-        FastDefinitionsParser parser = new FastDefinitionsParser(cs, len);
+    public static SimpleNode parse(char[] cs, String moduleName, int len, File f) {
+        FastDefinitionsParser parser = new FastDefinitionsParser(cs, len, moduleName, f);
         try {
             parser.extractBody();
         } catch (SyntaxErrorException e) {
             throw new RuntimeException(e);
         } catch (StackOverflowError e) {
             RuntimeException runtimeException = new RuntimeException(e);
-            Log.log("Error parsing: " + moduleName + "\nContents:\n" + new String(cs, 0, len > 1000 ? 1000 : len),
+            Log.log("Error parsing: " + moduleName + " - " + f + "\nContents:\n"
+                    + new String(cs, 0, len > 1000 ? 1000 : len),
                     runtimeException); //report at most 1000 chars...
             throw runtimeException;
         }
@@ -670,7 +710,7 @@ public final class FastDefinitionsParser {
     }
 
     public static SimpleNode parse(String s) {
-        return parse(s.toCharArray(), null);
+        return parse(s.toCharArray(), null, null);
     }
 
 }

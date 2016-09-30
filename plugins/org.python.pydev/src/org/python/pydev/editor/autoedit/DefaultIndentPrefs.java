@@ -17,6 +17,7 @@ import org.python.pydev.core.ITabChangedListener;
 import org.python.pydev.editor.preferences.PyScopedPreferences;
 import org.python.pydev.editor.preferences.PydevEditorPrefs;
 import org.python.pydev.editor.preferences.PydevTypingPrefs;
+import org.python.pydev.plugin.preferences.AbstractPydevPrefs;
 import org.python.pydev.shared_core.SharedCorePlugin;
 import org.python.pydev.shared_core.callbacks.ListenerList;
 
@@ -80,6 +81,7 @@ public class DefaultIndentPrefs extends AbstractIndentPrefs {
         regenerateIndentString();
     }
 
+    @Override
     public boolean getUseSpaces(boolean considerForceTabs) {
         boolean boolFromPreferences = getBoolFromPreferences(PydevEditorPrefs.SUBSTITUTE_TABS);
         if (lastUseSpaces != boolFromPreferences) {
@@ -98,6 +100,7 @@ public class DefaultIndentPrefs extends AbstractIndentPrefs {
         regenerateIndentString(); //When forcing tabs, we must update the cache.
     }
 
+    @Override
     public int getTabWidth() {
         if (lastTabWidth != getIntFromPreferences(PydevEditorPrefs.TAB_WIDTH, 1)) {
             lastTabWidth = getIntFromPreferences(PydevEditorPrefs.TAB_WIDTH, 1);
@@ -118,6 +121,7 @@ public class DefaultIndentPrefs extends AbstractIndentPrefs {
         return curr;
     }
 
+    @Override
     public void regenerateIndentString() {
         indentString = super.getIndentationString();
         if (lastIndentString == null || !lastIndentString.equals(indentString)) {
@@ -143,52 +147,74 @@ public class DefaultIndentPrefs extends AbstractIndentPrefs {
     /**
      * @see org.python.pydev.core.IIndentPrefs#getAutoParentesis()
      */
+    @Override
     public boolean getAutoParentesis() {
         return getBoolFromPreferences(PydevTypingPrefs.AUTO_PAR);
     }
 
+    @Override
     public boolean getAutoLink() {
         return getBoolFromPreferences(PydevTypingPrefs.AUTO_LINK);
     }
 
+    @Override
     public boolean getIndentToParLevel() {
         return getBoolFromPreferences(PydevTypingPrefs.AUTO_INDENT_TO_PAR_LEVEL);
     }
 
+    @Override
     public boolean getAutoColon() {
         return getBoolFromPreferences(PydevTypingPrefs.AUTO_COLON);
     }
 
+    @Override
     public boolean getAutoBraces() {
         return getBoolFromPreferences(PydevTypingPrefs.AUTO_BRACES);
     }
 
+    @Override
     public boolean getAutoWriteImport() {
         return getBoolFromPreferences(PydevTypingPrefs.AUTO_WRITE_IMPORT_STR);
     }
 
+    @Override
     public boolean getSmartIndentPar() {
         return getBoolFromPreferences(PydevTypingPrefs.SMART_INDENT_PAR);
     }
 
+    @Override
+    public boolean getIndentToParAsPep8() {
+        return getBoolFromPreferences(PydevTypingPrefs.INDENT_AFTER_PAR_AS_PEP8);
+    }
+
+    @Override
     public boolean getAutoAddSelf() {
         return getBoolFromPreferences(PydevTypingPrefs.AUTO_ADD_SELF);
     }
 
+    @Override
     public boolean getAutoDedentElse() {
         return getBoolFromPreferences(PydevTypingPrefs.AUTO_DEDENT_ELSE);
     }
 
+    @Override
     public int getIndentAfterParWidth() {
         return getIntFromPreferences(PydevTypingPrefs.AUTO_INDENT_AFTER_PAR_WIDTH, 1);
     }
 
+    @Override
     public boolean getSmartLineMove() {
         return getBoolFromPreferences(PydevTypingPrefs.SMART_LINE_MOVE);
     }
 
+    @Override
     public boolean getAutoLiterals() {
         return getBoolFromPreferences(PydevTypingPrefs.AUTO_LITERALS);
+    }
+
+    @Override
+    public boolean getTabStopInComment() {
+        return getBoolFromPreferences(AbstractPydevPrefs.TAB_STOP_IN_COMMENT);
     }
 
     private boolean getBoolFromPreferences(String pref) {

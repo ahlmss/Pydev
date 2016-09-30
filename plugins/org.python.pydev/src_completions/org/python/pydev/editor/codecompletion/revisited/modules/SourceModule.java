@@ -32,6 +32,7 @@ import org.python.pydev.core.IModule;
 import org.python.pydev.core.IPythonNature;
 import org.python.pydev.core.ISourceModule;
 import org.python.pydev.core.IToken;
+import org.python.pydev.core.ITypeInfo;
 import org.python.pydev.core.ModulesKey;
 import org.python.pydev.core.ModulesKeyForZip;
 import org.python.pydev.core.log.Log;
@@ -63,6 +64,7 @@ import org.python.pydev.parser.visitors.NodeUtils;
 import org.python.pydev.shared_core.cache.Cache;
 import org.python.pydev.shared_core.cache.LRUCache;
 import org.python.pydev.shared_core.callbacks.CallbackWithListeners;
+import org.python.pydev.shared_core.io.FileUtils;
 import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_core.structure.FastStack;
 import org.python.pydev.shared_core.structure.Tuple;
@@ -173,6 +175,7 @@ public class SourceModule extends AbstractModule implements ISourceModule {
 
     private Boolean hasFutureImportAbsoluteImportDeclared = null;
 
+    @Override
     public boolean hasFutureImportAbsoluteImportDeclared() {
         if (hasFutureImportAbsoluteImportDeclared == null) {
             hasFutureImportAbsoluteImportDeclared = false;
@@ -386,7 +389,7 @@ public class SourceModule extends AbstractModule implements ISourceModule {
         this.file = f;
         this.parseError = parseError;
         if (f != null) {
-            this.lastModified = f.lastModified();
+            this.lastModified = FileUtils.lastModified(f);
         }
     }
 
@@ -803,7 +806,7 @@ public class SourceModule extends AbstractModule implements ISourceModule {
                     //Well, it seems it's a parameter, so, let's check if we can get the parameter definition to then resolve
                     //the token.
                     ILocalScope scope = scopeVisitor.scope;
-                    List<String> possibleClassesForActivationToken = scope
+                    List<ITypeInfo> possibleClassesForActivationToken = scope
                             .getPossibleClassesForActivationToken(tokenRep);
 
                     //Above we have: actTok.startsWith(tokenRep + ".")
@@ -812,7 +815,7 @@ public class SourceModule extends AbstractModule implements ISourceModule {
                     String remainder = actTok.substring(tokenRepLen + 1);
 
                     if (possibleClassesForActivationToken.size() > 0) {
-                        for (String possibleClass : possibleClassesForActivationToken) {
+                        for (ITypeInfo possibleClass : possibleClassesForActivationToken) {
                             AbstractASTManager astManager = (AbstractASTManager) nature.getAstManager();
                             if (astManager != null) {
                                 IToken[] completionsFromTypeRepresentation = astManager
@@ -1096,7 +1099,9 @@ public class SourceModule extends AbstractModule implements ISourceModule {
                         IDefinition[] definitions = module.findDefinition(state.getCopyWithActTok(finalRep), -1, -1,
                                 nature);
                         if (definitions.length > 0) {
-                            return (Definition) definitions[0];
+                            Definition definition = (Definition) definitions[0];
+                            definition.setGeneratorType(token.getGeneratorType());
+                            return definition;
                         }
                     } catch (Exception e) {
                         throw new RuntimeException(e);
@@ -1170,9 +1175,10 @@ public class SourceModule extends AbstractModule implements ISourceModule {
         if (this.file == null && TESTING) {
             return true; //when testing we can have a source module without a file
         }
-        return this.file.lastModified() == this.lastModified;
+        return FileUtils.lastModified(this.file) == this.lastModified;
     }
 
+    @Override
     public SimpleNode getAst() {
         return ast;
     }
@@ -1306,6 +1312,7 @@ public class SourceModule extends AbstractModule implements ISourceModule {
                                             File folder = file.getParentFile();
                                             File[] validBootsrappedDlls = folder.listFiles(new FilenameFilter() {
 
+                                                @Override
                                                 public boolean accept(File dir, String name) {
                                                     int i = name.lastIndexOf('.');
                                                     if (i > 0) {

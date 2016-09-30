@@ -76,6 +76,9 @@ public abstract class AbstractPydevPrefs extends PreferencePage implements IWork
     public static final String GUESS_TAB_SUBSTITUTION = "GUESS_TAB_SUBSTITUTION";
     public static final boolean DEFAULT_GUESS_TAB_SUBSTITUTION = true;
 
+    public static final String TAB_STOP_IN_COMMENT = "TAB_STOP_IN_COMMENT";
+    public static final boolean DEFAULT_TAB_STOP_IN_COMMENT = true;
+
     public static final String USE_VERTICAL_INDENT_GUIDE = "USE_VERTICAL_INDENT_GUIDE";
     public static final boolean DEFAULT_USE_VERTICAL_INDENT_GUIDE = true;
 
@@ -234,9 +237,11 @@ public abstract class AbstractPydevPrefs extends PreferencePage implements IWork
 
     protected Map<Button, String> fCheckBoxes = new HashMap<Button, String>();
     protected SelectionListener fCheckBoxListener = new SelectionListener() {
+        @Override
         public void widgetDefaultSelected(SelectionEvent e) {
         }
 
+        @Override
         public void widgetSelected(SelectionEvent e) {
             Button button = (Button) e.widget;
             fOverlayStore.setValue(fCheckBoxes.get(button), button.getSelection());
@@ -245,6 +250,7 @@ public abstract class AbstractPydevPrefs extends PreferencePage implements IWork
 
     protected Map<Text, String> fTextFields = new HashMap<Text, String>();
     protected ModifyListener fTextFieldListener = new ModifyListener() {
+        @Override
         public void modifyText(ModifyEvent e) {
             Text text = (Text) e.widget;
             fOverlayStore.setValue(fTextFields.get(text), text.getText());
@@ -253,6 +259,7 @@ public abstract class AbstractPydevPrefs extends PreferencePage implements IWork
 
     protected java.util.List<Text> fNumberFields = new ArrayList<Text>();
     protected ModifyListener fNumberFieldListener = new ModifyListener() {
+        @Override
         public void modifyText(ModifyEvent e) {
             numberFieldChanged((Text) e.widget);
         }
@@ -265,10 +272,12 @@ public abstract class AbstractPydevPrefs extends PreferencePage implements IWork
     protected Button fFontItalicCheckBox;
 
     protected SelectionListener fStyleCheckBoxListener = new SelectionListener() {
+        @Override
         public void widgetDefaultSelected(SelectionEvent e) {
             // do nothing
         }
 
+        @Override
         public void widgetSelected(SelectionEvent e) {
             int i = fAppearanceColorList.getSelectionIndex();
             int style = SWT.NORMAL;
@@ -353,6 +362,7 @@ public abstract class AbstractPydevPrefs extends PreferencePage implements IWork
     /*
      * @see IWorkbenchPreferencePage#init()
      */
+    @Override
     public void init(IWorkbench workbench) {
     }
 
@@ -395,6 +405,7 @@ public abstract class AbstractPydevPrefs extends PreferencePage implements IWork
             }
 
             fAppearanceColorList.getDisplay().asyncExec(new Runnable() {
+                @Override
                 public void run() {
                     if (fAppearanceColorList != null && !fAppearanceColorList.isDisposed()) {
                         fAppearanceColorList.select(0);
@@ -552,17 +563,20 @@ public abstract class AbstractPydevPrefs extends PreferencePage implements IWork
         doCreateDependency(master, masterKey, slave, true);
     }
 
-    private void doCreateDependency(final Button master, String masterKey, final Control slave, final boolean enableIf) {
+    private void doCreateDependency(final Button master, String masterKey, final Control slave,
+            final boolean enableIf) {
         indent(slave);
 
         boolean masterState = fOverlayStore.getBoolean(masterKey);
         slave.setEnabled(masterState == enableIf);
 
         SelectionListener listener = new SelectionListener() {
+            @Override
             public void widgetSelected(SelectionEvent e) {
                 slave.setEnabled(master.getSelection() == enableIf);
             }
 
+            @Override
             public void widgetDefaultSelected(SelectionEvent e) {
             }
         };

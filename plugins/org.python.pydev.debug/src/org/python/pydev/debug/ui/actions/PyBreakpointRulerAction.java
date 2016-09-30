@@ -38,8 +38,8 @@ import org.python.pydev.debug.core.PydevDebugPlugin;
 import org.python.pydev.debug.model.PyBreakpoint;
 import org.python.pydev.debug.model.PyDebugModelPresentation;
 import org.python.pydev.debug.ui.IPyToggleBreakpointsTarget;
-import org.python.pydev.editorinput.PydevFileEditorInput;
 import org.python.pydev.shared_core.io.FileUtils;
+import org.python.pydev.shared_ui.editor_input.EditorInputUtils;
 import org.python.pydev.shared_ui.utils.PyMarkerUtils;
 
 /**
@@ -71,6 +71,7 @@ public class PyBreakpointRulerAction extends AbstractBreakpointRulerAction {
     /**
      * @see IUpdate#update()
      */
+    @Override
     public void update() {
         fMarkers = getMarkersFromCurrentFile(true);
         setText(fMarkers.isEmpty() ? fAddLabel : fRemoveLabel);
@@ -131,18 +132,19 @@ public class PyBreakpointRulerAction extends AbstractBreakpointRulerAction {
             }
 
             map.put(IMarker.MESSAGE, PYDEV_BREAKPOINT);
-            map.put(IMarker.LINE_NUMBER, new Integer(lineNumber));
-            map.put(IBreakpoint.ENABLED, new Boolean(true));
+            map.put(IMarker.LINE_NUMBER, lineNumber);
+            map.put(IBreakpoint.ENABLED, true);
             map.put(IBreakpoint.ID, PyDebugModelPresentation.PY_DEBUG_MODEL_ID);
             map.put(PyBreakpoint.PY_BREAK_TYPE, type);
             if (externalFileEditorInput != null) {
-                File file = PydevFileEditorInput.getFile(externalFileEditorInput);
+                File file = EditorInputUtils.getFile(externalFileEditorInput);
                 if (file != null) {
                     map.put(PyBreakpoint.PY_BREAK_EXTERNAL_PATH_ID, FileUtils.getFileAbsolutePath(file));
                 }
             }
 
             IWorkspaceRunnable runnable = new IWorkspaceRunnable() {
+                @Override
                 public void run(IProgressMonitor monitor) throws CoreException {
                     IMarker marker;
                     if (type.equals(PyBreakpoint.PY_BREAK_TYPE_DJANGO)) {

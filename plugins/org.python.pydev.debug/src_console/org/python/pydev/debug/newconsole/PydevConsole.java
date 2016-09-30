@@ -183,6 +183,7 @@ public class PydevConsole extends ScriptConsole {
         lineTracker.init(new IConsole() {
 
             //IMPLEMENTATIONS FORWARDED TO OUTER CLASS
+            @Override
             public void addLink(IConsoleHyperlink link, int offset, int length) {
                 try {
                     console.addHyperlink(link, offset, length);
@@ -191,6 +192,7 @@ public class PydevConsole extends ScriptConsole {
                 }
             }
 
+            @Override
             public void addLink(IHyperlink link, int offset, int length) {
                 try {
                     console.addHyperlink(link, offset, length);
@@ -199,40 +201,49 @@ public class PydevConsole extends ScriptConsole {
                 }
             }
 
+            @Override
             public void addPatternMatchListener(IPatternMatchListener matchListener) {
                 console.addPatternMatchListener(matchListener);
             }
 
+            @Override
             public IDocument getDocument() {
                 return console.getDocument();
             }
 
+            @Override
             public IRegion getRegion(IConsoleHyperlink link) {
                 return console.getRegion(link);
             }
 
+            @Override
             public IRegion getRegion(IHyperlink link) {
                 return console.getRegion(link);
             }
 
+            @Override
             public void removePatternMatchListener(IPatternMatchListener matchListener) {
                 console.removePatternMatchListener(matchListener);
             }
 
             //IMPLEMENTATIONS THAT AREN'T REALLY AVAILABLE IN THE PYDEV CONSOLE
+            @Override
             public void connect(IStreamsProxy streamsProxy) {
                 /**EMPTY**/
             }
 
+            @Override
             public void connect(IStreamMonitor streamMonitor, String streamIdentifer) {
                 /**EMPTY**/
             }
 
+            @Override
             public IProcess getProcess() {
                 return null;
                 /**EMPTY**/
             }
 
+            @Override
             public IOConsoleOutputStream getStream(String streamIdentifier) {
                 return null;
                 /**EMPTY**/
@@ -248,8 +259,8 @@ public class PydevConsole extends ScriptConsole {
      */
     @Override
     public String getInitialCommands() {
-        String str = PydevDebugPlugin.getDefault().getPreferenceStore().
-                getString(PydevConsoleConstants.INITIAL_INTERPRETER_CMDS);
+        String str = PydevDebugPlugin.getDefault().getPreferenceStore()
+                .getString(PydevConsoleConstants.INITIAL_INTERPRETER_CMDS);
         try {
             // Expand any eclipse variables in the GUI
             IStringVariableManager manager = VariablesPlugin.getDefault().getStringVariableManager();
@@ -338,7 +349,7 @@ public class PydevConsole extends ScriptConsole {
         return new PyAutoIndentStrategy(new IAdaptable() {
 
             @Override
-            public Object getAdapter(Class adapter) {
+            public <T> T getAdapter(Class<T> adapter) {
                 return null;
             }
         });

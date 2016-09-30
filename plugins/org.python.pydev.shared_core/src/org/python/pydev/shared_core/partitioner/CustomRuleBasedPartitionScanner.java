@@ -15,6 +15,7 @@ import org.eclipse.jface.text.rules.IPartitionTokenScanner;
 import org.eclipse.jface.text.rules.IPredicateRule;
 import org.eclipse.jface.text.rules.IRule;
 import org.eclipse.jface.text.rules.IToken;
+import org.python.pydev.shared_core.log.Log;
 
 /**
  * Scanner that exclusively uses predicate rules.
@@ -34,12 +35,11 @@ public class CustomRuleBasedPartitionScanner extends AbstractCustomBufferedRuleB
     /** The offset of the partition inside which to resume. */
     protected int fPartitionOffset;
 
-    private boolean topLevelRuleHasSubRules = false;
-
     /*
      * (non-Javadoc)
-     * @see com.brainwy.liclipse.editor.epl.rules.IDocumentScanner#getDocument()
+     * @see org.brainwy.liclipsetext.shared_core.partitioner.IDocumentScanner#getDocument()
      */
+    @Override
     public IDocument getDocument() {
         return fDocument;
     }
@@ -60,13 +60,6 @@ public class CustomRuleBasedPartitionScanner extends AbstractCustomBufferedRuleB
      */
     public void setPredicateRules(IPredicateRule[] rules) {
         super.setRules(rules);
-        topLevelRuleHasSubRules = false;
-        for (IPredicateRule rule : rules) {
-            if (rule instanceof IRuleWithSubRules) {
-                topLevelRuleHasSubRules = true;
-                break;
-            }
-        }
     }
 
     /*
@@ -84,10 +77,8 @@ public class CustomRuleBasedPartitionScanner extends AbstractCustomBufferedRuleB
      * that match the given content type.
      * </p>
      */
+    @Override
     public void setPartialRange(IDocument document, int offset, int length, String contentType, int partitionOffset) {
-        //        lastToken = null;
-        //        lookAhead = null;
-
         fContentType = contentType;
         fPartitionOffset = partitionOffset;
         if (partitionOffset > -1) {
@@ -95,15 +86,6 @@ public class CustomRuleBasedPartitionScanner extends AbstractCustomBufferedRuleB
             if (delta > 0) {
                 super.setRange(document, partitionOffset, length + delta);
                 fOffset = offset;
-                return;
-            }
-        } else if (topLevelRuleHasSubRules) {
-            //No partitions until now...
-            //When we have complex rules we have to start from the beginning of the document each time in this case.
-            partitionOffset = 0;
-            int delta = offset - partitionOffset;
-            if (delta > 0) {
-                super.setRange(document, partitionOffset, length + delta);
                 return;
             }
         }
@@ -115,22 +97,12 @@ public class CustomRuleBasedPartitionScanner extends AbstractCustomBufferedRuleB
      */
     @Override
     public IToken nextToken() {
-        //        lastToken = null; //reset the last token
-        //
-        //        //Check if we looked ahead and already resolved something.
-        //        if (lookAhead != null) {
-        //            lastToken = lookAhead;
-        //            lookAhead = null;
-        //            return lastToken.token;
-        //        }
-
         if (fContentType == null || fRules == null) {
             //don't try to resume
             return super.nextToken();
         }
 
         // inside a partition
-
         fColumn = UNDEFINED;
         boolean resume = (fPartitionOffset > -1 && fPartitionOffset < fOffset);
         fTokenOffset = resume ? fPartitionOffset : fOffset;
@@ -141,6 +113,10 @@ public class CustomRuleBasedPartitionScanner extends AbstractCustomBufferedRuleB
         for (int i = 0; i < fRules.length; i++) {
             rule = (IPredicateRule) fRules[i];
             token = rule.getSuccessToken();
+            if (token == null) {
+                Log.log("Rule: " + rule + " returned null as getSuccessToken.");
+                continue;
+            }
             if (fContentType.equals(token.getData())) {
                 token = rule.evaluate(this, resume);
                 if (!token.isUndefined()) {

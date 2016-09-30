@@ -16,10 +16,11 @@ import org.eclipse.ui.model.IWorkbenchAdapter;
 
 public class WorkspaceRootStub extends AbstractIWorkspaceRootStub implements IWorkbenchAdapter {
 
+    @SuppressWarnings("unchecked")
     @Override
-    public Object getAdapter(Class adapter) {
+    public <T> T getAdapter(Class<T> adapter) {
         if (adapter == IWorkbenchAdapter.class) {
-            return this;
+            return (T) this;
         }
         throw new RuntimeException("Not implemented for: " + adapter);
     }
@@ -31,18 +32,22 @@ public class WorkspaceRootStub extends AbstractIWorkspaceRootStub implements IWo
         children.add(child);
     }
 
+    @Override
     public Object[] getChildren(Object o) {
         return children.toArray();
     }
 
+    @Override
     public ImageDescriptor getImageDescriptor(Object object) {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public String getLabel(Object o) {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public Object getParent(Object o) {
         throw new RuntimeException("Not implemented");
     }

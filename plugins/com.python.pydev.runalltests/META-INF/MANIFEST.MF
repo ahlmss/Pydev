@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Runalltests2 Plug-in
 Bundle-SymbolicName: com.python.pydev.runalltests
-Bundle-Version: 3.9.3.qualifier
+Bundle-Version: 5.2.0.qualifier
 Bundle-Activator: com.python.pydev.runalltests2.Activator
 Eclipse-BundleShape: dir
 Bundle-Vendor: Aptana
@@ -29,4 +29,4 @@ Require-Bundle: org.junit;bundle-version="4.0.0";resolution:=optional,
  org.python.pydev.shared_ui
 Bundle-ActivationPolicy: lazy
 Bundle-ClassPath: .
-Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Bundle-RequiredExecutionEnvironment: JavaSE-1.8

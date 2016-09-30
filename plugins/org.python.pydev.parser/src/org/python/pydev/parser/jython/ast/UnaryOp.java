@@ -13,6 +13,7 @@ public final class UnaryOp extends exprType implements unaryopType {
         this.operand = operand;
     }
 
+    @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
@@ -21,43 +22,38 @@ public final class UnaryOp extends exprType implements unaryopType {
         return result;
     }
 
+    @Override
     public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
+        if (this == obj) return true;
+        if (obj == null) return false;
+        if (getClass() != obj.getClass()) return false;
         UnaryOp other = (UnaryOp) obj;
-        if (this.op != other.op)
-            return false;
-        if (operand == null) {
-            if (other.operand != null)
-                return false;
-        } else if (!operand.equals(other.operand))
-            return false;
+        if(this.op != other.op) return false;
+        if (operand == null) { if (other.operand != null) return false;}
+        else if (!operand.equals(other.operand)) return false;
         return true;
     }
-
+    @Override
     public UnaryOp createCopy() {
         return createCopy(true);
     }
-
+    @Override
     public UnaryOp createCopy(boolean copyComments) {
-        UnaryOp temp = new UnaryOp(op, operand != null ? (exprType) operand.createCopy(copyComments) : null);
+        UnaryOp temp = new UnaryOp(op,
+        operand!=null?(exprType)operand.createCopy(copyComments):null);
         temp.beginLine = this.beginLine;
         temp.beginColumn = this.beginColumn;
-        if (this.specialsBefore != null && copyComments) {
-            for (Object o : this.specialsBefore) {
-                if (o instanceof commentType) {
+        if(this.specialsBefore != null && copyComments){
+            for(Object o:this.specialsBefore){
+                if(o instanceof commentType){
                     commentType commentType = (commentType) o;
                     temp.getSpecialsBefore().add(commentType.createCopy(copyComments));
                 }
             }
         }
-        if (this.specialsAfter != null && copyComments) {
-            for (Object o : this.specialsAfter) {
-                if (o instanceof commentType) {
+        if(this.specialsAfter != null && copyComments){
+            for(Object o:this.specialsAfter){
+                if(o instanceof commentType){
                     commentType commentType = (commentType) o;
                     temp.getSpecialsAfter().add(commentType.createCopy(copyComments));
                 }
@@ -66,6 +62,7 @@ public final class UnaryOp extends exprType implements unaryopType {
         return temp;
     }
 
+    @Override
     public String toString() {
         StringBuffer sb = new StringBuffer("UnaryOp[");
         sb.append("op=");
@@ -77,10 +74,12 @@ public final class UnaryOp extends exprType implements unaryopType {
         return sb.toString();
     }
 
+    @Override
     public Object accept(VisitorIF visitor) throws Exception {
         return visitor.visitUnaryOp(this);
     }
 
+    @Override
     public void traverse(VisitorIF visitor) throws Exception {
         if (operand != null) {
             operand.accept(visitor);

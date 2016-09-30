@@ -64,10 +64,11 @@ public class PythonpathTreeNode extends TreeNode<LabelAndImage> implements ISort
         this(parent, file, null, false);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
-    public Object getAdapter(Class adapter) {
+    public <T> T getAdapter(Class<T> adapter) {
         if (adapter == URI.class) {
-            return file.toURI();
+            return (T) file.toURI();
         }
         return null;
     }
@@ -141,6 +142,7 @@ public class PythonpathTreeNode extends TreeNode<LabelAndImage> implements ISort
         return (isDir && dirFiles != null && dirFiles.length > 0) || (!isDir && isZipFile());
     }
 
+    @Override
     public int getRank() {
         return isDir ? ISortedElement.RANK_PYTHON_FOLDER : ISortedElement.RANK_PYTHON_FILE;
     }

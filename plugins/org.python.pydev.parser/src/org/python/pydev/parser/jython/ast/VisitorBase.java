@@ -257,6 +257,12 @@ public abstract class VisitorBase implements VisitorIF {
         return ret;
     }
 
+    public Object visitAwait(Await node) throws Exception {
+        Object ret = unhandled_node(node);
+        traverse(node);
+        return ret;
+    }
+
     public Object visitCompare(Compare node) throws Exception {
         Object ret = unhandled_node(node);
         traverse(node);
@@ -360,6 +366,5 @@ public abstract class VisitorBase implements VisitorIF {
     }
 
     abstract protected Object unhandled_node(SimpleNode node) throws Exception;
-
     abstract public void traverse(SimpleNode node) throws Exception;
 }

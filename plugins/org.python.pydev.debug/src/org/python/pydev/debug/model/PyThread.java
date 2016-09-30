@@ -43,7 +43,7 @@ public class PyThread extends PlatformObject implements IThread {
     private final boolean isPydevThread;
 
     /**
-     * A custom frame is one that's added programatically (such as a tasklet).
+     * A custom frame is one that's added programmatically (such as a tasklet).
      */
     public final boolean isCustomFrame;
 
@@ -64,9 +64,15 @@ public class PyThread extends PlatformObject implements IThread {
      */
     public void setSuspended(boolean state, IStackFrame[] stack) {
         isSuspended = state;
-        this.stack = stack;
+        if (stack != null) {
+            // Only save the stack when it's paused (otherwise, it should be null, but we
+            // don't want to reset it because we want to reuse the stack later on so that
+            // the expanded state in the tree is properly kept).
+            this.stack = stack;
+        }
     }
 
+    @Override
     public String getName() throws DebugException {
         return name + " - " + getId();
     }
@@ -79,77 +85,92 @@ public class PyThread extends PlatformObject implements IThread {
         return isPydevThread;
     }
 
+    @Override
     public int getPriority() throws DebugException {
         return 0;
     }
 
+    @Override
     public String getModelIdentifier() {
         return target.getModelIdentifier();
     }
 
+    @Override
     public IDebugTarget getDebugTarget() {
         return target;
     }
 
+    @Override
     public ILaunch getLaunch() {
         return target.getLaunch();
     }
 
+    @Override
     public boolean canTerminate() {
         return !isPydevThread && !isTerminated();
     }
 
+    @Override
     public boolean isTerminated() {
         return target.isTerminated();
     }
 
+    @Override
     public void terminate() throws DebugException {
         target.terminate();
     }
 
+    @Override
     public boolean canResume() {
         return !isPydevThread && isSuspended && !isTerminated() && !isCustomFrame;
     }
 
+    @Override
     public boolean canSuspend() {
         return !isPydevThread && !isSuspended && !isTerminated() && !isCustomFrame;
     }
 
+    @Override
     public boolean isSuspended() {
         return isSuspended;
     }
 
+    @Override
     public void resume() throws DebugException {
         if (!isPydevThread) {
-            stack = null;
             isStepping = false;
             target.postCommand(new ThreadRunCommand(target, id));
         }
     }
 
+    @Override
     public void suspend() throws DebugException {
         if (!isPydevThread) {
-            stack = null;
             target.postCommand(new ThreadSuspendCommand(target, id));
         }
     }
 
+    @Override
     public boolean canStepInto() {
         return canResume();
     }
 
+    @Override
     public boolean canStepOver() {
         return canResume();
     }
 
+    @Override
     public boolean canStepReturn() {
         return canResume();
     }
 
+    @Override
     public boolean isStepping() {
         return isStepping;
     }
 
+    @Override
     public void stepInto() throws DebugException {
         if (!isPydevThread) {
             isStepping = true;
@@ -157,6 +178,7 @@ public class PyThread extends PlatformObject implements IThread {
         }
     }
 
+    @Override
     public void stepOver() throws DebugException {
         if (!isPydevThread) {
             isStepping = true;
@@ -164,6 +186,7 @@ public class PyThread extends PlatformObject implements IThread {
         }
     }
 
+    @Override
     public void stepReturn() throws DebugException {
         if (!isPydevThread) {
             isStepping = true;
@@ -182,6 +205,7 @@ public class PyThread extends PlatformObject implements IThread {
                 funcName));
     }
 
+    @Override
     public IStackFrame[] getStackFrames() throws DebugException {
         if (isSuspended && stack != null) {
             return stack;
@@ -189,10 +213,12 @@ public class PyThread extends PlatformObject implements IThread {
         return new IStackFrame[0];
     }
 
+    @Override
     public boolean hasStackFrames() throws DebugException {
         return (stack != null && stack.length > 0);
     }
 
+    @Override
     public IStackFrame getTopStackFrame() {
         return (stack == null || stack.length == 0) ? null : stack[0];
     }
@@ -203,7 +229,6 @@ public class PyThread extends PlatformObject implements IThread {
             for (int i = 0; i < stack.length; i++) {
 
                 if (id.equals(((PyStackFrame) stack[i]).getId())) {
-
                     return (PyStackFrame) stack[i];
                 }
             }
@@ -211,6 +236,7 @@ public class PyThread extends PlatformObject implements IThread {
         return null;
     }
 
+    @Override
     public IBreakpoint[] getBreakpoints() {
         // should return breakpoint that caused this thread to suspend
         // not implementing this seems to cause no harm
@@ -218,8 +244,9 @@ public class PyThread extends PlatformObject implements IThread {
         return breaks;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
-    public Object getAdapter(Class adapter) {
+    public <T> T getAdapter(Class<T> adapter) {
         AdapterDebug.print(this, adapter);
 
         if (adapter.equals(ILaunch.class) || adapter.equals(IResource.class)) {
@@ -229,10 +256,10 @@ public class PyThread extends PlatformObject implements IThread {
             return null;
 
         } else if (adapter.equals(IDebugTarget.class)) {
-            return target;
+            return (T) target;
 
         } else if (adapter.equals(org.eclipse.debug.ui.actions.IRunToLineTarget.class)) {
-            return this.target.getRunToLineTarget();
+            return (T) this.target.getRunToLineTarget();
 
         } else if (adapter.equals(IPropertySource.class) || adapter.equals(ITaskListResourceAdapter.class)
                 || adapter.equals(org.eclipse.debug.ui.actions.IToggleBreakpointsTarget.class)

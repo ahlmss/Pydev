@@ -16,6 +16,7 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.core.runtime.OperationCanceledException;
 import org.eclipse.core.runtime.SubProgressMonitor;
+import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.ltk.core.refactoring.participants.RenameRefactoring;
 import org.eclipse.ltk.ui.refactoring.RefactoringWizardOpenOperation;
 import org.python.pydev.core.log.Log;
@@ -48,6 +49,7 @@ import com.python.pydev.ui.hierarchy.HierarchyNodeModel;
  */
 public class Refactorer extends AbstractPyRefactoring implements IPyRefactoring2 {
 
+    @Override
     public String getName() {
         return "PyDev Extensions Refactorer";
     }
@@ -59,6 +61,7 @@ public class Refactorer extends AbstractPyRefactoring implements IPyRefactoring2
      * 
      * @see org.python.pydev.editor.refactoring.IPyRefactoring#rename(org.python.pydev.editor.refactoring.RefactoringRequest)
      */
+    @Override
     public String rename(IPyRefactoringRequest request) {
         try {
             List<RefactoringRequest> actualRequests = request.getRequests();
@@ -110,19 +113,24 @@ public class Refactorer extends AbstractPyRefactoring implements IPyRefactoring2
         return null;
     }
 
-    public ItemPointer[] findDefinition(RefactoringRequest request) throws TooManyMatchesException {
+    @Override
+    public ItemPointer[] findDefinition(RefactoringRequest request)
+            throws TooManyMatchesException, BadLocationException {
         return new RefactorerFindDefinition().findDefinition(request);
     }
 
     // --------------------------------------------------------- IPyRefactoring2
+    @Override
     public boolean areAllInSameClassHierarchy(List<AssignDefinition> defs) {
         return new RefactorerFinds(this).areAllInSameClassHierarchy(defs);
     }
 
+    @Override
     public HierarchyNodeModel findClassHierarchy(RefactoringRequest request, boolean findOnlyParents) {
         return new RefactorerFinds(this).findClassHierarchy(request, findOnlyParents);
     }
 
+    @Override
     public Map<Tuple<String, File>, HashSet<ASTEntry>> findAllOccurrences(RefactoringRequest req)
             throws OperationCanceledException, CoreException {
         PyReferenceSearcher pyReferenceSearcher = new PyReferenceSearcher(req);
@@ -139,7 +147,7 @@ public class Refactorer extends AbstractPyRefactoring implements IPyRefactoring2
             try {
                 req.pushMonitor(new SubProgressMonitor(monitor, 10));
                 pyReferenceSearcher.prepareSearch(req);
-            } catch (PyReferenceSearcher.SearchException e) {
+            } catch (PyReferenceSearcher.SearchException | BadLocationException e) {
                 return null;
             } finally {
                 req.popMonitor().done();

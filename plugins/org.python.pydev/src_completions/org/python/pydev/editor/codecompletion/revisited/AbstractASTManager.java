@@ -32,6 +32,7 @@ import org.python.pydev.core.IModule;
 import org.python.pydev.core.IModulesManager;
 import org.python.pydev.core.IPythonNature;
 import org.python.pydev.core.IToken;
+import org.python.pydev.core.ITypeInfo;
 import org.python.pydev.core.MisconfigurationException;
 import org.python.pydev.core.ModulesKey;
 import org.python.pydev.core.TupleN;
@@ -53,7 +54,6 @@ import org.python.pydev.parser.jython.SimpleNode;
 import org.python.pydev.parser.jython.ast.Attribute;
 import org.python.pydev.parser.jython.ast.Call;
 import org.python.pydev.parser.jython.ast.ClassDef;
-import org.python.pydev.parser.jython.ast.Dict;
 import org.python.pydev.parser.jython.ast.For;
 import org.python.pydev.parser.jython.ast.FunctionDef;
 import org.python.pydev.parser.jython.ast.Import;
@@ -77,7 +77,7 @@ import org.python.pydev.shared_core.structure.Tuple3;
 
 public abstract class AbstractASTManager implements ICodeCompletionASTManager {
 
-    private static final IToken[] EMPTY_ITOKEN_ARRAY = new IToken[0];
+    public static final IToken[] EMPTY_ITOKEN_ARRAY = new IToken[0];
 
     private static final boolean DEBUG_CACHE = false;
 
@@ -88,6 +88,7 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
 
     private final Object lock = new Object();
 
+    @Override
     public Object getLock() {
         return lock;
     }
@@ -97,6 +98,7 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
      */
     public volatile IModulesManager modulesManager;
 
+    @Override
     public IModulesManager getModulesManager() {
         return modulesManager;
     }
@@ -108,15 +110,19 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
         getModulesManager().setPythonNature(nature);
     }
 
+    @Override
     public IPythonNature getNature() {
         return getModulesManager().getNature();
     }
 
+    @Override
     public abstract void setProject(IProject project, IPythonNature nature, boolean restoreDeltas);
 
+    @Override
     public abstract void rebuildModule(File file, ICallback0<IDocument> doc, IProject project,
             IProgressMonitor monitor, IPythonNature nature);
 
+    @Override
     public abstract void removeModule(File file, IProject project, IProgressMonitor monitor);
 
     /**
@@ -128,6 +134,7 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
      * @throws CompletionRecursionException
      * @throws MisconfigurationException
      */
+    @Override
     public IToken[] getCompletionsForImport(ImportInfo importInfo, ICompletionRequest r, boolean onlyGetDirectModules)
             throws CompletionRecursionException, MisconfigurationException {
 
@@ -197,7 +204,8 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
         //If we have a relative import, first match with the relative and only try to match the absolute if the relative
         //was not found.
         if (relative != null && relative.equals(absoluteModule) == false) {
-            getAbsoluteImportTokens(relative, set, IToken.TYPE_RELATIVE_IMPORT, false, importInfo, onlyGetDirectModules);
+            getAbsoluteImportTokens(relative, set, IToken.TYPE_RELATIVE_IMPORT, false, importInfo,
+                    onlyGetDirectModules);
             if (importInfo.hasImportSubstring) {
                 getTokensForModule(relative, nature, relative, set);
             }
@@ -401,7 +409,8 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
      * @return
      * @throws MisconfigurationException
      */
-    public static IModule createModule(File file, IDocument doc, IPythonNature nature) throws MisconfigurationException {
+    public static IModule createModule(File file, IDocument doc, IPythonNature nature)
+            throws MisconfigurationException {
         return AbstractModule.createModuleFromDoc(file, doc, nature);
     }
 
@@ -417,6 +426,7 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
     /**
      * @see org.python.pydev.editor.codecompletion.revisited.ICodeCompletionASTManage#getCompletionsForToken(org.eclipse.jface.text.IDocument, org.python.pydev.editor.codecompletion.revisited.CompletionState)
      */
+    @Override
     public IToken[] getCompletionsForToken(IDocument doc, ICompletionState state) {
         IToken[] completionsForModule;
         try {
@@ -446,6 +456,7 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
     /**
      * By default does not look for relative import
      */
+    @Override
     public IModule getModule(String name, IPythonNature nature, boolean dontSearchInit) {
         return modulesManager.getModule(name, nature, dontSearchInit, false);
     }
@@ -458,6 +469,7 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
      * not check in other places... only in the module)
      * @return the module represented by this name
      */
+    @Override
     public IModule getModule(String name, IPythonNature nature, boolean dontSearchInit, boolean lookingForRelative) {
         if (lookingForRelative) {
             return modulesManager.getRelativeModule(name, nature);
@@ -505,7 +517,9 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
      * @throws CompletionRecursionException
      * @see org.python.pydev.editor.codecompletion.revisited.ICodeCompletionASTManage#getCompletionsForModule(org.python.pydev.editor.codecompletion.revisited.modules.AbstractModule, org.python.pydev.editor.codecompletion.revisited.CompletionState)
      */
-    public IToken[] getCompletionsForModule(IModule module, ICompletionState state) throws CompletionRecursionException {
+    @Override
+    public IToken[] getCompletionsForModule(IModule module, ICompletionState state)
+            throws CompletionRecursionException {
         return getCompletionsForModule(module, state, true);
     }
 
@@ -513,6 +527,7 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
      * @throws CompletionRecursionException
      * @see org.python.pydev.editor.codecompletion.revisited.ICodeCompletionASTManage#getCompletionsForModule(org.python.pydev.editor.codecompletion.revisited.modules.AbstractModule, org.python.pydev.editor.codecompletion.revisited.CompletionState, boolean)
      */
+    @Override
     public IToken[] getCompletionsForModule(IModule module, ICompletionState state, boolean searchSameLevelMods)
             throws CompletionRecursionException {
         return getCompletionsForModule(module, state, true, false);
@@ -521,6 +536,7 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
     /**
      * @see org.python.pydev.editor.codecompletion.revisited.ICodeCompletionASTManage#getCompletionsForModule(org.python.pydev.editor.codecompletion.revisited.modules.AbstractModule, org.python.pydev.editor.codecompletion.revisited.CompletionState, boolean, boolean)
      */
+    @Override
     public IToken[] getCompletionsForModule(IModule module, ICompletionState state, boolean searchSameLevelMods,
             boolean lookForArgumentCompletion) throws CompletionRecursionException {
         return getCompletionsForModule(module, state, searchSameLevelMods, lookForArgumentCompletion, false);
@@ -783,39 +799,11 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
 
                 if (lookForArgumentCompletion && localScope != null) {
 
-                    //now, if we have to look for arguments and search things in the local scope, let's also
-                    //check for assert (isinstance...) in this scope with the given variable.
-                    List<String> lookForClass = localScope.getPossibleClassesForActivationToken(state
-                            .getActivationToken());
-                    if (lookForClass.size() > 0) {
-                        List<String> lst = new ArrayList<>(lookForClass.size());
-                        for (String s : lookForClass) {
-                            lst.add(NodeUtils.getPackedTypeFromDocstring(s));
-                        }
-                        lookForClass = lst;
-                        HashSet<IToken> hashSet = new HashSet<IToken>();
-
-                        getCompletionsForClassInLocalScope(module, state, searchSameLevelMods,
-                                lookForArgumentCompletion, lookForClass, hashSet);
-
-                        if (hashSet.size() > 0) {
-                            return hashSet.toArray(EMPTY_ITOKEN_ARRAY);
-                        } else {
-                            //Give a chance to find it without the scope
-                            //Try to deal with some token that's not imported
-                            IToken[] ret = getCompletionsFromTypeRepresentation(state, lookForClass, module);
-                            if (ret != null && ret.length > 0) {
-                                return ret;
-                            }
-                        }
-                    }
-
-                    //ok, didn't find in assert isinstance... keep going
-                    //if there was no assert for the class, get from extensions / local scope interface
-                    tokens = CompletionParticipantsHelper.getCompletionsForMethodParameter(state, localScope).toArray(
-                            EMPTY_ITOKEN_ARRAY);
-                    if (tokens != null && tokens.length > 0) {
-                        return tokens;
+                    IToken[] ret = getCompletionsFromTokenInLocalScope(module, state, searchSameLevelMods,
+                            lookForArgumentCompletion,
+                            localScope);
+                    if (ret != null && ret.length > 0) {
+                        return ret;
                     }
                 }
 
@@ -830,17 +818,59 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
         return EMPTY_ITOKEN_ARRAY;
     }
 
+    @Override
+    public IToken[] getCompletionsFromTokenInLocalScope(IModule module, ICompletionState state,
+            boolean searchSameLevelMods, boolean lookForArgumentCompletion, ILocalScope localScope)
+            throws CompletionRecursionException {
+        IToken[] tokens;
+        //now, if we have to look for arguments and search things in the local scope, let's also
+        //check for assert (isinstance...) in this scope with the given variable.
+        List<ITypeInfo> lookForClass = localScope.getPossibleClassesForActivationToken(state
+                .getActivationToken());
+        if (lookForClass.size() > 0) {
+            List<ITypeInfo> lst = new ArrayList<>(lookForClass.size());
+            for (ITypeInfo s : lookForClass) {
+                lst.add(s.getPackedType());
+            }
+            lookForClass = lst;
+            HashSet<IToken> hashSet = new HashSet<IToken>();
+
+            getCompletionsForClassInLocalScope(module, state, searchSameLevelMods,
+                    lookForArgumentCompletion, lookForClass, hashSet);
+
+            if (hashSet.size() > 0) {
+                return hashSet.toArray(EMPTY_ITOKEN_ARRAY);
+            } else {
+                //Give a chance to find it without the scope
+                //Try to deal with some token that's not imported
+                IToken[] ret = getCompletionsFromTypeRepresentation(state, lookForClass, module);
+                if (ret != null && ret.length > 0) {
+                    return ret;
+                }
+            }
+        }
+
+        //ok, didn't find in assert isinstance... keep going
+        //if there was no assert for the class, get from extensions / local scope interface
+        tokens = CompletionParticipantsHelper.getCompletionsForMethodParameter(state, localScope).toArray(
+                EMPTY_ITOKEN_ARRAY);
+        if (tokens != null && tokens.length > 0) {
+            return tokens;
+        }
+        return null;
+    }
+
     @SuppressWarnings("unchecked")
-    public IToken[] getCompletionsFromTypeRepresentation(ICompletionState state, List<String> lookForClass,
+    public IToken[] getCompletionsFromTypeRepresentation(ICompletionState state, List<ITypeInfo> lookForClass,
             IModule currentModule)
             throws CompletionRecursionException {
         state.checkMaxTimeForCompletion();
 
         //First check in the current module...
-        for (String classToCheck : lookForClass) {
+        for (ITypeInfo classToCheck : lookForClass) {
             IToken[] completionsForModule = getCompletionsForModule(
                     currentModule,
-                    state.getCopyWithActTok(classToCheck));
+                    state.getCopyWithActTok(classToCheck.getActTok()));
             if (completionsForModule != null
                     && completionsForModule.length > 0) {
                 return completionsForModule;
@@ -850,9 +880,9 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
         List<IPyDevCompletionParticipant> participants = ExtensionHelper
                 .getParticipants(ExtensionHelper.PYDEV_COMPLETION);
 
-        for (String classToCheck : lookForClass) {
+        for (ITypeInfo classToCheck : lookForClass) {
             for (IPyDevCompletionParticipant participant : participants) {
-                ICompletionState copy = state.getCopyWithActTok(classToCheck);
+                ICompletionState copy = state.getCopyWithActTok(classToCheck.getActTok());
                 int oldLookingFor = copy.getLookingFor();
                 copy.setLookingFor(ICompletionState.LOOKING_FOR_ASSIGN);
 
@@ -871,31 +901,34 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
             For for1)
             throws CompletionRecursionException {
         state.checkMaxTimeForCompletion();
-        if (for1.target instanceof org.python.pydev.parser.jython.ast.Tuple) {
-            org.python.pydev.parser.jython.ast.Tuple tuple = (org.python.pydev.parser.jython.ast.Tuple) for1.target;
-            if (tuple.elts != null) {
+        if (for1.target instanceof org.python.pydev.parser.jython.ast.Tuple
+                || for1.target instanceof org.python.pydev.parser.jython.ast.List) {
+            exprType[] eltsTarget = NodeUtils.getEltsFromCompoundObject(for1.target);
+            if (eltsTarget != null) {
                 UnpackInfo unpackPos = new UnpackInfo();
                 unpackPos.addUnpackFor();
-                for (int i = 0; i < tuple.elts.length; i++) {
-                    exprType elt = tuple.elts[i];
+                for (int i = 0; i < eltsTarget.length; i++) {
+                    exprType elt = eltsTarget[i];
                     if (state.getActivationToken().equals(
-                            NodeUtils.getRepresentationString(elt))) {
+                            NodeUtils.getFullRepresentationString(elt))) {
                         unpackPos.addUnpackTuple(i);
                         break;
                     }
                 }
 
-                int unpackTuple = unpackPos.getUnpackTuple();
-                if (unpackTuple >= 0) {
-                    exprType[] elts = getEltsFromCompoundObject(for1.iter);
+                boolean hasUnpackInfo = unpackPos.hasUnpackInfo();
+                if (hasUnpackInfo) {
+                    exprType[] elts = NodeUtils.getEltsFromCompoundObject(for1.iter);
                     if (elts != null) {
-                        if (elts.length == 1
-                                && elts[0] instanceof org.python.pydev.parser.jython.ast.Tuple) {
-                            org.python.pydev.parser.jython.ast.Tuple tuple2 = (org.python.pydev.parser.jython.ast.Tuple) elts[0];
-                            elts = tuple2.elts;
+                        if (elts.length == 1) {
+                            if (elts[0] instanceof org.python.pydev.parser.jython.ast.Tuple
+                                    || elts[0] instanceof org.python.pydev.parser.jython.ast.List) {
+                                elts = NodeUtils.getEltsFromCompoundObject(elts[0]);
+                            }
                         }
-                        if (elts.length > unpackTuple) {
-                            String rep = NodeUtils.getRepresentationString(elts[unpackTuple]);
+                        int unpackTuple = unpackPos.getUnpackTuple(elts.length);
+                        if (unpackTuple >= 0) {
+                            String rep = NodeUtils.getFullRepresentationString(elts[unpackTuple]);
                             if (rep != null) {
                                 ICompletionState copyWithActTok = state.getCopyWithActTok(rep);
                                 if (elts[unpackTuple] instanceof Call) {
@@ -918,11 +951,11 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
             }
 
         } else if (state.getActivationToken().equals(
-                NodeUtils.getRepresentationString(for1.target))) {
+                NodeUtils.getFullRepresentationString(for1.target))) {
             // We're the target of some for loop, so, in fact, we're unpacking some compound object...
             if (for1.iter != null) {
                 IToken[] ret = null;
-                exprType[] elts = getEltsFromCompoundObject(for1.iter);
+                exprType[] elts = NodeUtils.getEltsFromCompoundObject(for1.iter);
                 if (elts != null) {
                     UnpackInfo unpackInfo = new UnpackInfo();
                     unpackInfo.addUnpackFor();
@@ -956,85 +989,93 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
             throws CompletionRecursionException {
         state.checkMaxTimeForCompletion();
 
+        exprType func = null;
         if (for1.iter instanceof Call) {
             Call call = (Call) for1.iter;
-            exprType func = call.func;
-            if (func instanceof Attribute) {
-                Attribute attribute = (Attribute) func;
-                String representationString = NodeUtils
-                        .getRepresentationString(attribute.attr);
-                if (representationString != null) {
-                    exprType value = attribute.value;
-                    if (value != null) {
+            func = call.func;
+        } else if (for1.iter instanceof exprType) {
+            func = for1.iter;
+        }
+        if (func instanceof Attribute) {
+            Attribute attribute = (Attribute) func;
+            String representationString = NodeUtils
+                    .getFullRepresentationString(attribute.attr);
+            if (representationString != null) {
+                exprType value = attribute.value;
+                if (value != null) {
 
-                        int searchDict = -1;
-                        if ("keys".equals(representationString)
-                                || "iterkeys".equals(representationString)) {
-                            searchDict = 0;
-                        }
-                        if ("values".equals(representationString)
-                                || "itervalues".equals(representationString)) {
-                            searchDict = 1;
-                        }
-                        if ("items".equals(representationString)
-                                || "iteritems".equals(representationString)) {
-                            searchDict = 2;
-                        }
-                        if (searchDict >= 0) {
-                            String rep = NodeUtils.getRepresentationString(value);
-                            try {
-                                ArrayList<IDefinition> selected = new ArrayList<IDefinition>();
-                                PyRefactoringFindDefinition.findActualDefinition(null, module,
-                                        rep,
-                                        selected,
-                                        value.beginLine, value.beginLine, state.getNature(),
-                                        state);
-                                for (Iterator<IDefinition> iterator = selected.iterator(); iterator
-                                        .hasNext();) {
-                                    IDefinition iDefinition = iterator.next();
-                                    if (iDefinition instanceof Definition) {
-                                        Definition definition = (Definition) iDefinition;
-                                        if (definition.scope != null) {
-                                            List<String> possibleClassesForActivationToken = definition.scope
-                                                    .getPossibleClassesForActivationToken(rep);
-                                            for (String string : possibleClassesForActivationToken) {
-                                                String unpackedTypeFromDocstring = null;
-                                                if (searchDict == 0) {
-                                                    unpackedTypeFromDocstring = NodeUtils
-                                                            .getUnpackedTypeFromTypeDocstring(string,
-                                                                    new UnpackInfo(true, 0));
-                                                }
-                                                else if (searchDict == 1) {
-                                                    unpackedTypeFromDocstring = NodeUtils
-                                                            .getUnpackedTypeFromTypeDocstring(string,
-                                                                    new UnpackInfo(true, 1));
-                                                }
-                                                else if (searchDict == 2) {
-                                                    unpackedTypeFromDocstring = NodeUtils
-                                                            .getUnpackedTypeFromTypeDocstring(string,
-                                                                    unpackPos);
-                                                }
-                                                if (unpackedTypeFromDocstring.equals(string)) {
-                                                    continue;
-                                                }
+                    int searchDict = -1;
+                    if ("keys".equals(representationString)
+                            || "iterkeys".equals(representationString)) {
+                        searchDict = 0;
+                    }
+                    if ("values".equals(representationString)
+                            || "itervalues".equals(representationString)) {
+                        searchDict = 1;
+                    }
+                    if ("items".equals(representationString)
+                            || "iteritems".equals(representationString)) {
+                        searchDict = 2;
+                    }
+                    if (searchDict >= 0) {
+                        String rep = NodeUtils.getFullRepresentationString(value);
+                        try {
+                            ArrayList<IDefinition> selected = new ArrayList<IDefinition>();
+                            PyRefactoringFindDefinition.findActualDefinition(null, module,
+                                    rep,
+                                    selected,
+                                    value.beginLine, value.beginLine, state.getNature(),
+                                    state);
+                            for (Iterator<IDefinition> iterator = selected.iterator(); iterator
+                                    .hasNext();) {
+                                IDefinition iDefinition = iterator.next();
+                                // Ok, couldn't get possible classes, let's see if the definition is a dict
+                                if (iDefinition instanceof AssignDefinition) {
+                                    AssignDefinition assignDefinition = (AssignDefinition) iDefinition;
+                                    IToken[] tokens = getCompletionsFromAssignDefinition(module, state,
+                                            unpackPos, assignDefinition);
+                                    if (tokens != null && tokens.length > 0) {
+                                        return tokens;
+                                    }
+                                }
 
-                                                IToken[] ret = getCompletionsFromTypeRepresentation(
-                                                        state, Arrays.asList(unpackedTypeFromDocstring),
-                                                        definition.module);
-                                                if (ret != null && ret.length > 0) {
-                                                    return ret;
-                                                }
+                                if (iDefinition instanceof Definition) {
+                                    Definition definition = (Definition) iDefinition;
+                                    if (definition.scope != null) {
+                                        List<ITypeInfo> possibleClassesForActivationToken = definition.scope
+                                                .getPossibleClassesForActivationToken(rep);
+                                        for (ITypeInfo typeInfo : possibleClassesForActivationToken) {
+                                            ITypeInfo unpackedTypeFromDocstring = null;
+                                            if (searchDict == 0) {
+                                                unpackedTypeFromDocstring = typeInfo
+                                                        .getUnpacked(new UnpackInfo(true, 0));
+                                            } else if (searchDict == 1) {
+                                                unpackedTypeFromDocstring = typeInfo
+                                                        .getUnpacked(new UnpackInfo(true, 1));
+                                            } else if (searchDict == 2) {
+                                                unpackedTypeFromDocstring = typeInfo.getUnpacked(unpackPos);
+                                            }
+                                            if (unpackedTypeFromDocstring.equals(typeInfo)) {
+                                                continue;
+                                            }
+
+                                            IToken[] ret = getCompletionsFromTypeRepresentation(
+                                                    state, Arrays.asList(unpackedTypeFromDocstring),
+                                                    definition.module);
+                                            if (ret != null && ret.length > 0) {
+                                                return ret;
                                             }
                                         }
                                     }
+
                                 }
-                            } catch (CompletionRecursionException e) {
-                                throw e;
-                            } catch (Exception e) {
-                                Log.log(e);
-                                throw new RuntimeException("Error when getting definition for:"
-                                        + state.getActivationToken(), e);
                             }
+                        } catch (CompletionRecursionException e) {
+                            throw e;
+                        } catch (Exception e) {
+                            Log.log(e);
+                            throw new RuntimeException("Error when getting definition for:"
+                                    + state.getActivationToken(), e);
                         }
                     }
                 }
@@ -1058,10 +1099,12 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
      * @param unpackPos which position are we unpacking? -1 for 'don't care' (i.e.: for a in b) -- 0 would be for a,b in x (when
      * asking for completions in a).s
      */
+    @Override
     public IToken[] getCompletionsUnpackingObject(IModule module, ICompletionState state, ILocalScope scope,
             UnpackInfo unpackPos)
             throws CompletionRecursionException {
         ArrayList<IDefinition> selected = new ArrayList<IDefinition>();
+        state.pushGetCompletionsUnpackingObject();
         try {
             PyRefactoringFindDefinition.findActualDefinition(null, module, state.getActivationToken(),
                     selected,
@@ -1079,6 +1122,14 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
                         }
                     }
 
+                    ITypeInfo generatorType = definition.getGeneratorType();
+                    if (generatorType != null) {
+                        IToken[] tokens = getCompletionsUnpackingType(module, state, unpackPos, generatorType);
+                        if (tokens != null && tokens.length > 0) {
+                            return tokens;
+                        }
+                    }
+
                     // If it still hasn't returned, try to get it from the docstring
                     String docstring = definition.getDocstring(this.getNature(), state);
                     if (docstring != null && !docstring.isEmpty()) {
@@ -1090,40 +1141,9 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
 
                 } else if (iDefinition instanceof AssignDefinition) {
                     AssignDefinition assignDefinition = (AssignDefinition) iDefinition;
-                    exprType[] elts = getEltsFromCompoundObject(assignDefinition.nodeValue);
-                    if (elts != null) {
-                        // I.e.: something as [1,2,3, Call()]
-                        IToken[] completionsFromUnpackedList = getCompletionsFromUnpackedCompoundObject(module, state,
-                                elts, unpackPos);
-                        if (completionsFromUnpackedList != null) {
-                            return completionsFromUnpackedList;
-                        }
-                    } else {
-                        ArrayList<IDefinition> found = new ArrayList<>();
-                        // Pointing to some other place... let's follow it.
-                        PyRefactoringFindDefinition.findActualDefinition(null, assignDefinition.module,
-                                assignDefinition.value,
-                                found,
-                                assignDefinition.line, assignDefinition.col, state.getNature(),
-                                state);
-                        for (IDefinition f : found) {
-                            if (f instanceof Definition) {
-                                Definition definition = (Definition) f;
-                                if (definition.ast != null) {
-                                    //We're unpacking some class/method we found... something as:
-                                    //class SomeClass:
-                                    //    def __iter__(self):
-                                    //x = SomeClass()
-                                    //for a in x:
-                                    //    a.
-                                    IToken[] ret = getCompletionsUnpackingAST(definition.ast, definition.module, state,
-                                            unpackPos);
-                                    if (ret != null && ret.length > 0) {
-                                        return ret;
-                                    }
-                                }
-                            }
-                        }
+                    IToken[] tokens = getCompletionsFromAssignDefinition(module, state, unpackPos, assignDefinition);
+                    if (tokens != null && tokens.length > 0) {
+                        return tokens;
                     }
                 }
             }
@@ -1132,26 +1152,81 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
         } catch (Exception e) {
             Log.log(e);
             throw new RuntimeException("Error when getting definition for:" + state.getActivationToken(), e);
+        } finally {
+            state.popGetCompletionsUnpackingObject();
         }
 
         //If we didn't return so far, we should still check for types specified in docstrings...
         if (scope != null) {
-            List<String> possibleClassesForActivationToken = scope.getPossibleClassesForActivationToken(state
+            List<ITypeInfo> possibleClassesForActivationToken = scope.getPossibleClassesForActivationToken(state
                     .getActivationToken());
 
-            for (String string : possibleClassesForActivationToken) {
-                String unpackedTypeFromDocstring = NodeUtils.getUnpackedTypeFromTypeDocstring(string, unpackPos);
-                ICompletionState copyWithActTok = state.getCopyWithActTok(unpackedTypeFromDocstring);
+            for (ITypeInfo typeInfo : possibleClassesForActivationToken) {
+                ITypeInfo unpackedTypeFromDocstring = typeInfo.getUnpacked(unpackPos);
+                ICompletionState copyWithActTok = state.getCopyWithActTok(unpackedTypeFromDocstring.getActTok());
                 copyWithActTok.setLookingFor(ICompletionState.LOOKING_FOR_INSTANCED_VARIABLE);
                 IToken[] completionsForModule = getCompletionsForModule(module,
                         copyWithActTok);
-                if (completionsForModule.length > 0) {
+                if (completionsForModule != null && completionsForModule.length > 0) {
                     return completionsForModule;
+                } else {
+                    //Try to deal with some token that's not imported
+                    List<IPyDevCompletionParticipant> participants = ExtensionHelper
+                            .getParticipants(ExtensionHelper.PYDEV_COMPLETION);
+                    ArrayList<Object> lst = new ArrayList<>();
+                    for (IPyDevCompletionParticipant participant : participants) {
+                        Collection<IToken> collection = participant.getCompletionsForType(copyWithActTok);
+                        if (collection != null && collection.size() > 0) {
+                            lst.addAll(collection);
+                        }
+                    }
+                    if (lst.size() > 0) {
+                        return lst.toArray(new IToken[0]);
+                    }
                 }
-
             }
         }
 
+        return null;
+    }
+
+    private IToken[] getCompletionsFromAssignDefinition(IModule module, ICompletionState state, UnpackInfo unpackPos,
+            AssignDefinition assignDefinition) throws CompletionRecursionException, Exception {
+        exprType[] elts = NodeUtils.getEltsFromCompoundObject(assignDefinition.nodeValue);
+        if (elts != null) {
+            // I.e.: something as [1,2,3, Call()]
+            IToken[] completionsFromUnpackedList = getCompletionsFromUnpackedCompoundObject(module, state,
+                    elts, unpackPos);
+            if (completionsFromUnpackedList != null) {
+                return completionsFromUnpackedList;
+            }
+        } else {
+            ArrayList<IDefinition> found = new ArrayList<>();
+            // Pointing to some other place... let's follow it.
+            PyRefactoringFindDefinition.findActualDefinition(null, assignDefinition.module,
+                    assignDefinition.value,
+                    found,
+                    assignDefinition.line, assignDefinition.col, state.getNature(),
+                    state);
+            for (IDefinition f : found) {
+                if (f instanceof Definition) {
+                    Definition definition = (Definition) f;
+                    if (definition.ast != null) {
+                        //We're unpacking some class/method we found... something as:
+                        //class SomeClass:
+                        //    def __iter__(self):
+                        //x = SomeClass()
+                        //for a in x:
+                        //    a.
+                        IToken[] ret = getCompletionsUnpackingAST(definition.ast, definition.module, state,
+                                unpackPos);
+                        if (ret != null && ret.length > 0) {
+                            return ret;
+                        }
+                    }
+                }
+            }
+        }
         return null;
     }
 
@@ -1172,7 +1247,7 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
                 //what we should complete on.
                 if (yield.value != null) {
                     String rep = NodeUtils
-                            .getRepresentationString(yield.value);
+                            .getFullRepresentationString(yield.value);
                     if (rep != null) {
                         ICompletionState copyWithActTok = state.getCopyWithActTok(rep);
                         copyWithActTok.setLookingFor(ICompletionState.LOOKING_FOR_INSTANCED_VARIABLE);
@@ -1189,7 +1264,7 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
             for (Return return1 : findReturns) {
                 //Return types have to be unpacked...
                 if (return1.value != null) {
-                    exprType[] elts = getEltsFromCompoundObject(return1.value);
+                    exprType[] elts = NodeUtils.getEltsFromCompoundObject(return1.value);
                     if (elts != null) {
                         IToken[] ret = getCompletionsFromUnpackedCompoundObject(module, state, elts, unpackPos);
                         if (ret != null && ret.length > 0) {
@@ -1197,7 +1272,7 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
                         }
 
                     } else {
-                        String rep = NodeUtils.getRepresentationString(return1.value);
+                        String rep = NodeUtils.getFullRepresentationString(return1.value);
                         if (rep != null) {
                             IToken[] completionsUnpackingObject = getCompletionsUnpackingObject(module,
                                     state.getCopyWithActTok(rep), null, unpackPos);
@@ -1210,7 +1285,7 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
             }
         } else if (ast instanceof ClassDef) {
             String rep = NodeUtils
-                    .getRepresentationString(ast);
+                    .getFullRepresentationString(ast);
             if (rep != null) {
                 IToken[] completionsForModule = this.getCompletionsForModule(module,
                         state.getCopyWithActTok(rep));
@@ -1272,8 +1347,7 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
     }
 
     private IToken[] getCompletionsUnpackingDocstring(final IModule module, ICompletionState state,
-            UnpackInfo unpackPos,
-            String docstring) throws CompletionRecursionException {
+            UnpackInfo unpackPos, String docstring) throws CompletionRecursionException {
         if (docstring != null) {
             String type = NodeUtils.getReturnTypeFromDocstring(docstring);
             if (type != null) {
@@ -1292,6 +1366,21 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
         return null;
     }
 
+    private IToken[] getCompletionsUnpackingType(final IModule module, ICompletionState state,
+            UnpackInfo unpackPos, ITypeInfo type) throws CompletionRecursionException {
+        ITypeInfo unpackedTypeFromDocstring = type.getUnpacked(unpackPos);
+        if (unpackedTypeFromDocstring != null) {
+            ICompletionState copyWithActTok = state.getCopyWithActTok(unpackedTypeFromDocstring.getActTok());
+            copyWithActTok.setLookingFor(ICompletionState.LOOKING_FOR_INSTANCED_VARIABLE);
+            IToken[] completionsForModule = getCompletionsForModule(module,
+                    copyWithActTok);
+            if (completionsForModule.length > 0) {
+                return completionsForModule;
+            }
+        }
+        return null;
+    }
+
     private IToken[] getCompletionsNotUnpackingToken(SourceToken token, IModule useModule, ICompletionState state)
             throws CompletionRecursionException {
         if (useModule == null) {
@@ -1301,9 +1390,9 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
 
         SimpleNode ast = token.getAst();
         if (ast instanceof FunctionDef) {
-            String type = NodeUtils.getReturnTypeFromDocstring(ast);
+            ITypeInfo type = NodeUtils.getReturnTypeFromFuncDefAST(ast);
             if (type != null) {
-                ICompletionState copyWithActTok = state.getCopyWithActTok(type);
+                ICompletionState copyWithActTok = state.getCopyWithActTok(type.getActTok());
                 copyWithActTok.setLookingFor(ICompletionState.LOOKING_FOR_INSTANCED_VARIABLE);
                 IToken[] completionsForModule = getCompletionsForModule(useModule,
                         copyWithActTok);
@@ -1316,7 +1405,7 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
             for (Return return1 : findReturns) {
                 //Return types have to be unpacked...
                 if (return1.value != null) {
-                    String rep = NodeUtils.getRepresentationString(return1.value);
+                    String rep = NodeUtils.getFullRepresentationString(return1.value);
                     if (rep != null) {
                         IToken[] completionsForModule = getCompletionsForModule(useModule,
                                 state.getCopyWithActTok(rep));
@@ -1331,48 +1420,6 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
         return null;
     }
 
-    private exprType[] getEltsFromCompoundObject(SimpleNode ast) {
-        if (ast instanceof org.python.pydev.parser.jython.ast.List) {
-            org.python.pydev.parser.jython.ast.List list = (org.python.pydev.parser.jython.ast.List) ast;
-            return list.elts;
-        }
-        if (ast instanceof org.python.pydev.parser.jython.ast.Set) {
-            org.python.pydev.parser.jython.ast.Set set = (org.python.pydev.parser.jython.ast.Set) ast;
-            return set.elts;
-        }
-        if (ast instanceof org.python.pydev.parser.jython.ast.Tuple) {
-            org.python.pydev.parser.jython.ast.Tuple tuple = (org.python.pydev.parser.jython.ast.Tuple) ast;
-            return tuple.elts;
-        }
-        if (ast instanceof org.python.pydev.parser.jython.ast.Dict) {
-            org.python.pydev.parser.jython.ast.Dict dict = (org.python.pydev.parser.jython.ast.Dict) ast;
-            return dict.keys; // Default in a dict iteration is iterating through the keys
-        }
-        if (ast instanceof Call) {
-            Call call = (Call) ast;
-            exprType func = call.func;
-            if (func instanceof Attribute) {
-                Attribute attribute = (Attribute) func;
-                if (attribute.value instanceof Dict) {
-                    Dict dict = (Dict) attribute.value;
-                    String representationString = NodeUtils.getRepresentationString(attribute.attr);
-                    if ("keys".equals(representationString) || "iterkeys".equals(representationString)) {
-                        return dict.keys;
-                    }
-                    if ("values".equals(representationString) || "itervalues".equals(representationString)) {
-                        return dict.values;
-                    }
-                    if ("items".equals(representationString) || "iteritems".equals(representationString)) {
-                        if (dict.keys != null && dict.values != null && dict.keys.length > 0 && dict.values.length > 0) {
-                            return new exprType[] { dict.keys[0], dict.values[0] };
-                        }
-                    }
-                }
-            }
-        }
-        return null;
-    }
-
     /**
      * Unpacks the type of the content of a list and gets completions based on it.
      * @param unpackPos
@@ -1382,23 +1429,18 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
 
         if (elts != null && elts.length > 0) {
             exprType elt = elts[0];
-            if (elt instanceof org.python.pydev.parser.jython.ast.Tuple) {
-                org.python.pydev.parser.jython.ast.Tuple tuple = (org.python.pydev.parser.jython.ast.Tuple) elt;
+            if (elt instanceof org.python.pydev.parser.jython.ast.Tuple
+                    || elt instanceof org.python.pydev.parser.jython.ast.List) {
                 if (unpackPos.getUnpackFor()) {
-                    elts = tuple.elts;
-                }
-            } else if (elt instanceof org.python.pydev.parser.jython.ast.List) {
-                org.python.pydev.parser.jython.ast.List tuple = (org.python.pydev.parser.jython.ast.List) elt;
-                if (unpackPos.getUnpackFor()) {
-                    elts = tuple.elts;
+                    elts = NodeUtils.getEltsFromCompoundObject(elt);
                 }
             }
             String rep;
-            int unpackTuple = unpackPos.getUnpackTuple();
-            if (unpackTuple >= 0 && elts.length > unpackTuple) {
-                rep = NodeUtils.getRepresentationString(elts[unpackTuple]);
+            int unpackTuple = unpackPos.getUnpackTuple(elts.length);
+            if (unpackTuple >= 0) {
+                rep = NodeUtils.getFullRepresentationString(elts[unpackTuple]);
             } else {
-                rep = NodeUtils.getRepresentationString(elts[0]);
+                rep = NodeUtils.getFullRepresentationString(elts[0]);
 
             }
             if (rep != null) {
@@ -1433,7 +1475,7 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
     private IToken[] getAssignCompletions(IModule module, ICompletionState state, boolean lookForArgumentCompletion,
             ILocalScope localScope) throws CompletionRecursionException {
         state.checkMaxTimeForCompletion();
-        AssignCompletionInfo assignCompletions = assignAnalysis.getAssignCompletions(this, module, state);
+        AssignCompletionInfo assignCompletions = assignAnalysis.getAssignCompletions(this, module, state, localScope);
 
         boolean useExtensions = assignCompletions.completions.size() == 0;
 
@@ -1461,8 +1503,9 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
     /**
      * @see ICodeCompletionASTManager#getCompletionsForClassInLocalScope(IModule, ICompletionState, boolean, boolean, List, HashSet)
      */
+    @Override
     public void getCompletionsForClassInLocalScope(IModule module, ICompletionState state, boolean searchSameLevelMods,
-            boolean lookForArgumentCompletion, List<String> lookForClass, HashSet<IToken> hashSet)
+            boolean lookForArgumentCompletion, List<ITypeInfo> lookForClass, HashSet<IToken> hashSet)
             throws CompletionRecursionException {
         IToken[] tokens;
         //if found here, it's an instanced variable (force it and restore if we didn't find it here...)
@@ -1471,9 +1514,9 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
         //force looking for instance
         stateCopy.setLookingFor(ICompletionState.LOOKING_FOR_INSTANCED_VARIABLE, true);
 
-        for (String classFound : lookForClass) {
+        for (ITypeInfo classFound : lookForClass) {
             stateCopy.setLocalImportsGotten(false);
-            stateCopy.setActivationToken(classFound);
+            stateCopy.setActivationToken(classFound.getActTok());
 
             //same thing as the initial request, but with the class we could find...
             tokens = getCompletionsForModule(module, stateCopy, searchSameLevelMods, lookForArgumentCompletion);
@@ -1546,6 +1589,7 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
     /**
      * @see ICodeCompletionASTManager#getGlobalCompletions
      */
+    @Override
     public List<IToken> getGlobalCompletions(IToken[] globalTokens, IToken[] importedModules,
             IToken[] wildImportedModules, ICompletionState state, IModule current) {
         if (DebugSettings.DEBUG_CODE_COMPLETION) {
@@ -1590,6 +1634,7 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
     /**
      * @return the builtin completions
      */
+    @Override
     public List<IToken> getBuiltinCompletions(ICompletionState state, List<IToken> completions) {
         IPythonNature nature = state.getNature();
         IToken[] builtinCompletions = getBuiltinComps(nature);
@@ -1623,6 +1668,7 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
      * @return the resolved token or the original token in case no additional information could be obtained.
      * @throws CompletionRecursionException
      */
+    @Override
     public ImmutableTuple<IModule, IToken> resolveImport(ICompletionState state, final IToken imported, IModule current)
             throws CompletionRecursionException {
         String currModName = imported.getParentPackage();
@@ -1654,6 +1700,7 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
      * @throws CompletionRecursionException
      * @see org.python.pydev.core.ICodeCompletionASTManager#getRepInModule(org.python.pydev.core.IModule, java.lang.String, org.python.pydev.core.IPythonNature)
      */
+    @Override
     public IToken getRepInModule(IModule module, String tokName, IPythonNature nature)
             throws CompletionRecursionException {
         return getRepInModule(module, tokName, nature, null);
@@ -1706,6 +1753,7 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
     /* (non-Javadoc)
      * @see ICodeCompletionASTManager#getCompletionsForWildImport(ICompletionState, IModule, List, IToken)
      */
+    @Override
     public boolean getCompletionsForWildImport(ICompletionState state, IModule current, List<IToken> completions,
             IToken name) {
         try {
@@ -1770,6 +1818,7 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
         return false;
     }
 
+    @Override
     public IToken[] findTokensOnImportedMods(IToken[] importedModules, ICompletionState state, IModule current)
             throws CompletionRecursionException {
         Tuple3<IModule, String, IToken> o = findOnImportedMods(importedModules, state, current.getName(), current);
@@ -1848,6 +1897,7 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
      * 1: tok
      * @throws CompletionRecursionException
      */
+    @Override
     public Tuple3<IModule, String, IToken> findOnImportedMods(ICompletionState state, IModule current)
             throws CompletionRecursionException {
         IToken[] importedModules = current.getTokenImportedModules();
@@ -1871,6 +1921,7 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
      * 2: actual tok
      * @throws CompletionRecursionException
      */
+    @Override
     public Tuple3<IModule, String, IToken> findOnImportedMods(IToken[] importedModules, ICompletionState state,
             String currentModuleName, IModule current) throws CompletionRecursionException {
 
@@ -1899,6 +1950,7 @@ public abstract class AbstractASTManager implements ICodeCompletionASTManager {
         return null;
     }
 
+    @Override
     public Tuple<IModule, String> findModule(String moduleToFind, String currentModule, ICompletionState state,
             IModule current) throws CompletionRecursionException, MisconfigurationException {
         NameTok name = new NameTok(moduleToFind, NameTok.ImportModule);

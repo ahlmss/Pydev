@@ -301,23 +301,22 @@ public class PyResourceDropAdapterAssistant extends ResourceDropAdapterAssistant
      * 
      * @return the resource selection from the LocalSelectionTransfer
      */
-    @SuppressWarnings("unchecked")
     private IResource[] getSelectedResources(IStructuredSelection selection) {
-        ArrayList selectedResources = new ArrayList();
+        ArrayList<Object> selectedResources = new ArrayList<Object>();
 
-        for (Iterator i = selection.iterator(); i.hasNext();) {
+        for (Iterator<?> i = selection.iterator(); i.hasNext();) {
             Object o = i.next();
             if (o instanceof IResource) {
                 selectedResources.add(o);
             } else if (o instanceof IAdaptable) {
                 IAdaptable a = (IAdaptable) o;
-                IResource r = (IResource) a.getAdapter(IResource.class);
+                IResource r = a.getAdapter(IResource.class);
                 if (r != null) {
                     selectedResources.add(r);
                 }
             }
         }
-        return (IResource[]) selectedResources.toArray(new IResource[selectedResources.size()]);
+        return selectedResources.toArray(new IResource[selectedResources.size()]);
     }
 
     /**
@@ -465,6 +464,7 @@ public class PyResourceDropAdapterAssistant extends ResourceDropAdapterAssistant
         // Otherwise the drag source (e.g., Windows Explorer) will be blocked
         // while the operation executes. Fixes bug 16478.
         Display.getCurrent().asyncExec(new Runnable() {
+            @Override
             public void run() {
                 getShell().forceActive();
                 CopyFilesAndFoldersOperation operation = new CopyFilesAndFoldersOperation(getShell());

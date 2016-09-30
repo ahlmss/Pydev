@@ -56,7 +56,7 @@ public class PyReconciler implements IReconcilingStrategy, IReconcilingStrategyE
         private IAnnotationModel fAnnotationModel;
 
         /** Annotations to add. */
-        private Map<SpellingAnnotation, Position> fAddAnnotations;
+        private Map<Annotation, Position> fAddAnnotations;
 
         /**
          * Initializes this collector with the given annotation model.
@@ -71,6 +71,7 @@ public class PyReconciler implements IReconcilingStrategy, IReconcilingStrategyE
         /*
          * @see org.eclipse.ui.texteditor.spelling.ISpellingProblemCollector#accept(org.eclipse.ui.texteditor.spelling.SpellingProblem)
          */
+        @Override
         public void accept(SpellingProblem problem) {
             fAddAnnotations
                     .put(new SpellingAnnotation(problem), new Position(problem.getOffset(), problem.getLength()));
@@ -79,16 +80,18 @@ public class PyReconciler implements IReconcilingStrategy, IReconcilingStrategyE
         /*
          * @see org.eclipse.ui.texteditor.spelling.ISpellingProblemCollector#beginCollecting()
          */
+        @Override
         public void beginCollecting() {
-            fAddAnnotations = new HashMap<SpellingAnnotation, Position>();
+            fAddAnnotations = new HashMap<Annotation, Position>();
         }
 
         /*
          * @see org.eclipse.ui.texteditor.spelling.ISpellingProblemCollector#endCollecting()
          */
+        @Override
         public void endCollecting() {
 
-            List toRemove = new ArrayList();
+            List<Object> toRemove = new ArrayList<Object>();
 
             Object fLockObject;
             if (fAnnotationModel instanceof ISynchronizable) {
@@ -107,7 +110,7 @@ public class PyReconciler implements IReconcilingStrategy, IReconcilingStrategyE
                 //retain that object locked (the annotation model is used on lots of places, so, retaining the lock
                 //on it on a minimum priority thread is not a good thing.
                 thread.setPriority(Thread.NORM_PRIORITY);
-                Iterator<SpellingAnnotation> iter;
+                Iterator<Annotation> iter;
 
                 synchronized (fLockObject) {
                     iter = fAnnotationModel.getAnnotationIterator();
@@ -120,7 +123,7 @@ public class PyReconciler implements IReconcilingStrategy, IReconcilingStrategyE
                     iter = null;
                 }
 
-                Annotation[] annotationsToRemove = (Annotation[]) toRemove.toArray(new Annotation[toRemove.size()]);
+                Annotation[] annotationsToRemove = toRemove.toArray(new Annotation[toRemove.size()]);
 
                 //let other threads execute before getting the lock (again) on the annotation model
                 Thread.yield();
@@ -188,6 +191,7 @@ public class PyReconciler implements IReconcilingStrategy, IReconcilingStrategyE
     /*
      * @see org.eclipse.jface.text.reconciler.IReconcilingStrategyExtension#initialReconcile()
      */
+    @Override
     public void initialReconcile() {
         reconcile(new Region(0, fDocument.getLength()));
     }
@@ -202,6 +206,7 @@ public class PyReconciler implements IReconcilingStrategy, IReconcilingStrategyE
      * 
      * @see org.eclipse.jface.text.reconciler.IReconcilingStrategy#reconcile(org.eclipse.jface.text.reconciler.DirtyRegion,org.eclipse.jface.text.IRegion)
      */
+    @Override
     public void reconcile(DirtyRegion dirtyRegion, IRegion subRegion) {
         reconcile(subRegion);
     }
@@ -209,6 +214,7 @@ public class PyReconciler implements IReconcilingStrategy, IReconcilingStrategyE
     /*
      * @see org.eclipse.jface.text.reconciler.IReconcilingStrategy#reconcile(org.eclipse.jface.text.IRegion)
      */
+    @Override
     public void reconcile(IRegion region) {
         IAnnotationModel annotationModel = fViewer.getAnnotationModel();
 
@@ -280,6 +286,7 @@ public class PyReconciler implements IReconcilingStrategy, IReconcilingStrategyE
     /*
      * @see org.eclipse.jface.text.reconciler.IReconcilingStrategy#setDocument(org.eclipse.jface.text.IDocument)
      */
+    @Override
     public void setDocument(IDocument document) {
         fDocument = document;
 
@@ -290,6 +297,7 @@ public class PyReconciler implements IReconcilingStrategy, IReconcilingStrategyE
     /*
      * @see org.eclipse.jface.text.reconciler.IReconcilingStrategyExtension#setProgressMonitor(org.eclipse.core.runtime.IProgressMonitor)
      */
+    @Override
     public final void setProgressMonitor(IProgressMonitor monitor) {
         fProgressMonitor = monitor;
     }

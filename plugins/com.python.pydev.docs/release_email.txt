@@ -1,6 +1,26 @@
-PyDev 3.9.2 Released
+PyDev 5.1.2 Released
 
+Release Highlights:
+-------------------------------
 
+* **Important** PyDev now requires Java 8 and Eclipse 4.5 onwards.
+
+	* PyDev 4.5.5 is the last release supporting Java 7 and Eclipse 3.8.
+	* See: http://www.pydev.org/update_sites/index.html for the update site of older versions of PyDev.
+	* See: the **PyDev does not appear after install** section on http://www.pydev.org/download.html for help on using a Java 8 vm in Eclipse.
+
+* The pytest integration was redone and should now work properly with the latest pytest.
+
+* Properly showing output of tests in PyUnit view.
+	* Improved dealing with items filtered through Ctrl+F9.
+	* Better support for xdist (no longer reporting that the session finished when only a slave finished).
+	* Reporting skipped items as "skip" and not "ok".
+	* Properly showing running tests on PyUnit view.
+	* Not using tokenize.open() in Python 3.2 for the execfile custom implementation.
+
+* Expand and collapse keybindings changed to use the Numpad entries (so that they don't override the add/subtract used for zooming). #PyDev 695.
+
+* The hover in PyDev has an implementation which is now more flexible and easier to extend in plugins (patch by Mark A. Leone).
 
 What is PyDev?
 ---------------------------
@@ -16,56 +36,12 @@ Details on its development: http://pydev.blogspot.com
 What is LiClipse?
 ---------------------------
 
-LiClipse is a PyDev standalone with goodies such as support for Multiple cursors, theming and a number of other languages such as Django Templates, Kivy Language, Mako Templates, Html, Javascript, etc.
+LiClipse is a PyDev standalone with goodies such as support for Multiple cursors, theming, TextMate bundles and a number of other languages such as Django Templates, Jinja2, Kivy Language, Mako Templates, Html, Javascript, etc.
 
 It's also a commercial counterpart which helps supporting the development of PyDev.
 
 Details on LiClipse: http://www.liclipse.com/
 
-
-Release Highlights:
--------------------------------
-
-* **Important**: PyDev requires Eclipse 3.8 or 4.3 onwards and Java 7! For older versions, keep using PyDev 2.x (use LiClipse: http://www.liclipse.com for a PyDev standalone with all requirements bundled).
-
-* **PyVmMonitor Integration**
-
-	* PyVmMonitor: http://www.pyvmmonitor.com/ is now in public beta, so, the PyDev integration
-		(Window > Show View > Other > PyDev > Profile) may be used to  profile your programs.
-
-* **Debugger**
-
-	* The debug view now has an interactive console (with history) attached to it by default (which may be toggled on/off). (PyDev-507)
-	* Debugger no longer reopens a file when that file is already opened. (PyDev-456)
-	* Handled issue when getting referrers for some object gave an error if it was found in a dict where the key is not a string.
-	* When interactive console starts in debug session, a banner is no longer shown.
-	* Stepping with #@DontTrace no longer returns through decorator call-site. (PyDev-526)
-	* The default for tracing template render exceptions on Django is now false.
-
-* **Interactive Console**
-
-	* F2 to send contents from editor to console now considers backslash continuations. (PyDev-502)
-	* Interactive Console interrupt now properly interrupts a sleep call (when possible). (PyDev-500)
-	* PyDev interactive console now has a user-specified encoding (by default UTF-8). (PyDev-454)
-	* Scroll the console on stdout / stderr output. (PyDev-504, patch by James Blackburn)
-	* Moved interactive console initial commands to a separate preferences page.
-	* Handling interrupted system call EINTR in the pydevconsole.py. (PyDev-534)
-	* Fixed racing condition where the output of the console could appear as a user input. (PyDev-490, patch by James Blackburn)
-
-* **Refactoring**
-
-	* Fixed issue where indentation lost on rename module refactoring. (PyDev-498)
-	* The rename modules refactoring wizard now provides a way to do a simple resource rename (to rename extensions).
-
-* **Others**
-
-	* Converting filename from .pyx to .py doesn't loose indexing on the file anymore. (PyDev-525)
-	* The Cython parser now properly scopes methods.
-	* Pasting contents directly in the PyDev package explorer to create a file uses the proper delimiter.
-	* Fixed deadlock in ImageCache when rendering debug completions from console. (PyDev-527)
-	* Fixed deadlock on racing condition when rendering PyTextHover. (PyDev-523)
-	* Tab settings were separated from the editor color settings and may now be persisted in the project/user settings.
-	* Fixed surround with try..finally/except indentation on Ctrl+1 when some line has a comment which has a different indentation.
 
 
 Cheers,

@@ -22,10 +22,22 @@ public class TestIndentPrefs extends AbstractIndentPrefs {
     public boolean smartIndentAfterPar = true;
     public boolean autoAddSelf = true;
     public boolean autoElse;
+
+    // This is the new mode implementing as pep8:
+    // Indenting right after a parens adds an additional level
+    // Indenting after a variable (after a parens) indents to the parenthesis level
+    // It should be made the default after it's properly tested.
+    public boolean indentToParAsPep8 = false;
+
+    // Old default always indents to the parenthesis level (and if
+    // False always added a fixed amount of parenthesis as specified 
+    // by indentAfterParWidth)
     public boolean indentToParLevel = true;
     public int indentAfterParWidth = 1;
+
     public boolean autoAddLiterals = true;
     public boolean autoLink = true;
+    public boolean tabStopInComment = false;
 
     public TestIndentPrefs(boolean useSpaces, int tabWidth) {
         this.useSpaces = useSpaces;
@@ -52,6 +64,7 @@ public class TestIndentPrefs extends AbstractIndentPrefs {
         this.autoElse = autoElse;
     }
 
+    @Override
     public boolean getUseSpaces(boolean considerForceTabs) {
         if (considerForceTabs && getForceTabs()) {
             return false;//force use tabs
@@ -59,60 +72,83 @@ public class TestIndentPrefs extends AbstractIndentPrefs {
         return useSpaces;
     }
 
+    @Override
     public boolean getAutoLink() {
         return autoLink;
     }
 
+    @Override
     public int getTabWidth() {
         return tabWidth;
     }
 
+    @Override
     public boolean getAutoParentesis() {
         return autoPar;
     }
 
+    @Override
     public boolean getAutoColon() {
         return autoColon;
     }
 
+    @Override
     public boolean getAutoBraces() {
         return autoBraces;
     }
 
+    @Override
     public boolean getAutoWriteImport() {
         return autoWriteImport;
     }
 
+    @Override
     public boolean getSmartIndentPar() {
         return smartIndentAfterPar;
     }
 
+    @Override
     public boolean getAutoAddSelf() {
         return autoAddSelf;
     }
 
+    @Override
     public boolean getAutoDedentElse() {
         return autoElse;
     }
 
+    @Override
     public boolean getIndentToParLevel() {
         return indentToParLevel;
     }
 
+    @Override
     public int getIndentAfterParWidth() {
         return indentAfterParWidth;
     }
 
+    @Override
     public boolean getSmartLineMove() {
         return true;
     }
 
+    @Override
     public boolean getAutoLiterals() {
         return autoAddLiterals;
     }
 
+    @Override
+    public boolean getTabStopInComment() {
+        return tabStopInComment;
+    }
+
+    @Override
     public void regenerateIndentString() {
         //ignore it
     }
 
+    @Override
+    public boolean getIndentToParAsPep8() {
+        return indentToParAsPep8;
+    }
 }

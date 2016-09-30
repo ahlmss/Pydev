@@ -35,9 +35,9 @@ import org.python.pydev.shared_core.structure.Tuple;
 import com.python.pydev.refactoring.IPyRefactoring2;
 import com.python.pydev.refactoring.actions.PyFindAllOccurrences;
 import com.python.pydev.refactoring.refactorer.search.AbstractPythonSearchQuery;
+import com.python.pydev.refactoring.refactorer.search.copied.FileMatch;
+import com.python.pydev.refactoring.refactorer.search.copied.LineElement;
 import com.python.pydev.refactoring.wizards.rename.AbstractRenameRefactorProcess;
-import com.python.pydev.ui.search.FileMatch;
-import com.python.pydev.ui.search.LineElement;
 
 public class FindOccurrencesSearchQuery extends AbstractPythonSearchQuery {
     private static final String DEFAULT_DESCRIPTION = "Workspace";
@@ -156,7 +156,7 @@ public class FindOccurrencesSearchQuery extends AbstractPythonSearchQuery {
                             getDescription());
                 }
                 return StringUtils.format("%s - %s matches in %s", searchString,
-                        new Integer(nMatches),
+                        nMatches,
                         getDescription());
             }
             // search selected file extensions
@@ -165,7 +165,7 @@ public class FindOccurrencesSearchQuery extends AbstractPythonSearchQuery {
                         getDescription());
             }
             return StringUtils.format("%s - %s matches in %s", searchString,
-                    new Integer(nMatches), getDescription());
+                    nMatches, getDescription());
         }
         throw new RuntimeException("Unexpected condition when finding: " + searchString);
     }

@@ -18,10 +18,10 @@ import org.eclipse.jface.preference.IntegerFieldEditor;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
-import org.python.pydev.core.docutils.WrapAndCaseUtils;
 import org.python.pydev.plugin.PydevPlugin;
 import org.python.pydev.shared_core.SharedCorePlugin;
 import org.python.pydev.shared_core.callbacks.ICallback;
+import org.python.pydev.shared_core.string.WrapAndCaseUtils;
 import org.python.pydev.shared_ui.field_editors.LabelFieldEditor;
 
 /**
@@ -159,6 +159,7 @@ public class PyCodeCompletionPreferencesPage extends FieldEditorPreferencePage i
      *
      * @see org.eclipse.ui.IWorkbenchPreferencePage#init(org.eclipse.ui.IWorkbench)
      */
+    @Override
     public void init(IWorkbench workbench) {
     }
 

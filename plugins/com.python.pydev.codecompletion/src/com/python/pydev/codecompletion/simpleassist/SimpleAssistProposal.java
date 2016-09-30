@@ -28,9 +28,9 @@ import com.python.pydev.codecompletion.ui.CodeCompletionPreferencesPage;
 
 /**
  * by using this assist (with the extension), we are able to just validate it (without recomputing all completions each time).
- * 
+ *
  * They are only recomputed on backspace...
- * 
+ *
  * @author Fabio
  */
 public class SimpleAssistProposal extends PyCompletionProposal implements ICompletionProposalExtension2 {
@@ -86,6 +86,7 @@ public class SimpleAssistProposal extends PyCompletionProposal implements ICompl
         return new Point(fReplacementOffset + fCursorPosition + changeInCursorPos, 0);
     }
 
+    @Override
     public void apply(ITextViewer viewer, char trigger, int stateMask, int offset) {
         try {
             IDocument doc = viewer.getDocument();
@@ -98,7 +99,7 @@ public class SimpleAssistProposal extends PyCompletionProposal implements ICompl
                 projectAdaptable = new IAdaptable() {
 
                     @Override
-                    public Object getAdapter(Class adapter) {
+                    public <T> T getAdapter(Class<T> adapter) {
                         return null;
                     }
                 };
@@ -167,12 +168,15 @@ public class SimpleAssistProposal extends PyCompletionProposal implements ICompl
         }
     }
 
+    @Override
     public void selected(ITextViewer viewer, boolean smartToggle) {
     }
 
+    @Override
     public void unselected(ITextViewer viewer) {
     }
 
+    @Override
     public boolean validate(IDocument document, int offset, DocumentEvent event) {
         String[] strs = PySelection.getActivationTokenAndQual(document, offset, false);
 

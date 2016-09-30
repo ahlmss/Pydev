@@ -27,12 +27,12 @@
    <extension point="org.eclipse.ui.editors.documentProviders">
       <provider
             class="org.python.pydev.editor.PyDocumentProvider"
-            id="org.python.pydev.editorinput.PydevFileEditorInput"
-            inputTypes="org.python.pydev.editorinput.PydevFileEditorInput"/>
+            id="org.python.pydev.shared_ui.editor_input.PydevFileEditorInput"
+            inputTypes="org.python.pydev.shared_ui.editor_input.PydevFileEditorInput"/>
       <provider
             class="org.python.pydev.editor.PyDocumentProvider"
-            id="org.python.pydev.editorinput.PydevFileEditorInput"
-            inputTypes="org.python.pydev.editorinput.PydevZipFileEditorInput"/>
+            id="org.python.pydev.shared_ui.editor_input.PydevFileEditorInput"
+            inputTypes="org.python.pydev.shared_ui.editor_input.PydevZipFileEditorInput"/>
       <provider
             class="org.python.pydev.editor.PyDocumentProvider"
             id="org.python.pydev.editor.PyDocumentProvider"
@@ -992,25 +992,25 @@
       </key>
       -->
       <key
-            sequence="M1+-"
+            sequence="M1+Numpad_Subtract"
             contextId="org.python.pydev.ui.editor.scope"
             commandId="org.python.pydev.editor.actions.navigation.pyCollapse"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration">
       </key>
       <key
-            sequence="M1+="
+            sequence="M1+Numpad_Add"
             contextId="org.python.pydev.ui.editor.scope"
             commandId="org.python.pydev.editor.actions.navigation.pyUnCollapse"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration">
       </key>
       <key
-            sequence="M1+9"
+            sequence="M1+Numpad_Divide"
             contextId="org.python.pydev.ui.editor.scope"
             commandId="org.python.pydev.editor.actions.navigation.pyCollapseAll"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration">
       </key>
       <key
-            sequence="M1+0"
+            sequence="M1+Numpad_Multiply"
             contextId="org.python.pydev.ui.editor.scope"
             commandId="org.python.pydev.editor.actions.navigation.pyUnCollapseAll"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration">
@@ -1165,10 +1165,11 @@
    <extension-point id="pydev_debug_preferences_page" name="PyDev Debug Preferences Page" schema="schema/pydev_debug_preferences_page.exsd"/>
    <extension-point id="pydev_pythonpath_contrib" name="Python Path Contributor" schema="schema/pydev_pythonpath_contrib.exsd"/>
    <extension-point id="pydev_manager_observer" name="PyDev code completion manager observer" schema="schema/pydev_manager_observer.exsd"/>
-   <extension-point id="pydev_hover" name="PyDev hover" schema="schema/pydev_hover.exsd"/>
    <extension-point id="pydev_interpreter_info_builder" name="PyDev interpreter info builder" schema="schema/pydev_interpreter_info_builder.exsd"/>
    <extension-point id="pydev_interpreter_provider" name="PyDev interpreter provider" schema="schema/pydev_interpreter_provider.exsd"/>
    <extension-point id="pydev_python_module_resolver" name="Python module resolver" schema="schema/pydev_python_module_resolver.exsd"/>
+   <extension-point id="pydev_hover2" name="PyDev Hover2" schema="schema/pydev_hover2.exsd"/>
+   <extension-point id="pydev_combiningHover" name="PyDev Combining Hover" schema="schema/pydev_combiningHover.exsd"/>
 <!-- wizards -->
    <extension point="org.eclipse.ui.newWizards">
       <category
@@ -1310,14 +1311,6 @@
       </viewerContribution>
    </extension>
 
-
-   <extension
-         point="org.eclipse.ui.elementFactories">
-      <factory
-            class="org.python.pydev.editorinput.PyEditorInputFactory"
-            id="org.python.pydev.editorinput.pyEditorInputFactory">
-      </factory>
-   </extension>
 
 <!-- ********************** PyDev Package Explorer ********************** -->
 <!-- ********************** PyDev Package Explorer ********************** -->
@@ -2826,5 +2819,31 @@ if __name__ == "__main__":
                refid="org.eclipse.e4.ui.css.theme.e4_dark">
          </themeid>
       </stylesheet>
+   </extension>
+   <extension
+         point="org.python.pydev.pydev_hover2">
+      <pyTextHover
+            activate="false"
+            class="org.python.pydev.editor.hover.PyDocstringTextHover"
+            description="Provides hover text for Python docstrings"
+            enable="true"
+            id="org.python.pydev.editor.hover.pyDocstringTextHover"
+            label="PyDev Docstring Hover"
+            preempt="false"
+            priority="100">
+      </pyTextHover>
+   </extension>
+   <extension
+         point="org.python.pydev.pydev_hover2">
+      <pyTextHover
+            activate="false"
+            class="org.python.pydev.editor.hover.PyMarkerTextHover"
+            description="Provides hover text for Python markers"
+            enable="true"
+            id="org.python.pydev.editor.hover.pyMarkerTextHover"
+            label="PyDev Marker Hover"
+            preempt="false"
+            priority="150">
+      </pyTextHover>
    </extension>
  </plugin>

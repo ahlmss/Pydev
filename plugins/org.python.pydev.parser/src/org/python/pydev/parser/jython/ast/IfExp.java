@@ -15,6 +15,7 @@ public final class IfExp extends exprType {
         this.orelse = orelse;
     }
 
+    @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
@@ -24,53 +25,42 @@ public final class IfExp extends exprType {
         return result;
     }
 
+    @Override
     public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
+        if (this == obj) return true;
+        if (obj == null) return false;
+        if (getClass() != obj.getClass()) return false;
         IfExp other = (IfExp) obj;
-        if (test == null) {
-            if (other.test != null)
-                return false;
-        } else if (!test.equals(other.test))
-            return false;
-        if (body == null) {
-            if (other.body != null)
-                return false;
-        } else if (!body.equals(other.body))
-            return false;
-        if (orelse == null) {
-            if (other.orelse != null)
-                return false;
-        } else if (!orelse.equals(other.orelse))
-            return false;
+        if (test == null) { if (other.test != null) return false;}
+        else if (!test.equals(other.test)) return false;
+        if (body == null) { if (other.body != null) return false;}
+        else if (!body.equals(other.body)) return false;
+        if (orelse == null) { if (other.orelse != null) return false;}
+        else if (!orelse.equals(other.orelse)) return false;
         return true;
     }
-
+    @Override
     public IfExp createCopy() {
         return createCopy(true);
     }
-
+    @Override
     public IfExp createCopy(boolean copyComments) {
-        IfExp temp = new IfExp(test != null ? (exprType) test.createCopy(copyComments) : null,
-                body != null ? (exprType) body.createCopy(copyComments) : null,
-                orelse != null ? (exprType) orelse.createCopy(copyComments) : null);
+        IfExp temp = new IfExp(test!=null?(exprType)test.createCopy(copyComments):null,
+        body!=null?(exprType)body.createCopy(copyComments):null,
+        orelse!=null?(exprType)orelse.createCopy(copyComments):null);
         temp.beginLine = this.beginLine;
         temp.beginColumn = this.beginColumn;
-        if (this.specialsBefore != null && copyComments) {
-            for (Object o : this.specialsBefore) {
-                if (o instanceof commentType) {
+        if(this.specialsBefore != null && copyComments){
+            for(Object o:this.specialsBefore){
+                if(o instanceof commentType){
                     commentType commentType = (commentType) o;
                     temp.getSpecialsBefore().add(commentType.createCopy(copyComments));
                 }
             }
         }
-        if (this.specialsAfter != null && copyComments) {
-            for (Object o : this.specialsAfter) {
-                if (o instanceof commentType) {
+        if(this.specialsAfter != null && copyComments){
+            for(Object o:this.specialsAfter){
+                if(o instanceof commentType){
                     commentType commentType = (commentType) o;
                     temp.getSpecialsAfter().add(commentType.createCopy(copyComments));
                 }
@@ -79,6 +69,7 @@ public final class IfExp extends exprType {
         return temp;
     }
 
+    @Override
     public String toString() {
         StringBuffer sb = new StringBuffer("IfExp[");
         sb.append("test=");
@@ -93,10 +84,12 @@ public final class IfExp extends exprType {
         return sb.toString();
     }
 
+    @Override
     public Object accept(VisitorIF visitor) throws Exception {
         return visitor.visitIfExp(this);
     }
 
+    @Override
     public void traverse(VisitorIF visitor) throws Exception {
         if (test != null) {
             test.accept(visitor);

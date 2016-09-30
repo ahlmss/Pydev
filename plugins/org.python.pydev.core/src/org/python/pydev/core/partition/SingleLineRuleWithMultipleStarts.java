@@ -12,13 +12,14 @@ import org.python.pydev.shared_core.string.FastStringBuffer;
 
 public class SingleLineRuleWithMultipleStarts implements IPredicateRule, IChangeTokenRule {
 
-    protected Token fToken;
+    protected IToken fToken;
     private final char escapeCharacter;
     private final boolean escapeContinuesLine;
     private ArrayList<char[]> fStartSequences;
     private char[] fEndSequence;
 
-    public void setToken(Token token) {
+    @Override
+    public void setToken(IToken token) {
         this.fToken = token;
     }
 
@@ -36,14 +37,17 @@ public class SingleLineRuleWithMultipleStarts implements IPredicateRule, IChange
         this.escapeContinuesLine = escapeContinuesLine;
     }
 
+    @Override
     public IToken evaluate(ICharacterScanner scanner) {
         return evaluate(scanner, false);
     }
 
+    @Override
     public IToken getSuccessToken() {
         return fToken;
     }
 
+    @Override
     public IToken evaluate(ICharacterScanner scanner, boolean resume) {
         if (resume) {
             if (detectEnd(scanner)) {

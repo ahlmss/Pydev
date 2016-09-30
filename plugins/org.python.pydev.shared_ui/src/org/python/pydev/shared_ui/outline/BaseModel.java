@@ -35,6 +35,8 @@ public abstract class BaseModel implements IOutlineModel {
 
     protected abstract IParsedItem createParsedItemFromSimpleNode(ISimpleNode ast);
 
+    private boolean disposed = false;
+
     public final ICallbackWithListeners<IOutlineModel> onModelChanged = new CallbackWithListeners<IOutlineModel>();
 
     @Override
@@ -56,8 +58,10 @@ public abstract class BaseModel implements IOutlineModel {
         // make sure that the changes are propagated on the main thread
         modelListener = new IModelListener() {
 
+            @Override
             public void modelChanged(final ISimpleNode ast) {
                 Display.getDefault().asyncExec(new Runnable() {
+                    @Override
                     public void run() {
                         synchronized (this) {
                             IParsedItem newRoot = createParsedItemFromSimpleNode(ast);
@@ -68,8 +72,10 @@ public abstract class BaseModel implements IOutlineModel {
                 });
             }
 
+            @Override
             public void errorChanged(final ErrorDescription errorDesc) {
                 Display.getDefault().asyncExec(new Runnable() {
+                    @Override
                     public void run() {
                         synchronized (this) {
                             IParsedItem newRoot = duplicateRootAddingError(errorDesc);
@@ -94,12 +100,17 @@ public abstract class BaseModel implements IOutlineModel {
 
     protected abstract IParsedItem duplicateRootAddingError(ErrorDescription errorDesc);
 
+    @Override
     public void dispose() {
-        editor.removeModelListener(modelListener);
-        onModelChanged.unregisterAllListeners();
-        root = null;
+        if (!disposed) {
+            disposed = true;
+            editor.removeModelListener(modelListener);
+            onModelChanged.unregisterAllListeners();
+            root = null;
+        }
     }
 
+    @Override
     public IParsedItem getRoot() {
         return root;
     }
@@ -174,7 +185,12 @@ public abstract class BaseModel implements IOutlineModel {
                 }
 
             } else {
-                Log.log("No old model root?");
+                if (disposed) {
+                    Log.logInfo("It seems it's already disposed...");
+
+                } else {
+                    Log.logInfo("No old model root?");
+                }
             }
         } catch (Throwable e) {
             Log.log(e);

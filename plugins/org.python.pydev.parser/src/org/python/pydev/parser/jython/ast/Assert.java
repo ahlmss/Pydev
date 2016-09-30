@@ -13,6 +13,7 @@ public final class Assert extends stmtType {
         this.msg = msg;
     }
 
+    @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
@@ -21,47 +22,39 @@ public final class Assert extends stmtType {
         return result;
     }
 
+    @Override
     public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
+        if (this == obj) return true;
+        if (obj == null) return false;
+        if (getClass() != obj.getClass()) return false;
         Assert other = (Assert) obj;
-        if (test == null) {
-            if (other.test != null)
-                return false;
-        } else if (!test.equals(other.test))
-            return false;
-        if (msg == null) {
-            if (other.msg != null)
-                return false;
-        } else if (!msg.equals(other.msg))
-            return false;
+        if (test == null) { if (other.test != null) return false;}
+        else if (!test.equals(other.test)) return false;
+        if (msg == null) { if (other.msg != null) return false;}
+        else if (!msg.equals(other.msg)) return false;
         return true;
     }
-
+    @Override
     public Assert createCopy() {
         return createCopy(true);
     }
-
+    @Override
     public Assert createCopy(boolean copyComments) {
-        Assert temp = new Assert(test != null ? (exprType) test.createCopy(copyComments) : null,
-                msg != null ? (exprType) msg.createCopy(copyComments) : null);
+        Assert temp = new Assert(test!=null?(exprType)test.createCopy(copyComments):null,
+        msg!=null?(exprType)msg.createCopy(copyComments):null);
         temp.beginLine = this.beginLine;
         temp.beginColumn = this.beginColumn;
-        if (this.specialsBefore != null && copyComments) {
-            for (Object o : this.specialsBefore) {
-                if (o instanceof commentType) {
+        if(this.specialsBefore != null && copyComments){
+            for(Object o:this.specialsBefore){
+                if(o instanceof commentType){
                     commentType commentType = (commentType) o;
                     temp.getSpecialsBefore().add(commentType.createCopy(copyComments));
                 }
             }
         }
-        if (this.specialsAfter != null && copyComments) {
-            for (Object o : this.specialsAfter) {
-                if (o instanceof commentType) {
+        if(this.specialsAfter != null && copyComments){
+            for(Object o:this.specialsAfter){
+                if(o instanceof commentType){
                     commentType commentType = (commentType) o;
                     temp.getSpecialsAfter().add(commentType.createCopy(copyComments));
                 }
@@ -70,6 +63,7 @@ public final class Assert extends stmtType {
         return temp;
     }
 
+    @Override
     public String toString() {
         StringBuffer sb = new StringBuffer("Assert[");
         sb.append("test=");
@@ -81,10 +75,12 @@ public final class Assert extends stmtType {
         return sb.toString();
     }
 
+    @Override
     public Object accept(VisitorIF visitor) throws Exception {
         return visitor.visitAssert(this);
     }
 
+    @Override
     public void traverse(VisitorIF visitor) throws Exception {
         if (test != null) {
             test.accept(visitor);

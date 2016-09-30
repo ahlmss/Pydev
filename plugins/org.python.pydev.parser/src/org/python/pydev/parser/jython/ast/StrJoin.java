@@ -11,6 +11,7 @@ public final class StrJoin extends exprType {
         this.strs = strs;
     }
 
+    @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
@@ -18,47 +19,44 @@ public final class StrJoin extends exprType {
         return result;
     }
 
+    @Override
     public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
+        if (this == obj) return true;
+        if (obj == null) return false;
+        if (getClass() != obj.getClass()) return false;
         StrJoin other = (StrJoin) obj;
-        if (!Arrays.equals(strs, other.strs))
-            return false;
+        if (!Arrays.equals(strs, other.strs)) return false;
         return true;
     }
-
+    @Override
     public StrJoin createCopy() {
         return createCopy(true);
     }
-
+    @Override
     public StrJoin createCopy(boolean copyComments) {
         exprType[] new0;
-        if (this.strs != null) {
-            new0 = new exprType[this.strs.length];
-            for (int i = 0; i < this.strs.length; i++) {
-                new0[i] = (exprType) (this.strs[i] != null ? this.strs[i].createCopy(copyComments) : null);
-            }
-        } else {
+        if(this.strs != null){
+        new0 = new exprType[this.strs.length];
+        for(int i=0;i<this.strs.length;i++){
+            new0[i] = (exprType) (this.strs[i] != null? this.strs[i].createCopy(copyComments):null);
+        }
+        }else{
             new0 = this.strs;
         }
         StrJoin temp = new StrJoin(new0);
         temp.beginLine = this.beginLine;
         temp.beginColumn = this.beginColumn;
-        if (this.specialsBefore != null && copyComments) {
-            for (Object o : this.specialsBefore) {
-                if (o instanceof commentType) {
+        if(this.specialsBefore != null && copyComments){
+            for(Object o:this.specialsBefore){
+                if(o instanceof commentType){
                     commentType commentType = (commentType) o;
                     temp.getSpecialsBefore().add(commentType.createCopy(copyComments));
                 }
             }
         }
-        if (this.specialsAfter != null && copyComments) {
-            for (Object o : this.specialsAfter) {
-                if (o instanceof commentType) {
+        if(this.specialsAfter != null && copyComments){
+            for(Object o:this.specialsAfter){
+                if(o instanceof commentType){
                     commentType commentType = (commentType) o;
                     temp.getSpecialsAfter().add(commentType.createCopy(copyComments));
                 }
@@ -67,6 +65,7 @@ public final class StrJoin extends exprType {
         return temp;
     }
 
+    @Override
     public String toString() {
         StringBuffer sb = new StringBuffer("StrJoin[");
         sb.append("strs=");
@@ -75,10 +74,12 @@ public final class StrJoin extends exprType {
         return sb.toString();
     }
 
+    @Override
     public Object accept(VisitorIF visitor) throws Exception {
         return visitor.visitStrJoin(this);
     }
 
+    @Override
     public void traverse(VisitorIF visitor) throws Exception {
         if (strs != null) {
             for (int i = 0; i < strs.length; i++) {

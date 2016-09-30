@@ -72,6 +72,7 @@ public abstract class AbstractTreeBuilder extends AbstractTreeBuilderHelpers {
     /**
      * @return the last opened node.
      */
+    @Override
     public final SimpleNode getLastOpened() {
         return lastOpened;
     }
@@ -102,6 +103,7 @@ public abstract class AbstractTreeBuilder extends AbstractTreeBuilderHelpers {
      * in {@link #closeNode(SimpleNode, int)} to have its scope closed (and at that time it may be changed
      * for a new node that represents the scope more accurately.
      */
+    @Override
     public final SimpleNode openNode(final int id) {
         SimpleNode ret;
 
@@ -141,7 +143,7 @@ public abstract class AbstractTreeBuilder extends AbstractTreeBuilderHelpers {
                 break;
 
             case JJTFOR_STMT:
-                ret = new For(null, null, null, null);
+                ret = new For(null, null, null, null, stack.getGrammar().getInsideAsync());
                 break;
 
             case JJTEXEC_STMT:
@@ -176,6 +178,9 @@ public abstract class AbstractTreeBuilder extends AbstractTreeBuilderHelpers {
                 break;
             case JJTAUG_MULTIPLY:
                 ret = new AugAssign(null, AugAssign.Mult, null);
+                break;
+            case JJTAUG_DOT:
+                ret = new AugAssign(null, AugAssign.Dot, null);
                 break;
             case JJTAUG_DIVIDE:
                 ret = new AugAssign(null, AugAssign.Div, null);
@@ -229,6 +234,9 @@ public abstract class AbstractTreeBuilder extends AbstractTreeBuilderHelpers {
             case JJTMUL_2OP:
                 ret = new BinOp(null, BinOp.Mult, null);
                 break;
+            case JJTDOT_2OP:
+                ret = new BinOp(null, BinOp.Dot, null);
+                break;
             case JJTDIV_2OP:
                 ret = new BinOp(null, BinOp.Div, null);
                 break;
@@ -281,6 +289,7 @@ public abstract class AbstractTreeBuilder extends AbstractTreeBuilderHelpers {
      * @return a new node representing the node that's having it's context closed.
      * @throws Exception
      */
+    @Override
     public final SimpleNode closeNode(final SimpleNode n, final int arity) throws Exception {
         exprType value;
         suiteType orelseSuite;
@@ -423,6 +432,7 @@ public abstract class AbstractTreeBuilder extends AbstractTreeBuilderHelpers {
             case JJTAUG_PLUS:
             case JJTAUG_MINUS:
             case JJTAUG_MULTIPLY:
+            case JJTAUG_DOT:
             case JJTAUG_DIVIDE:
             case JJTAUG_MODULO:
             case JJTAUG_AND:
@@ -510,6 +520,7 @@ public abstract class AbstractTreeBuilder extends AbstractTreeBuilderHelpers {
             case JJTADD_2OP:
             case JJTSUB_2OP:
             case JJTMUL_2OP:
+            case JJTDOT_2OP:
             case JJTDIV_2OP:
             case JJTMOD_2OP:
             case JJTPOW_2OP:
@@ -814,7 +825,7 @@ public abstract class AbstractTreeBuilder extends AbstractTreeBuilderHelpers {
         suiteType s = new Suite(suite.body);
         addSpecialsAndClearOriginal(suite, s);
 
-        return new With(items, s);
+        return new With(items, s, stack.getGrammar().getInsideAsync());
     }
 
 }

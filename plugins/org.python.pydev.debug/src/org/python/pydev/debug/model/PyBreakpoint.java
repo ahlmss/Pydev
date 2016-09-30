@@ -34,6 +34,7 @@ import org.python.pydev.parser.jython.SimpleNode;
 import org.python.pydev.parser.visitors.NodeUtils;
 import org.python.pydev.plugin.PydevPlugin;
 import org.python.pydev.plugin.nature.PythonNature;
+import org.python.pydev.shared_core.io.FileUtils;
 import org.python.pydev.shared_core.structure.Tuple;
 
 /**
@@ -83,6 +84,7 @@ public class PyBreakpoint extends LineBreakpoint {
         }
     }
 
+    @Override
     public String getModelIdentifier() {
         return PyDebugModelPresentation.PY_DEBUG_MODEL_ID;
     }
@@ -187,7 +189,7 @@ public class PyBreakpoint extends LineBreakpoint {
     }
 
     public void setConditionEnabled(boolean conditionEnabled) throws CoreException {
-        setAttributes(new String[] { CONDITION_ENABLED }, new Object[] { new Boolean(conditionEnabled) });
+        setAttributes(new String[] { CONDITION_ENABLED }, new Object[] { conditionEnabled });
     }
 
     public void setCondition(String condition) throws CoreException {
@@ -230,7 +232,7 @@ public class PyBreakpoint extends LineBreakpoint {
             return "None";
         }
 
-        if (file.lastModified() == lastModifiedTimeCached) {
+        if (FileUtils.lastModified(file) == lastModifiedTimeCached) {
             return functionName;
         }
 
@@ -263,7 +265,7 @@ public class PyBreakpoint extends LineBreakpoint {
                 } finally {
                     nature.endRequests();
                 }
-                lastModifiedTimeCached = file.lastModified();
+                lastModifiedTimeCached = FileUtils.lastModified(file);
 
                 if (sourceModule == null) {
                     //the text for the breakpoint requires the function name, and it may be requested before

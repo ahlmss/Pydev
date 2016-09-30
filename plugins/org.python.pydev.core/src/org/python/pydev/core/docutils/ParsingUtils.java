@@ -579,8 +579,15 @@ public abstract class ParsingUtils extends BaseParsingUtils implements IPythonPa
                     i--;
                     break;
                 }
+                // ignoreNextNewLine == true
+                if (i < len && c == '\r') {
+                    //deal with \r\n if found...
+                    if (charAt(i) == '\n') {
+                        i++;
+                    }
+                }
 
-            } else if (c == '\\' || c == '\\') {
+            } else if (c == '\\') {
                 ignoreNextNewLine = true;
                 continue;
 
@@ -592,7 +599,7 @@ public abstract class ParsingUtils extends BaseParsingUtils implements IPythonPa
 
             ignoreNextNewLine = false;
         }
-        i--; //we have to do that because we passed 1 char in the beggining of the while.
+        i--; //we have to do that because we passed 1 char in the beginning of the while.
         return i;
     }
 
@@ -1044,8 +1051,7 @@ public abstract class ParsingUtils extends BaseParsingUtils implements IPythonPa
         return line;
     }
 
-    public static boolean isStringPartition(IDocument document, int offset) {
-        String contentType = getContentType(document, offset);
+    public static boolean isStringContentType(String contentType) {
         return IPythonPartitions.PY_MULTILINE_BYTES1.equals(contentType)
                 || IPythonPartitions.PY_MULTILINE_BYTES2.equals(contentType)
                 || IPythonPartitions.PY_SINGLELINE_BYTES1.equals(contentType)
@@ -1064,9 +1070,18 @@ public abstract class ParsingUtils extends BaseParsingUtils implements IPythonPa
         ;
     }
 
+    public static boolean isCommentContentType(String contentType) {
+        return IPythonPartitions.PY_COMMENT.equals(contentType);
+    }
+
+    public static boolean isStringPartition(IDocument document, int offset) {
+        String contentType = getContentType(document, offset);
+        return isStringContentType(contentType);
+    }
+
     public static boolean isCommentPartition(IDocument document, int offset) {
         String contentType = getContentType(document, offset);
-        return IPythonPartitions.PY_COMMENT.equals(contentType);
+        return isCommentContentType(contentType);
     }
 
 }

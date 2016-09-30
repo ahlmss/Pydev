@@ -20,6 +20,8 @@ import org.eclipse.swt.custom.StyledTextContent;
 import org.eclipse.swt.custom.TextChangeListener;
 import org.eclipse.swt.custom.TextChangedEvent;
 import org.eclipse.swt.custom.TextChangingEvent;
+import org.eclipse.swt.events.DisposeEvent;
+import org.eclipse.swt.events.DisposeListener;
 import org.eclipse.swt.events.ModifyEvent;
 import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.PaintEvent;
@@ -28,9 +30,10 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Rectangle;
 import org.python.pydev.shared_core.log.Log;
+import org.python.pydev.shared_ui.utils.RunInUiThread;
 
 public class VerticalIndentGuidesPainter implements PaintListener, ModifyListener, ExtendedModifyListener,
-        TextChangeListener {
+        TextChangeListener, DisposeListener {
 
     private StyledText styledText;
     private boolean inDraw;
@@ -44,6 +47,11 @@ public class VerticalIndentGuidesPainter implements PaintListener, ModifyListene
     private int currTabWidth = -1;
     private boolean askFullRedraw = true; //On the first one always make it full
 
+    /**
+     * Note: dispose doesn't need to be explicitly called (it'll be disposed when
+     * the StyledText set at setStyledText is disposed). Still, calling it more than
+     * once should be ok.
+     */
     public void dispose() {
         styledText = null;
         currClientArea = null;
@@ -119,7 +127,16 @@ public class VerticalIndentGuidesPainter implements PaintListener, ModifyListene
                         //Only do it if the difference is really high (some decorations make it usually a bit lower than
                         //the actual client area -- usually around 14 in my tests, but make it a bit higher as the usual
                         //difference when a redraw is needed is pretty high).
-                        styledText.redraw();
+                        RunInUiThread.async(new Runnable() {
+
+                            @Override
+                            public void run() {
+                                StyledText s = styledText;
+                                if (s != null && !s.isDisposed()) {
+                                    s.redraw();
+                                }
+                            }
+                        });
                     } else {
                     }
                 }
@@ -211,6 +228,11 @@ public class VerticalIndentGuidesPainter implements PaintListener, ModifyListene
         return false;
     }
 
+    @Override
+    public void widgetDisposed(DisposeEvent e) {
+        this.dispose();
+    }
+
     public void setStyledText(StyledText styledText) {
         if (this.styledText != null) {
             this.styledText.removeModifyListener(this);
@@ -218,6 +240,7 @@ public class VerticalIndentGuidesPainter implements PaintListener, ModifyListene
             if (this.content != null) {
                 this.content.removeTextChangeListener(this);
             }
+            this.styledText.removeDisposeListener(this);
         }
         this.styledText = styledText;
         this.content = this.styledText.getContent();
@@ -225,6 +248,7 @@ public class VerticalIndentGuidesPainter implements PaintListener, ModifyListene
         this.styledText.addModifyListener(this);
         this.styledText.addExtendedModifyListener(this);
         this.content.addTextChangeListener(this);
+        this.styledText.addDisposeListener(this);
     }
 
     @Override

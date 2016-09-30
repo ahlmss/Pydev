@@ -37,6 +37,7 @@ public class TestDependent {
     public static String PYTHON_EXE = null;
     public static String PYTHON_SITE_PACKAGES = null;
     public static String PYTHON_TEST_PACKAGES = null;
+    public static String PYTHON_LIB_DYNLOAD = null;
 
     //Python (optional): related tests won't be run if not available
     public static String PYTHON_WXPYTHON_PACKAGES = null;
@@ -47,8 +48,9 @@ public class TestDependent {
     public static String PYTHON_MX_PACKAGES = null;
     public static String PYTHON_PIL_PACKAGES = null;
 
-    //python 3.0
+    //python 3.x
     public static String PYTHON_30_LIB = null;
+    public static String PYTHON_30_EXE = null;
 
     // the following are all derived from TEST_PYDEV_BASE_LOC if unset
     public static String TEST_PYSRC_LOC = null;
@@ -87,13 +89,16 @@ public class TestDependent {
 
     public static String GetCompletePythonLib(boolean addSitePackages) {
         String dlls = "";
+        if (PYTHON_LIB_DYNLOAD == null) {
+            PYTHON_LIB_DYNLOAD = "";
+        }
         if (isWindows()) {
             dlls = "|" + PYTHON_DLLS;
         }
         if (!addSitePackages) {
-            return PYTHON_LIB + dlls;
+            return PYTHON_LIB + "|" + PYTHON_LIB_DYNLOAD + dlls;
         } else {
-            return PYTHON_LIB + "|" + PYTHON_SITE_PACKAGES + dlls;
+            return PYTHON_LIB + "|" + PYTHON_LIB_DYNLOAD + "|" + PYTHON_SITE_PACKAGES + dlls;
         }
     }
 

@@ -36,6 +36,7 @@ public class HistoryAction extends Action {
 
         }
 
+        @Override
         public void dispose() {
             if (fMenu != null) {
                 fMenu.dispose();
@@ -43,6 +44,7 @@ public class HistoryAction extends Action {
             }
         }
 
+        @Override
         public Menu getMenu(Control parent) {
             if (fMenu != null) {
                 fMenu.dispose();
@@ -51,9 +53,11 @@ public class HistoryAction extends Action {
             final MenuManager manager = new MenuManager();
             manager.setRemoveAllWhenShown(true);
             manager.addMenuListener(new IMenuListener() {
+                @Override
                 public void menuAboutToShow(final IMenuManager manager2) {
                     fillMenuManager(new IActionsMenu() {
 
+                        @Override
                         public void add(IAction action) {
                             manager2.add(action);
 
@@ -66,6 +70,7 @@ public class HistoryAction extends Action {
             return fMenu;
         }
 
+        @Override
         public Menu getMenu(Menu parent) {
             return null; //yes, return null here (no sub children)
         }
@@ -80,13 +85,24 @@ public class HistoryAction extends Action {
             }
             PyUnitTestRun currentTestRun = pyUnitView.getCurrentTestRun();
             List<PyUnitTestRun> allTestRuns = pyUnitView.getAllTestRuns();
+
+            PyUnitTestRun lastPinned = PyUnitViewTestsHolder.getLastPinned();
+            if (lastPinned != null) {
+                SetCurrentRunAction runAction = new SetCurrentRunAction(view, lastPinned);
+                runAction.setChecked(false);
+                runAction.setText("Last Pinned: " + lastPinned.getShortDescription());
+                actionsMenu.add(runAction);
+            }
+
             for (PyUnitTestRun pyUnitTestRun : allTestRuns) {
                 SetCurrentRunAction runAction = new SetCurrentRunAction(view, pyUnitTestRun);
                 runAction.setChecked(pyUnitTestRun == currentTestRun);
-                runAction.setText(pyUnitTestRun.name);
+                runAction.setText(pyUnitTestRun.getShortDescription());
                 actionsMenu.add(runAction);
             }
             actionsMenu.add(new ClearTerminatedAction(view));
+            actionsMenu.add(new ExportCurrentToClipboardAction(view));
+            actionsMenu.add(new RestoreFromClipboardAction(view));
         }
     }
 

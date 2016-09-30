@@ -33,9 +33,9 @@ import org.python.pydev.shared_ui.editor.ITextViewerExtensionAutoEditions;
 
 /**
  * @author Fabio Zadrozny
- * 
+ *
  * Makes a backspace happen...
- * 
+ *
  * We can:
  * - go to the indentation from some uncommented previous line (if we
  *   only have whitespaces in the current line).
@@ -129,7 +129,7 @@ public class PyBackspace extends PyAction {
 
     /**
      * Makes a backspace happen...
-     * 
+     *
      * We can:
      * - go to the indentation from some uncommented previous line (if
      *   we only have whitespaces in the current line).
@@ -156,7 +156,7 @@ public class PyBackspace extends PyAction {
     /**
      * @param ps
      * @param hasOnlyWhitespaces
-     * @param lastCharRegion 
+     * @param lastCharRegion
      * @throws BadLocationException
      */
     private void eraseToPreviousIndentation(PySelection ps, boolean hasOnlyWhitespaces, IRegion lastCharRegion)
@@ -188,7 +188,7 @@ public class PyBackspace extends PyAction {
     }
 
     /**
-     * 
+     *
      * @param ps
      * @throws BadLocationException
      */
@@ -245,7 +245,7 @@ public class PyBackspace extends PyAction {
     }
 
     /**
-     * 
+     *
      * @param ps
      * @throws BadLocationException
      */
@@ -262,7 +262,7 @@ public class PyBackspace extends PyAction {
     }
 
     /**
-     * 
+     *
      * @param ps
      * @throws BadLocationException
      */
@@ -291,7 +291,7 @@ public class PyBackspace extends PyAction {
     /**
      * TODO: Make use of the indentation gotten previously. This implementation
      * just uses the indentation string and erases the number of chars from it.
-     * 
+     *
      * @param ps
      * @param indentation this is in number of characters.
      * @throws BadLocationException
@@ -386,6 +386,7 @@ public class PyBackspace extends PyAction {
     public static VerifyKeyListener createVerifyKeyListener(final TextViewer viewer, final PyEdit edit) {
         return new VerifyKeyListener() {
 
+            @Override
             public void verifyKey(VerifyEvent event) {
                 if ((event.doit && event.character == SWT.BS && event.stateMask == 0 && viewer != null && viewer
                         .isEditable())) { //isBackspace
@@ -417,7 +418,7 @@ public class PyBackspace extends PyAction {
                                     adaptable = new IAdaptable() {
 
                                         @Override
-                                        public Object getAdapter(Class adapter) {
+                                        public <T> T getAdapter(Class<T> adapter) {
                                             return null;
                                         }
                                     };

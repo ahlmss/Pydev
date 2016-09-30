@@ -20,15 +20,16 @@ import org.python.pydev.navigator.elements.IWrappedResource;
 /**
  * This adapter factory is needed for the pydev package explorer (no, it's not enough that the objects themselves are
  * adaptable, there must be a factory to make that visible to it).
- * 
+ *
  * @author Fabio
  */
 public class ModelAdapter implements IAdapterFactory {
 
-    public Object getAdapter(Object adaptableObject, Class adapterType) {
+    @Override
+    public <T> T getAdapter(Object adaptableObject, Class<T> adapterType) {
         if (adaptableObject instanceof IAdaptable) {
             IAdaptable adaptable = (IAdaptable) adaptableObject;
-            Object adapter = adaptable.getAdapter(adapterType);
+            T adapter = adaptable.getAdapter(adapterType);
             //System.out.println("Returning adapter:"+adapter+"\tfor:"+adapterType+"\tfor object:"+adaptableObject);
             return adapter;
 
@@ -36,7 +37,8 @@ public class ModelAdapter implements IAdapterFactory {
         return null;
     }
 
-    public Class[] getAdapterList() {
+    @Override
+    public Class<?>[] getAdapterList() {
         return new Class[] { IWrappedResource.class, ResourceMapping.class, IResource.class, IFolder.class,
                 IFile.class, IContainer.class, IContributorResourceAdapter.class, IProject.class };
     }

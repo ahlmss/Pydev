@@ -67,6 +67,7 @@ public class UIConstants {
     public static final String CLOSE_ICON = "icons/close.gif";
     public static final String SOURCE_FOLDER_ICON = "icons/packagefolder_obj.gif";
     public static final String PROJECT_SOURCE_FOLDER_ICON = "icons/project_source_folder.gif";
+    public static final String PROJECT_ICON = "icons/project.png";
 
     //completion
     public static final String BUILTINS_ICON = "icons/builtin_obj.gif";
@@ -139,4 +140,7 @@ public class UIConstants {
     public static final String WARNING = "icons/warning.png";
     public static final String ERROR_DECORATION = "icons/error_decoration.gif";
     public static final String WARNING_DECORATION = "icons/warning_decoration.gif";
+
+    // search
+    public static final String LINE_MATCH = "icons/line_match.gif";
 }

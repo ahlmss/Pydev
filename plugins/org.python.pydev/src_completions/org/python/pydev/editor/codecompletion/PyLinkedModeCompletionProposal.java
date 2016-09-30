@@ -30,7 +30,7 @@ import org.eclipse.ui.texteditor.link.EditorLinkedModeUI;
 import org.python.pydev.core.IToken;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.editor.codecompletion.revisited.modules.SourceToken;
-import org.python.pydev.editor.hover.PyTextHover;
+import org.python.pydev.editor.hover.AbstractPyEditorTextHover;
 import org.python.pydev.parser.jython.SimpleNode;
 import org.python.pydev.parser.jython.ast.ClassDef;
 import org.python.pydev.parser.jython.ast.FunctionDef;
@@ -44,8 +44,8 @@ public final class PyLinkedModeCompletionProposal extends AbstractPyCompletionPr
 
     /**
      * The number of positions that we should add to the original position.
-     * 
-     * Used so that when we enter '.', we add an additional position (because '.' will be added when applying the completion) 
+     *
+     * Used so that when we enter '.', we add an additional position (because '.' will be added when applying the completion)
      * or so that we can go back one position when the toggle mode (ctrl) is on and a completion with parameters is applied (and they
      * are removed)
      */
@@ -130,7 +130,7 @@ public final class PyLinkedModeCompletionProposal extends AbstractPyCompletionPr
                 SourceToken sourceToken = (SourceToken) element;
                 SimpleNode ast = sourceToken.getAst();
                 if (ast != null && (ast instanceof FunctionDef || ast instanceof ClassDef)) {
-                    computedInfo = PyTextHover.printAst(null, ast);
+                    computedInfo = AbstractPyEditorTextHover.printAst(null, ast);
                 }
                 if (computedInfo != null) {
                     return computedInfo;
@@ -149,6 +149,7 @@ public final class PyLinkedModeCompletionProposal extends AbstractPyCompletionPr
     /*
      * @see ICompletionProposal#getSelection(IDocument)
      */
+    @Override
     public Point getSelection(IDocument document) {
         if (newForcedOffset >= 0) {
             return new Point(newForcedOffset, 0);
@@ -169,6 +170,7 @@ public final class PyLinkedModeCompletionProposal extends AbstractPyCompletionPr
         throw new RuntimeException("Unexpected apply mode:" + onApplyAction);
     }
 
+    @Override
     public void apply(ITextViewer viewer, char trigger, int stateMask, int offset) {
 
         boolean eat = (stateMask & SWT.MOD1) != 0;
@@ -235,12 +237,12 @@ public final class PyLinkedModeCompletionProposal extends AbstractPyCompletionPr
 
     /**
      * Applies the changes in the document (useful for testing)
-     * 
+     *
      * @param offset the offset where the change should be applied
      * @param eat whether we should 'eat' the selection (on toggle)
-     * @param doc the document where the changes should be applied 
-     * @param dif the difference between the offset and and the replacement offset  
-     * 
+     * @param doc the document where the changes should be applied
+     * @param dif the difference between the offset and and the replacement offset
+     *
      * @return whether we should return (and not keep on with the linking mode)
      * @throws BadLocationException
      */
@@ -253,7 +255,7 @@ public final class PyLinkedModeCompletionProposal extends AbstractPyCompletionPr
 
         if (eat) {
 
-            //behavior change: when we have a parenthesis and we're in toggle (eat) mode, let's not add the 
+            //behavior change: when we have a parenthesis and we're in toggle (eat) mode, let's not add the
             //parenthesis anymore.
             if (/*fLastIsPar &&*/iPar != -1) {
                 rep = rep.substring(0, iPar);
@@ -366,6 +368,7 @@ public final class PyLinkedModeCompletionProposal extends AbstractPyCompletionPr
             ui.setDoContextInfo(true); //set it to request the ctx info from the completion processor
             ui.setExitPosition(viewer, exitPos, 0, Integer.MAX_VALUE);
             Runnable r = new Runnable() {
+                @Override
                 public void run() {
                     ui.enter();
                 }
@@ -379,12 +382,13 @@ public final class PyLinkedModeCompletionProposal extends AbstractPyCompletionPr
 
     /**
      * We want to apply it on \n or on '.'
-     * 
+     *
      * When . is entered, the user will finish (and apply) the current completion
      * and request a new one with '.'
-     * 
+     *
      * If not added, it won't request the new one (and will just stop the current)
      */
+    @Override
     public char[] getTriggerCharacters() {
         if (onApplyAction != ON_APPLY_DEFAULT) {
             return null;

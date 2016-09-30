@@ -11,6 +11,7 @@ public final class Return extends stmtType {
         this.value = value;
     }
 
+    @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
@@ -18,41 +19,36 @@ public final class Return extends stmtType {
         return result;
     }
 
+    @Override
     public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
+        if (this == obj) return true;
+        if (obj == null) return false;
+        if (getClass() != obj.getClass()) return false;
         Return other = (Return) obj;
-        if (value == null) {
-            if (other.value != null)
-                return false;
-        } else if (!value.equals(other.value))
-            return false;
+        if (value == null) { if (other.value != null) return false;}
+        else if (!value.equals(other.value)) return false;
         return true;
     }
-
+    @Override
     public Return createCopy() {
         return createCopy(true);
     }
-
+    @Override
     public Return createCopy(boolean copyComments) {
-        Return temp = new Return(value != null ? (exprType) value.createCopy(copyComments) : null);
+        Return temp = new Return(value!=null?(exprType)value.createCopy(copyComments):null);
         temp.beginLine = this.beginLine;
         temp.beginColumn = this.beginColumn;
-        if (this.specialsBefore != null && copyComments) {
-            for (Object o : this.specialsBefore) {
-                if (o instanceof commentType) {
+        if(this.specialsBefore != null && copyComments){
+            for(Object o:this.specialsBefore){
+                if(o instanceof commentType){
                     commentType commentType = (commentType) o;
                     temp.getSpecialsBefore().add(commentType.createCopy(copyComments));
                 }
             }
         }
-        if (this.specialsAfter != null && copyComments) {
-            for (Object o : this.specialsAfter) {
-                if (o instanceof commentType) {
+        if(this.specialsAfter != null && copyComments){
+            for(Object o:this.specialsAfter){
+                if(o instanceof commentType){
                     commentType commentType = (commentType) o;
                     temp.getSpecialsAfter().add(commentType.createCopy(copyComments));
                 }
@@ -61,6 +57,7 @@ public final class Return extends stmtType {
         return temp;
     }
 
+    @Override
     public String toString() {
         StringBuffer sb = new StringBuffer("Return[");
         sb.append("value=");
@@ -69,10 +66,12 @@ public final class Return extends stmtType {
         return sb.toString();
     }
 
+    @Override
     public Object accept(VisitorIF visitor) throws Exception {
         return visitor.visitReturn(this);
     }
 
+    @Override
     public void traverse(VisitorIF visitor) throws Exception {
         if (value != null) {
             value.accept(visitor);

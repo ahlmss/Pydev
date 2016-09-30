@@ -11,13 +11,16 @@
  */
 package org.python.pydev.editor;
 
-import junit.framework.TestCase;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.jface.text.Document;
 import org.python.pydev.editor.autoedit.PyAutoIndentStrategy;
 import org.python.pydev.editor.autoedit.TestIndentPrefs;
 import org.python.pydev.shared_core.utils.DocCmd;
+
+import junit.framework.TestCase;
 
 /**
  * @author Fabio Zadrozny
@@ -66,7 +69,7 @@ public class PyAutoIndentStrategyTest extends TestCase {
         strategy = new PyAutoIndentStrategy(new IAdaptable() {
 
             @Override
-            public Object getAdapter(Class adapter) {
+            public <T> T getAdapter(Class<T> adapter) {
                 return null;
             }
         });
@@ -342,7 +345,7 @@ public class PyAutoIndentStrategyTest extends TestCase {
         DocCmd docCmd = new DocCmd(offset, 0, "\n");
         strategy.customizeDocumentCommand(doc, docCmd);
         assertEquals("\n        ", docCmd.text);
-        assertEquals(-1, docCmd.caretOffset); //don't change it 
+        assertEquals(-1, docCmd.caretOffset); //don't change it
 
     }
 
@@ -1859,6 +1862,12 @@ public class PyAutoIndentStrategyTest extends TestCase {
         expected = " ";
         assertEquals(expected, docCmd.text);
 
+        doc = "from xxx cimport";
+        docCmd = new DocCmd(doc.length(), 0, " ");
+        strategy.customizeDocumentCommand(new Document(doc), docCmd);
+        expected = " ";
+        assertEquals(expected, docCmd.text);
+
         doc = "no from xxx";
         docCmd = new DocCmd(doc.length(), 0, " ");
         strategy.customizeDocumentCommand(new Document(doc), docCmd);
@@ -1948,7 +1957,7 @@ public class PyAutoIndentStrategyTest extends TestCase {
         doc = "''";
         docCmd = new DocCmd(0, 0, "'");
         strategy.customizeDocumentCommand(new Document(doc), docCmd);
-        expected = "'"; //don't walk with the cursor and add so that the document becomes ''' 
+        expected = "'"; //don't walk with the cursor and add so that the document becomes '''
         assertEquals(expected, docCmd.text);
 
         doc = "";
@@ -2391,6 +2400,138 @@ public class PyAutoIndentStrategyTest extends TestCase {
         assertEquals(expected, docCmd.text);
     }
 
+    public void testIndentParensPep8_1() throws Exception {
+        // New indent mode:
+        // pep8 indents aligned with the opening parens (if not directly after the opening parens) 
+        // or with an additional level for vertical alignment of multiple vars after the parens.
+        TestIndentPrefs prefs = new TestIndentPrefs(true, 4);
+        prefs.indentToParAsPep8 = true;
+        strategy.setIndentPrefs(prefs);
+        String doc = "" +
+                "def testIt(" + // indent 1 because of the def and an additional one for the parens.
+                "";
+        DocCmd docCmd = new DocCmd(doc.length(), 0, "\n");
+        strategy.customizeDocumentCommand(new Document(doc), docCmd);
+        String expected = "\n        ";
+        assertEquals(expected, docCmd.text);
+    }
+
+    public void testIndentParensPep8_2() throws Exception {
+        // New indent mode:
+        // pep8 indents aligned with the opening parens (if not directly after the opening parens) 
+        // or with an additional level for vertical alignment of multiple vars after the parens.
+        TestIndentPrefs prefs = new TestIndentPrefs(true, 4);
+        prefs.indentToParAsPep8 = true;
+        strategy.setIndentPrefs(prefs);
+        String doc = "" +
+                "def testIt(aa, bb," + // indent 1 because of the def and an additional one for the parens.
+                "";
+        DocCmd docCmd = new DocCmd(doc.length(), 0, "\n");
+        strategy.customizeDocumentCommand(new Document(doc), docCmd);
+        String expected = "\n           ";
+        assertEquals(expected, docCmd.text);
+    }
+
+    public void testIndentParensPep8_3() throws Exception {
+        // New indent mode:
+        // pep8 indents aligned with the opening parens (if not directly after the opening parens) 
+        // or with an additional level for vertical alignment of multiple vars after the parens.
+        TestIndentPrefs prefs = new TestIndentPrefs(true, 4);
+        prefs.indentToParAsPep8 = true;
+        strategy.setIndentPrefs(prefs);
+        String doc = "" +
+                "myverybigvar = (" + // indent 1 because of the def and an additional one for the parens.
+                "";
+        DocCmd docCmd = new DocCmd(doc.length(), 0, "\n");
+        strategy.customizeDocumentCommand(new Document(doc), docCmd);
+        String expected = "\n    ";
+        assertEquals(expected, docCmd.text);
+    }
+
+    public void testIndentParensPep8_4() throws Exception {
+        // New indent mode:
+        // pep8 indents aligned with the opening parens (if not directly after the opening parens) 
+        // or with an additional level for vertical alignment of multiple vars after the parens.
+        TestIndentPrefs prefs = new TestIndentPrefs(true, 4);
+        prefs.indentToParAsPep8 = true;
+        strategy.setIndentPrefs(prefs);
+        String doc = "" +
+                "myverybigvar = (aaa," + // indent 1 because of the def and an additional one for the parens.
+                "";
+        DocCmd docCmd = new DocCmd(doc.length(), 0, "\n");
+        strategy.customizeDocumentCommand(new Document(doc), docCmd);
+        String expected = "\n                ";
+        assertEquals(expected, docCmd.text);
+    }
+
+    public void testIndentParensPep8_1_tabs() throws Exception {
+        // New indent mode:
+        // pep8 indents aligned with the opening parens (if not directly after the opening parens) 
+        // or with an additional level for vertical alignment of multiple vars after the parens.
+        TestIndentPrefs prefs = new TestIndentPrefs(true, 4);
+        prefs.indentToParAsPep8 = true;
+        prefs.setForceTabs(true);
+        strategy.setIndentPrefs(prefs);
+        String doc = "" +
+                "def testIt(" + // indent 1 because of the def and an additional one for the parens.
+                "";
+        DocCmd docCmd = new DocCmd(doc.length(), 0, "\n");
+        strategy.customizeDocumentCommand(new Document(doc), docCmd);
+        String expected = "\n\t\t";
+        assertEquals(expected, docCmd.text);
+    }
+
+    public void testIndentParensPep8_2_tabs() throws Exception {
+        // New indent mode:
+        // pep8 indents aligned with the opening parens (if not directly after the opening parens) 
+        // or with an additional level for vertical alignment of multiple vars after the parens.
+        TestIndentPrefs prefs = new TestIndentPrefs(true, 4);
+        prefs.indentToParAsPep8 = true;
+        prefs.setForceTabs(true);
+        strategy.setIndentPrefs(prefs);
+        String doc = "" +
+                "def testItrararara(aa, bb," + // indent 1 because of the def and an additional one for the parens.
+                "";
+        DocCmd docCmd = new DocCmd(doc.length(), 0, "\n");
+        strategy.customizeDocumentCommand(new Document(doc), docCmd);
+        String expected = "\n\t\t\t\t";
+        assertEquals(expected, docCmd.text);
+    }
+
+    public void testIndentParensPep8_3_tabs() throws Exception {
+        // New indent mode:
+        // pep8 indents aligned with the opening parens (if not directly after the opening parens) 
+        // or with an additional level for vertical alignment of multiple vars after the parens.
+        TestIndentPrefs prefs = new TestIndentPrefs(true, 4);
+        prefs.indentToParAsPep8 = true;
+        prefs.setForceTabs(true);
+        strategy.setIndentPrefs(prefs);
+        String doc = "" +
+                "myverybigvar = (" + // indent 1 because of the def and an additional one for the parens.
+                "";
+        DocCmd docCmd = new DocCmd(doc.length(), 0, "\n");
+        strategy.customizeDocumentCommand(new Document(doc), docCmd);
+        String expected = "\n\t";
+        assertEquals(expected, docCmd.text);
+    }
+
+    public void testIndentParensPep8_4_tabs() throws Exception {
+        // New indent mode:
+        // pep8 indents aligned with the opening parens (if not directly after the opening parens) 
+        // or with an additional level for vertical alignment of multiple vars after the parens.
+        TestIndentPrefs prefs = new TestIndentPrefs(true, 4);
+        prefs.indentToParAsPep8 = true;
+        prefs.setForceTabs(true);
+        strategy.setIndentPrefs(prefs);
+        String doc = "" +
+                "myverybigvar = (aaa," + // indent 1 because of the def and an additional one for the parens.
+                "";
+        DocCmd docCmd = new DocCmd(doc.length(), 0, "\n");
+        strategy.customizeDocumentCommand(new Document(doc), docCmd);
+        String expected = "\n\t\t\t";
+        assertEquals(expected, docCmd.text);
+    }
+
     public void testDedentElse() {
         strategy.setIndentPrefs(new TestIndentPrefs(true, 4, true));
         String strDoc = "" +
@@ -2446,6 +2587,38 @@ public class PyAutoIndentStrategyTest extends TestCase {
                 "", doc.get());
         assertEquals(docCmd.offset, initialOffset - 4);
         assertEquals(expected, docCmd.text);
+
+    }
+
+    public void testAllowTabStopInComments() {
+        // (Based on code in testTabInComment())
+        TestIndentPrefs prefs = new TestIndentPrefs(true, 4);
+        strategy.setIndentPrefs(prefs);
+
+        LinkedHashMap<String, String> tests = new LinkedHashMap<String, String>();
+        tests.put("#comment", "    ");
+        tests.put("#comment ", "   ");
+        tests.put("#comment  ", "  ");
+        tests.put("#comment   ", " ");
+        tests.put("#comment    ", "    "); // We wrap around to 4 spaces again
+
+        // Set the option, test that we get variable number of spaces inserted
+        prefs.tabStopInComment = true;
+        for (Map.Entry<String, String> e : tests.entrySet()) {
+            Document doc = new Document(e.getKey());
+            DocCmd docCmd = new DocCmd(doc.getLength(), 0, "\t");
+            strategy.customizeDocumentCommand(doc, docCmd);
+            assertEquals(e.getValue(), docCmd.text);
+        }
+
+        // Disable the option, test that we get exactly 4 spaces inserted
+        prefs.tabStopInComment = false;
+        for (Map.Entry<String, String> e : tests.entrySet()) {
+            Document doc = new Document(e.getKey());
+            DocCmd docCmd = new DocCmd(doc.getLength(), 0, "\t");
+            strategy.customizeDocumentCommand(doc, docCmd);
+            assertEquals("    ", docCmd.text);
+        }
 
     }
 }

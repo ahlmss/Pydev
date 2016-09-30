@@ -60,10 +60,12 @@ public class PySourceViewer extends BaseSourceViewer implements IAdaptable, ICom
 
     private boolean isInToggleCompletionStyle;
 
+    @Override
     public void setInToggleCompletionStyle(boolean b) {
         this.isInToggleCompletionStyle = b;
     }
 
+    @Override
     public boolean getIsInToggleCompletionStyle() {
         return this.isInToggleCompletionStyle;
     }
@@ -146,6 +148,7 @@ public class PySourceViewer extends BaseSourceViewer implements IAdaptable, ICom
 
                 private MarkerAnnotationAndPosition marker;
 
+                @Override
                 public boolean hasNext() {
                     while (annotationIterator.hasNext()) {
                         if (marker != null) {
@@ -167,6 +170,7 @@ public class PySourceViewer extends BaseSourceViewer implements IAdaptable, ICom
                     return false;
                 }
 
+                @Override
                 public MarkerAnnotationAndPosition next() {
                     hasNext();
 
@@ -175,6 +179,7 @@ public class PySourceViewer extends BaseSourceViewer implements IAdaptable, ICom
                     return m;
                 }
 
+                @Override
                 public void remove() {
                     throw new RuntimeException("not implemented");
                 }
@@ -182,14 +187,17 @@ public class PySourceViewer extends BaseSourceViewer implements IAdaptable, ICom
             };
         }
         return new Iterator<MarkerAnnotationAndPosition>() {
+            @Override
             public boolean hasNext() {
                 return false;
             }
 
+            @Override
             public MarkerAnnotationAndPosition next() {
                 return null;
             }
 
+            @Override
             public void remove() {
                 throw new RuntimeException("not implemented");
             }
@@ -265,10 +273,12 @@ public class PySourceViewer extends BaseSourceViewer implements IAdaptable, ICom
         super.customizeDocumentCommand(command);
     }
 
-    public Object getAdapter(Class adapter) {
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> T getAdapter(Class<T> adapter) {
         PyEdit pyEdit = projection.get();
         if (pyEdit != null) {
-            return pyEdit.getAdapter(adapter);
+            return (T) pyEdit.getAdapter(adapter);
         }
         return null;
     }

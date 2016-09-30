@@ -9,8 +9,6 @@ package org.python.pydev.dltk.console.ui.internal;
 import java.util.ArrayList;
 import java.util.List;
 
-import junit.framework.TestCase;
-
 import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.debug.ui.console.IConsoleLineTracker;
 import org.eclipse.jface.text.Document;
@@ -30,6 +28,8 @@ import org.python.pydev.shared_interactive_console.console.ui.internal.ICommandH
 import org.python.pydev.shared_interactive_console.console.ui.internal.IScriptConsoleViewer2ForDocumentListener;
 import org.python.pydev.shared_interactive_console.console.ui.internal.ScriptConsoleDocumentListener;
 
+import junit.framework.TestCase;
+
 public class ScriptConsoleDocumentListenerTest extends TestCase {
 
     private IDocument doc;
@@ -45,30 +45,37 @@ public class ScriptConsoleDocumentListenerTest extends TestCase {
         listener = new ScriptConsoleDocumentListener(
                 new IScriptConsoleViewer2ForDocumentListener() {
 
+                    @Override
                     public IDocument getDocument() {
                         return doc;
                     }
 
+                    @Override
                     public IConsoleStyleProvider getStyleProvider() {
                         return null;
                     }
 
+                    @Override
                     public void revealEndOfDocument() {
                         //do nothing
                     }
 
+                    @Override
                     public void setCaretOffset(int length, boolean async) {
                         //do nothing
                     }
 
+                    @Override
                     public int getCommandLineOffset() {
                         return 0;
                     }
 
+                    @Override
                     public int getConsoleWidthInCharacters() {
                         return 0;
                     }
 
+                    @Override
                     public int getCaretOffset() {
                         return 0;
                     }
@@ -87,6 +94,7 @@ public class ScriptConsoleDocumentListenerTest extends TestCase {
                         commandsHandled.add(userInput);
                     }
 
+                    @Override
                     public void handleCommand(String userInput,
                             ICallback<Object, InterpreterResponse> onResponseReceived) {
                         boolean more = false;
@@ -96,6 +104,7 @@ public class ScriptConsoleDocumentListenerTest extends TestCase {
                         onResponseReceived.call(new InterpreterResponse(more, false));
                     }
 
+                    @Override
                     public ICompletionProposal[] getTabCompletions(String commandLine, int cursorPosition) {
                         return null;
                     }
@@ -111,7 +120,7 @@ public class ScriptConsoleDocumentListenerTest extends TestCase {
                 new PyAutoIndentStrategy(new IAdaptable() {
 
                     @Override
-                    public Object getAdapter(Class adapter) {
+                    public <T> T getAdapter(Class<T> adapter) {
                         return null;
                     }
                 }));

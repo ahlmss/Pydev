@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.jface.text.TextAttribute;
+import org.eclipse.swt.graphics.Color;
 import org.python.pydev.debug.newconsole.prefs.ColorManager;
 import org.python.pydev.shared_core.string.FastStringBuffer;
 import org.python.pydev.shared_core.structure.Tuple;
@@ -41,7 +42,9 @@ public final class ConsoleStyleProvider implements IConsoleStyleProvider {
 
     private ScriptStyleRange getIt(String content, int offset, TextAttribute attr, int scriptStyle) {
         //background is the default (already set)
-        return new ScriptStyleRange(offset, content.length(), attr.getForeground(), null, scriptStyle, attr.getStyle());
+        Color background = attr.getBackground();
+        return new ScriptStyleRange(offset, content.length(), attr.getForeground(), background, scriptStyle,
+                attr.getStyle());
     }
 
     public Tuple<List<ScriptStyleRange>, String> createInterpreterStdStyle(String content, int offset,
@@ -96,23 +99,27 @@ public final class ConsoleStyleProvider implements IConsoleStyleProvider {
         return ret;
     }
 
+    @Override
     public Tuple<List<ScriptStyleRange>, String> createInterpreterErrorStyle(String content, int offset) {
         ColorManager colorManager = ColorManager.getDefault();
         TextAttribute attr = colorManager.getConsoleErrorTextAttribute();
         return createInterpreterStdStyle(content, offset, err, colorManager, attr, ScriptStyleRange.STDERR);
     }
 
+    @Override
     public Tuple<List<ScriptStyleRange>, String> createInterpreterOutputStyle(String content, int offset) {
         ColorManager colorManager = ColorManager.getDefault();
         TextAttribute attr = colorManager.getConsoleOutputTextAttribute();
         return createInterpreterStdStyle(content, offset, out, colorManager, attr, ScriptStyleRange.STDOUT);
     }
 
+    @Override
     public ScriptStyleRange createPromptStyle(String content, int offset) {
         TextAttribute attr = ColorManager.getDefault().getConsolePromptTextAttribute();
         return getIt(content, offset, attr, ScriptStyleRange.PROMPT);
     }
 
+    @Override
     public ScriptStyleRange createUserInputStyle(String content, int offset) {
         TextAttribute attr = ColorManager.getDefault().getConsoleInputTextAttribute();
         return getIt(content, offset, attr, ScriptStyleRange.STDIN);

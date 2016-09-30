@@ -15,6 +15,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -44,9 +45,9 @@ import org.xml.sax.helpers.DefaultHandler;
  */
 public class XMLUtils {
 
-    static SAXParserFactory parserFactory = SAXParserFactory.newInstance();
+    public static final SAXParserFactory parserFactory = SAXParserFactory.newInstance();
 
-    static SAXParser getSAXParser() throws CoreException {
+    public static SAXParser getSAXParser() throws CoreException {
         SAXParser parser = null;
         try {
             synchronized (parserFactory) {
@@ -85,7 +86,8 @@ public class XMLUtils {
         }
 
         @Override
-        public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
+        public void startElement(String uri, String localName, String qName, Attributes attributes)
+                throws SAXException {
             if (qName.equals("thread")) {
                 String name = attributes.getValue("name");
                 String id = attributes.getValue("id");
@@ -189,7 +191,8 @@ public class XMLUtils {
 
             String line = attributes.getValue("line");
             IPath filePath = new Path(file);
-            // Try to recycle old stack objects
+            // Try to recycle old stack objects (this is needed so that in a step over we
+            // reuse the same frame and keep the expanded state of the frame).
             currentFrame = thread.findStackFrameByID(id);
             if (currentFrame == null) {
                 currentFrame = new PyStackFrame(thread, id, name, filePath, Integer.parseInt(line), target);
@@ -197,6 +200,8 @@ public class XMLUtils {
                 currentFrame.setName(name);
                 currentFrame.setPath(filePath);
                 currentFrame.setLine(Integer.parseInt(line));
+                // If we found it, reuse it and make sure that new variables will be asked when requested.
+                currentFrame.forceGetNewVariables();
             }
             stack.add(currentFrame);
         }
@@ -207,16 +212,17 @@ public class XMLUtils {
          * Assign local variables to stack frame
          */
         @Override
-        public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
+        public void startElement(String uri, String localName, String qName, Attributes attributes)
+                throws SAXException {
             /*
              <xml>
                <thread id="id"/>
                     <frame id="id" name="functionName " file="file" line="line">
-
+            
                         @deprecated: variables are no longer returned in this request (they are
                         gotten later in asynchronously to speed up the debugger).
                         <var scope="local" name="self" type="ObjectType" value="<DeepThread>"/>
-
+            
                     </frame>*
              */
             if (qName.equals("thread")) {
@@ -253,7 +259,7 @@ public class XMLUtils {
      * @return an array of [thread_id, stopReason, IStackFrame[]]
      */
     public static StoppedStack XMLToStack(AbstractDebugTarget target, String payload) throws CoreException {
-        IStackFrame[] stack;
+        IStackFrame[] stack = new IStackFrame[0];
         StoppedStack retVal;
         try {
             SAXParser parser = getSAXParser();
@@ -343,7 +349,8 @@ public class XMLUtils {
         }
 
         @Override
-        public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
+        public void startElement(String uri, String localName, String qName, Attributes attributes)
+                throws SAXException {
             // <var name="self" type="ObjectType" value="<DeepThread>"/>
             // create a local variable, and add it to locals
             if (qName.equals("var")) {
@@ -394,7 +401,8 @@ public class XMLUtils {
         }
 
         @Override
-        public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
+        public void startElement(String uri, String localName, String qName, Attributes attributes)
+                throws SAXException {
             // <var name="self" type="ObjectType" value="<DeepThread>"/>
             // create a local variable, and add it to locals
             if (qName.equals("for")) {
@@ -482,7 +490,8 @@ public class XMLUtils {
         }
 
         @Override
-        public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
+        public void startElement(String uri, String localName, String qName, Attributes attributes)
+                throws SAXException {
             // <comp p0="%s" p1="%s" p2="%s" p3="%s"/>
             if (qName.equals("comp")) {
 
@@ -687,7 +696,7 @@ public class XMLUtils {
         try {
             SAXParser parser = getSAXParser();
             ExceptionStackTraceXMLInfo info = new ExceptionStackTraceXMLInfo(target);
-            parser.parse(new ByteArrayInputStream(payload.getBytes("utf-8")), info);
+            parser.parse(new ByteArrayInputStream(payload.getBytes(StandardCharsets.UTF_8)), info);
             exceptionStackTraceList = info.exceptionStackTraceList;
         } catch (SAXException e) {
             throw new CoreException(PydevDebugPlugin.makeStatus(IStatus.ERROR, "Unexpected XML error", e));

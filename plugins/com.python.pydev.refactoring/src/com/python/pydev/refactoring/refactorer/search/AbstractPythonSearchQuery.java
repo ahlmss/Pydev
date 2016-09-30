@@ -13,24 +13,28 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.search.ui.ISearchQuery;
 import org.eclipse.search.ui.ISearchResult;
 import org.eclipse.search.ui.text.FileTextSearchScope;
+import org.python.pydev.shared_ui.search.ICustomSearchQuery;
+import org.python.pydev.shared_ui.search.replace.PatternConstructor;
 
-import com.python.pydev.refactoring.refactorer.search.copied.PatternConstructor;
 import com.python.pydev.refactoring.refactorer.search.copied.SearchResultUpdater;
 
-public abstract class AbstractPythonSearchQuery implements ISearchQuery {
+public abstract class AbstractPythonSearchQuery implements ISearchQuery, ICustomSearchQuery {
 
     public AbstractPythonSearchQuery(String searchText) {
-        this(searchText, false, true, null);
+        this(searchText, false, true, true, null);
     }
 
+    @Override
     public boolean canRerun() {
         return false;
     }
 
+    @Override
     public boolean canRunInBackground() {
         return true;
     }
 
+    @Override
     public String getLabel() {
         return "Python Search";
     }
@@ -47,12 +51,14 @@ public abstract class AbstractPythonSearchQuery implements ISearchQuery {
     private final boolean fIsCaseSensitive;
 
     private PythonFileSearchResult fResult;
+    private boolean fIsWholeWord;
 
-    public AbstractPythonSearchQuery(String searchText, boolean isRegEx, boolean isCaseSensitive,
+    public AbstractPythonSearchQuery(String searchText, boolean isRegEx, boolean isCaseSensitive, boolean isWholeWord,
             FileTextSearchScope scope) {
         fSearchText = searchText;
         fIsRegEx = isRegEx;
         fIsCaseSensitive = isCaseSensitive;
+        fIsWholeWord = isWholeWord;
         fScope = scope;
     }
 
@@ -60,28 +66,38 @@ public abstract class AbstractPythonSearchQuery implements ISearchQuery {
         return fScope;
     }
 
+    @Override
     public abstract IStatus run(final IProgressMonitor monitor);
 
+    @Override
     public String getSearchString() {
         return fSearchText;
     }
 
     protected Pattern getSearchPattern() {
-        return PatternConstructor.createPattern(fSearchText, fIsCaseSensitive, fIsRegEx);
+        return PatternConstructor.createPattern(fSearchText, fIsRegEx, true, fIsCaseSensitive, fIsWholeWord);
+    }
+
+    @Override
+    public boolean isWholeWord() {
+        return fIsWholeWord;
     }
 
     public boolean isFileNameSearch() {
         return fSearchText.length() == 0;
     }
 
+    @Override
     public boolean isRegexSearch() {
         return fIsRegEx;
     }
 
+    @Override
     public boolean isCaseSensitive() {
         return fIsCaseSensitive;
     }
 
+    @Override
     public ISearchResult getSearchResult() {
         if (fResult == null) {
             fResult = new PythonFileSearchResult(this);

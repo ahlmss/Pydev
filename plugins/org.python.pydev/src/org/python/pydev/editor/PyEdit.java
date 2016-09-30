@@ -48,10 +48,13 @@ import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IDocumentListener;
 import org.eclipse.jface.text.IRegion;
+import org.eclipse.jface.text.ITextHover;
 import org.eclipse.jface.text.ITextSelection;
+import org.eclipse.jface.text.ITextViewerExtension2;
 import org.eclipse.jface.text.source.ISourceViewer;
 import org.eclipse.jface.text.source.IVerticalRuler;
 import org.eclipse.jface.text.source.LineNumberRulerColumn;
+import org.eclipse.jface.text.source.SourceViewerConfiguration;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.swt.custom.VerifyKeyListener;
@@ -123,7 +126,6 @@ import org.python.pydev.editor.refactoring.PyRefactoringFindDefinition;
 import org.python.pydev.editor.saveactions.PydevSaveActionsPrefPage;
 import org.python.pydev.editor.scripting.PyEditScripting;
 import org.python.pydev.editorinput.PyOpenEditor;
-import org.python.pydev.editorinput.PydevFileEditorInput;
 import org.python.pydev.outline.ParsedModel;
 import org.python.pydev.outline.PyOutlinePage;
 import org.python.pydev.parser.PyParser;
@@ -161,6 +163,7 @@ import org.python.pydev.shared_ui.EditorUtils;
 import org.python.pydev.shared_ui.ImageCache;
 import org.python.pydev.shared_ui.UIConstants;
 import org.python.pydev.shared_ui.editor.IPyEditListener;
+import org.python.pydev.shared_ui.editor_input.PydevFileEditorInput;
 import org.python.pydev.shared_ui.outline.IOutlineModel;
 import org.python.pydev.shared_ui.proposals.IPyCompletionProposal;
 import org.python.pydev.shared_ui.proposals.PyCompletionProposal;
@@ -221,10 +224,12 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
     /** need to hold onto it to support indentPrefix change through preferences */
     private PyEditConfiguration editConfiguration;
 
+    @Override
     public PyEditConfiguration getEditConfiguration() {
         return editConfiguration;
     }
 
+    @Override
     public ColorAndStyleCache getColorCache() {
         return colorCache;
     }
@@ -232,6 +237,7 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
     /**
      * Important: keep for scripting
      */
+    @Override
     public PySelection createPySelection() {
         return new PySelection(this);
     }
@@ -290,6 +296,7 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
     protected void handlePreferenceStoreChanged(PropertyChangeEvent event) {
         super.handlePreferenceStoreChanged(event);
         this.onHandlePreferenceStoreChanged.call(event);
+        updateHoverBehavior();
     }
 
     @Override
@@ -303,6 +310,7 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
     }
 
     private boolean disposed = false;
+    private CodeFoldingSetter codeFoldingSetter;
 
     public boolean isDisposed() {
         return disposed;
@@ -342,14 +350,11 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
             // vertical ruler
 
             //Added to set the code folding.
-            CodeFoldingSetter codeFoldingSetter = new CodeFoldingSetter(this);
-            this.addModelListener(codeFoldingSetter);
-            this.addPropertyListener(codeFoldingSetter);
+            this.codeFoldingSetter = new CodeFoldingSetter(this);
 
             CheckDefaultPreferencesDialog.askAboutSettings();
 
-            //Ask for people to take a look in the crowdfunding for pydev:
-            //http://tiny.cc/pydev-2014
+            //Ask for people to consider funding PyDev.
             PydevShowBrowserMessage.show();
         } catch (Throwable e) {
             Log.log(e);
@@ -392,6 +397,7 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
      * <p>
      * If the first indented line starts with a tab, then tabs override spaces.
      */
+    @Override
     public void resetForceTabs() {
         IDocument doc = getDocumentProvider().getDocument(getEditorInput());
         if (doc == null) {
@@ -455,6 +461,7 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
      * we want to make sure that the indent must be the one bounded to this editor (because tabs may be forced in a given
      * editor, even if does not match the global settings).
      */
+    @Override
     public IIndentPrefs getIndentPrefs() {
         return indentStrategy.getIndentPrefs();
     }
@@ -464,6 +471,7 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
     }
 
     //Just making interface public
+    @Override
     public void resetIndentPrefixes() {
         super.updateIndentPrefixes();
     }
@@ -533,6 +541,7 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
 
             Runnable runnable = new Runnable() {
 
+                @Override
                 public void run() {
                     try {
                         //let's do that in a thread, so that we don't have any delays in setting up the editor
@@ -574,6 +583,7 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
             final IPySyntaxHighlightingAndCodeCompletionEditor editor) {
         return new IPropertyChangeListener() {
 
+            @Override
             public void propertyChange(PropertyChangeEvent event) {
                 try {
                     String property = event.getProperty();
@@ -647,6 +657,44 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
         PyMarkerUtils.replaceMarkers(lst, fileAdapter, INVALID_MODULE_MARKER_TYPE, true, new NullProgressMonitor());
     }
 
+    /*
+     * Update the hovering behavior depending on the preferences.
+     */
+    private void updateHoverBehavior() {
+        ISourceViewer sourceViewer = getSourceViewer();
+        if (sourceViewer == null) {
+            return;
+        }
+        SourceViewerConfiguration configuration = getSourceViewerConfiguration();
+        String[] types = configuration.getConfiguredContentTypes(getSourceViewer());
+
+        for (int i = 0; i < types.length; i++) {
+
+            String t = types[i];
+
+            if (sourceViewer instanceof ITextViewerExtension2) {
+                // Remove existing hovers
+                ((ITextViewerExtension2) sourceViewer).removeTextHovers(t);
+
+                int[] stateMasks = configuration.getConfiguredTextHoverStateMasks(getSourceViewer(), t);
+
+                if (stateMasks != null) {
+                    for (int j = 0; j < stateMasks.length; j++) {
+                        int stateMask = stateMasks[j];
+                        ITextHover textHover = configuration.getTextHover(sourceViewer, t, stateMask);
+                        ((ITextViewerExtension2) sourceViewer).setTextHover(textHover, t, stateMask);
+                    }
+                } else {
+                    ITextHover textHover = configuration.getTextHover(sourceViewer, t);
+                    ((ITextViewerExtension2) sourceViewer).setTextHover(textHover, t,
+                            ITextViewerExtension2.DEFAULT_HOVER_STATE_MASK);
+                }
+            } else {
+                sourceViewer.setTextHover(configuration.getTextHover(sourceViewer, t), t);
+            }
+        }
+    }
+
     /**
      * When we have the editor input re-set, we have to change the parser and the partition scanner to
      * the new document. This happens in 3 cases:
@@ -710,6 +758,9 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
         try {
             if (this.isCythonFile()) {
                 this.setTitleImage(PydevPlugin.getImageCache().get(UIConstants.CYTHON_FILE_ICON));
+                this.getAutoEditStrategy().setCythonFile(true);
+            } else {
+                this.getAutoEditStrategy().setCythonFile(false);
             }
         } catch (Throwable e) {
             Log.log(e);
@@ -902,7 +953,7 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
      */
     private void fixEncoding(final IEditorInput input, IDocument document) {
         if (input instanceof FileEditorInput) {
-            final IFile file = (IFile) ((FileEditorInput) input).getAdapter(IFile.class);
+            final IFile file = ((FileEditorInput) input).getAdapter(IFile.class);
             try {
                 final String encoding = FileUtilsFileBuffer.getPythonFileEncoding(document, file.getFullPath()
                         .toOSString());
@@ -966,6 +1017,7 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
                 currentlyOpenedEditors.remove(this);
             }
             this.outlinePage = null;
+            this.codeFoldingSetter = null;
 
             try {
                 IFile iFile = this.getIFile();
@@ -1304,6 +1356,7 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
         //Details: https://sourceforge.net/projects/pydev/forums/forum/293649/topic/4477776
         RunInUiThread.async(new Runnable() {
 
+            @Override
             public void run() {
                 if (!isDisposed()) {
                     getSourceViewer().invalidateTextPresentation();
@@ -1430,6 +1483,7 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
     /**
      * Only used if we weren't able
      */
+    @Override
     public int getGrammarVersion() throws MisconfigurationException {
         if (isCythonFile()) {
             return IPythonNature.GRAMMAR_PYTHON_VERSION_CYTHON;
@@ -1450,9 +1504,11 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
         return infoForFile.o1.getGrammarVersion();
     }
 
+    @Override
     public IGrammarVersionProvider getGrammarVersionProvider() {
         return new IGrammarVersionProvider() {
 
+            @Override
             public int getGrammarVersion() throws MisconfigurationException {
                 //Always calculate at the present time based on the editor configuration.
                 return PyEdit.this.getGrammarVersion();
@@ -1478,6 +1534,7 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
      * @return the python nature associated with this editor.
      * @throws NotConfiguredInterpreterException
      */
+    @Override
     public IPythonNature getPythonNature() throws MisconfigurationException {
         IProject project = getProject();
         if (project == null || !project.isOpen()) {
@@ -1622,6 +1679,7 @@ public class PyEdit extends PyEditProjection implements IPyEdit, IGrammarVersion
         return false;
     }
 
+    @Override
     public FormatStd getFormatStd() {
         return PyFormatStd.getFormat(this);
     }

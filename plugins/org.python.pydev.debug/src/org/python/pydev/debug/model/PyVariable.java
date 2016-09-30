@@ -18,7 +18,6 @@ import org.eclipse.debug.core.ILaunch;
 import org.eclipse.debug.core.model.IDebugTarget;
 import org.eclipse.debug.core.model.IValue;
 import org.eclipse.debug.core.model.IVariable;
-import org.eclipse.ui.progress.IDeferredWorkbenchAdapter;
 import org.eclipse.ui.views.properties.IPropertySource;
 import org.eclipse.ui.views.tasklist.ITaskListResourceAdapter;
 import org.python.pydev.debug.model.remote.ChangeVariableCommand;
@@ -26,11 +25,11 @@ import org.python.pydev.shared_interactive_console.console.codegen.IScriptConsol
 
 /**
  * Represents a python variable.
- * 
+ *
  * Eclipse gives you an option to separate implementation of variable
  * and its value. I've found it convenient to roll both of them into 1
  * class.
- * 
+ *
  */
 public class PyVariable extends PlatformObject implements IVariable, IValue, IVariableLocator {
 
@@ -59,7 +58,7 @@ public class PyVariable extends PlatformObject implements IVariable, IValue, IVa
     protected String id;
 
     /**
-     * This method sets information about how this variable was found. 
+     * This method sets information about how this variable was found.
      */
     public void setRefererrerFoundInfo(String id, String foundAs) {
         if (foundAs != null && foundAs.length() > 0) {
@@ -75,6 +74,7 @@ public class PyVariable extends PlatformObject implements IVariable, IValue, IVa
         return locator.getThreadId();
     }
 
+    @Override
     public String getPyDBLocation() {
         if (id == null) {
             return locator.getPyDBLocation() + "\t" + name;
@@ -89,10 +89,12 @@ public class PyVariable extends PlatformObject implements IVariable, IValue, IVa
         return getValueString();
     }
 
+    @Override
     public IValue getValue() throws DebugException {
         return this;
     }
 
+    @Override
     public String getValueString() throws DebugException {
         if (value == null) {
             return "";
@@ -103,18 +105,27 @@ public class PyVariable extends PlatformObject implements IVariable, IValue, IVa
         return value;
     }
 
+    public void copyValueString(PyVariable newVariable) {
+        this.type = newVariable.type;
+        this.value = newVariable.value;
+    }
+
+    @Override
     public String getName() throws DebugException {
         return name;
     }
 
+    @Override
     public String getModelIdentifier() {
         return target.getModelIdentifier();
     }
 
+    @Override
     public IDebugTarget getDebugTarget() {
         return target;
     }
 
+    @Override
     public ILaunch getLaunch() {
         return target.getLaunch();
     }
@@ -123,10 +134,12 @@ public class PyVariable extends PlatformObject implements IVariable, IValue, IVa
      * LATER valueChanging nterface has not been implemented yet.
      * When implemented, recently changed variables are shown in red.
      */
+    @Override
     public boolean supportsValueModification() {
         return this.locator != null;
     }
 
+    @Override
     public boolean hasValueChanged() throws DebugException {
         return isModified;
     }
@@ -137,10 +150,11 @@ public class PyVariable extends PlatformObject implements IVariable, IValue, IVa
 
     /**
      * This method is called when some value has to be changed to some other expression.
-     * 
+     *
      * Note that it will (currently) only work for changing local values that are in the topmost frame.
-     * -- python has no way of making it work right now (see: pydevd_vars.changeAttrExpression) 
+     * -- python has no way of making it work right now (see: pydevd_vars.changeAttrExpression)
      */
+    @Override
     public void setValue(String expression) throws DebugException {
         ChangeVariableCommand changeVariableCommand = getChangeVariableCommand(target, expression);
         target.postCommand(changeVariableCommand);
@@ -148,29 +162,33 @@ public class PyVariable extends PlatformObject implements IVariable, IValue, IVa
         target.fireEvent(new DebugEvent(this, DebugEvent.CONTENT | DebugEvent.CHANGE));
     }
 
+    @Override
     public void setValue(IValue value) throws DebugException {
     }
 
+    @Override
     public boolean verifyValue(String expression) throws DebugException {
         return true;
     }
 
+    @Override
     public boolean verifyValue(IValue value) throws DebugException {
         return false;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
-    public Object getAdapter(Class adapter) {
+    public <T> T getAdapter(Class<T> adapter) {
         AdapterDebug.print(this, adapter);
 
         if (adapter.equals(ILaunch.class)) {
             return target.getAdapter(adapter);
 
         } else if (adapter.equals(org.eclipse.debug.ui.actions.IRunToLineTarget.class)) {
-            return this.target.getRunToLineTarget();
+            return (T) this.target.getRunToLineTarget();
 
         } else if (adapter.equals(IScriptConsoleCodeGenerator.class)) {
-            return new PyConsoleCodeGeneratorVariable(this);
+            return (T) new PyConsoleCodeGeneratorVariable(this);
 
         } else if (adapter.equals(IPropertySource.class) || adapter.equals(ITaskListResourceAdapter.class)
                 || adapter.equals(org.eclipse.ui.IContributorResourceAdapter.class)
@@ -180,40 +198,43 @@ public class PyVariable extends PlatformObject implements IVariable, IValue, IVa
                 || adapter.equals(IResource.class) || adapter.equals(org.eclipse.core.resources.IFile.class)) {
             return super.getAdapter(adapter);
         }
-        // ongoing, I do not fully understand all the interfaces they'd like me to support
-        // so I print them out as errors
-        if (adapter.equals(IDeferredWorkbenchAdapter.class)) {
-            return new DeferredWorkbenchAdapter(this);
-        }
 
         //cannot check for the actual interface because it may not be available on eclipse 3.2 (it's only available
         //from 3.3 onwards... and this is only a hack for it to work with eclipse 3.4)
         if (adapter.toString().endsWith(
                 "org.eclipse.debug.internal.ui.viewers.model.provisional.IElementContentProvider")) {
-            return new PyVariableContentProviderHack();
+            return (T) new PyVariableContentProviderHack();
         }
         AdapterDebug.printDontKnow(this, adapter);
         return super.getAdapter(adapter);
     }
 
+    @Override
     public boolean isAllocated() throws DebugException {
         return true;
     }
 
+    @Override
     public IVariable[] getVariables() throws DebugException {
         return EMPTY_IVARIABLE_ARRAY;
     }
 
+    @Override
     public boolean hasVariables() throws DebugException {
         return false;
     }
 
+    @Override
     public String getReferenceTypeName() throws DebugException {
         return type;
     }
 
     public ChangeVariableCommand getChangeVariableCommand(AbstractDebugTarget dbg, String expression) {
         return new ChangeVariableCommand(dbg, getPyDBLocation(), expression);
+    }
+
+    public void forceGetNewVariables() {
+        //no-op for variable (only really available for PyVariableCollection).
     }
 
 }

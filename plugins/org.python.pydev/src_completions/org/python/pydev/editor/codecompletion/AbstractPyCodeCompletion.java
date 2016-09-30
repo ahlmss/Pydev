@@ -26,6 +26,7 @@ public abstract class AbstractPyCodeCompletion implements IPyCodeCompletion {
     /* (non-Javadoc)
      * @see org.python.pydev.editor.codecompletion.IPyCodeCompletion#getImportsTipperStr(org.python.pydev.editor.codecompletion.CompletionRequest)
      */
+    @Override
     public ImportInfo getImportsTipperStr(CompletionRequest request) {
 
         IDocument doc = request.doc;
@@ -88,6 +89,8 @@ public abstract class AbstractPyCodeCompletion implements IPyCodeCompletion {
                         if (!request.isInCalltip) {
                             getIt = false;
                         }
+                    } else if (AbstractToken.isFunctionDefProperty(element)) {
+                        getIt = false;
                     }
                     if (getIt) {
                         args = getArgs(element, state);

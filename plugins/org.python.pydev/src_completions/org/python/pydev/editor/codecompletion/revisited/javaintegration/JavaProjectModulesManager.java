@@ -7,6 +7,7 @@
 package org.python.pydev.editor.codecompletion.revisited.javaintegration;
 
 import java.io.File;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -42,25 +43,25 @@ import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_core.structure.Tuple;
 
 /**
- * This class wraps a java project as we'd wrap a python project in a ProjectModulesManager, to give info on the 
- * modules available. 
+ * This class wraps a java project as we'd wrap a python project in a ProjectModulesManager, to give info on the
+ * modules available.
  *
  * Alternative to find the package names:
  *             SearchableEnvironment s = j.newSearchableNameEnvironment(new ICompilationUnit[]{unit});
  *             s.findPackages("bar".toCharArray(), new ISearchRequestor(){
- * 
+ *
  *                 public void acceptPackage(char[] packageName) {
  *                     System.out.println("Accept package:"+new String(packageName));
  *                 }
- * 
+ *
  *                 public void acceptType(char[] packageName, char[] typeName, char[][] enclosingTypeNames, int modifiers,
  *                         AccessRestriction accessRestriction) {
  *                     System.out.println("Accept type:"+new String(packageName)+" / "+new String(typeName));
  *                 }});
  * End Alternative
- * 
+ *
  * Message about it: http://www.eclipse.org/newsportal/article.php?id=21742&group=eclipse.tools.jdt#21742
- * 
+ *
  * @author Fabio
  */
 public class JavaProjectModulesManager implements IModulesManager, IProjectModulesManager {
@@ -81,6 +82,7 @@ public class JavaProjectModulesManager implements IModulesManager, IProjectModul
     /**
      * @return a map with the modules keys for all the available modules that start with the passed token.
      */
+    @Override
     public SortedMap<ModulesKey, ModulesKey> getAllDirectModulesStartingWith(final String moduleToGetTokensFrom) {
         if (DEBUG_GET_DIRECT_MODULES) {
             System.out.println("getAllDirectModulesStartingWith: " + moduleToGetTokensFrom);
@@ -89,6 +91,7 @@ public class JavaProjectModulesManager implements IModulesManager, IProjectModul
 
         filterJavaPackages(new IFilter() {
 
+            @Override
             public boolean accept(String elementName, IPackageFragmentRoot packageRoot, IJavaElement javaElement) {
                 if (elementName.startsWith(moduleToGetTokensFrom) && elementName.length() > 0) { //we don't want the 'default' package here!
                     if (DEBUG_GET_DIRECT_MODULES) {
@@ -120,6 +123,7 @@ public class JavaProjectModulesManager implements IModulesManager, IProjectModul
      * @return a set with all the module names contained in this modules manager (only in this modules manager,
      * as the addDependencies should never be true in this implementation).
      */
+    @Override
     public Set<String> getAllModuleNames(boolean addDependencies, final String partStartingWithLowerCase) {
         if (addDependencies) {
             throw new RuntimeException("At this point, it should never be called with dependencies "
@@ -130,6 +134,7 @@ public class JavaProjectModulesManager implements IModulesManager, IProjectModul
 
         filterJavaPackages(new IFilter() {
 
+            @Override
             public boolean accept(String elementName, IPackageFragmentRoot packageRoot, IJavaElement javaElement) {
                 for (String mod : StringUtils.dotSplit(elementName)) {
                     if (mod.toLowerCase().startsWith(partStartingWithLowerCase)) {
@@ -152,17 +157,17 @@ public class JavaProjectModulesManager implements IModulesManager, IProjectModul
         /**
          * @param elementName the name of the element (same as javaElement.getElementName())
          * @param packageRoot the java package where the element is contained
-         * @param javaElement the java element 
-         * 
+         * @param javaElement the java element
+         *
          * @return true if the element should be added and false otherwise.
          */
         public boolean accept(String elementName, IPackageFragmentRoot packageRoot, IJavaElement javaElement);
     }
 
     /**
-     * This method passes through all the java packages and calls the filter callback passed 
+     * This method passes through all the java packages and calls the filter callback passed
      * on each package found.
-     * 
+     *
      * If true is returned on the callback, the children of each package (classes) will also be visited,
      * otherwise, they'll be skipped.
      */
@@ -182,7 +187,7 @@ public class JavaProjectModulesManager implements IModulesManager, IProjectModul
                     for (IPackageFragmentRoot root : roots) {
                         IJavaElement[] children = root.getChildren();
 
-                        //get the actual packages 
+                        //get the actual packages
                         for (IJavaElement child : children) {
                             IPackageFragment childPackage = (IPackageFragment) child;
                             String elementName = childPackage.getElementName();
@@ -213,34 +218,42 @@ public class JavaProjectModulesManager implements IModulesManager, IProjectModul
         }
     }
 
+    @Override
     public String[] getBuiltins() {
         return EMPTY_STRINTG_ARRAY;
     }
 
+    @Override
     public List<String> getCompletePythonPath(IInterpreterInfo interpreter, IInterpreterManager manager) {
         return new ArrayList<String>();
     }
 
+    @Override
     public IModule getModule(String name, IPythonNature nature, boolean dontSearchInit) {
         return this.getModuleInDirectManager(name, nature, dontSearchInit);
     }
 
+    @Override
     public IModule getModule(String name, IPythonNature nature, boolean checkSystemManager, boolean dontSearchInit) {
         return this.getModuleInDirectManager(name, nature, dontSearchInit);
     }
 
+    @Override
     public IPythonNature getNature() {
         return null;
     }
 
+    @Override
     public boolean hasModule(ModulesKey key) {
         return false;
     }
 
+    @Override
     public ModulesKey[] getOnlyDirectModules() {
         return new ModulesKey[0];
     }
 
+    @Override
     public Object getPythonPathHelper() {
         return null;
     }
@@ -249,18 +262,22 @@ public class JavaProjectModulesManager implements IModulesManager, IProjectModul
         return; // noop
     }
 
+    @Override
     public IModule getRelativeModule(String name, IPythonNature nature) {
         return this.getModuleInDirectManager(name, nature, true);
     }
 
+    @Override
     public int getSize(boolean addDependenciesSize) {
         return 0;
     }
 
+    @Override
     public ISystemModulesManager getSystemModulesManager() {
         return null;
     }
 
+    @Override
     public Tuple<IModule, IModulesManager> getModuleAndRelatedModulesManager(String name, IPythonNature nature,
             boolean checkSystemManager, boolean dontSearchInit) {
         IModule module = this.getModule(name, nature, checkSystemManager, dontSearchInit);
@@ -274,6 +291,7 @@ public class JavaProjectModulesManager implements IModulesManager, IProjectModul
      * @param dontSearchInit: not applicable for this method (ignored)
      * @return the module that corresponds to the passed name.
      */
+    @Override
     public IModule getModuleInDirectManager(String name, IPythonNature nature, boolean dontSearchInit) {
         if (DEBUG_GET_MODULE) {
             System.out.println("Trying to get module in java project modules manager: " + name);
@@ -293,7 +311,7 @@ public class JavaProjectModulesManager implements IModulesManager, IProjectModul
 
             if (javaElement != null) {
 
-                //now, there's a catch here, we'll find any class in the project classpath, even if it's in the 
+                //now, there's a catch here, we'll find any class in the project classpath, even if it's in the
                 //global classpath (e.g.: rt.jar), and this shouldn't be treated in this project modules manager
                 //(that's treated in the Jython system manager)
                 IJavaElement ancestor = javaElement.getAncestor(IJavaElement.PACKAGE_FRAGMENT_ROOT);
@@ -312,10 +330,12 @@ public class JavaProjectModulesManager implements IModulesManager, IProjectModul
         return null;
     }
 
+    @Override
     public String resolveModuleInDirectManager(IFile file) {
         return null;
     }
 
+    @Override
     public String resolveModuleInDirectManager(String full) {
         return null;
     }
@@ -324,87 +344,108 @@ public class JavaProjectModulesManager implements IModulesManager, IProjectModul
     //the methods below are not actually implemented for a java project (as they aren't really applicable)
     //------------------------------------------------------------------------------------------------------------------
 
+    @Override
     public boolean isInPythonPath(IResource member, IProject container) {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public String resolveModule(IResource member, IProject container) {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public String resolveModule(String full) {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public String resolveModule(String full, boolean checkSystemManager) {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public void setPythonNature(IPythonNature nature) {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public boolean startCompletionCache() {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public void endCompletionCache() {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public void endProcessing() {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public SortedMap<ModulesKey, ModulesKey> getAllModulesStartingWith(String moduleToGetTokensFrom) {
         throw new RuntimeException("Not implemented"); //should never be called (this modules manager is inside another one that should handle it)
     }
 
+    @Override
     public IModule addModule(ModulesKey key) {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public void changePythonPath(String pythonpath, IProject project, IProgressMonitor monitor) {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public void removeModules(Collection<ModulesKey> toRem) {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public void processDelete(ModulesKey key) {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public void processInsert(ModulesKey key) {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public void processUpdate(ModulesKey data) {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public void rebuildModule(File f, ICallback0<IDocument> doc, IProject project, IProgressMonitor monitor,
             IPythonNature nature) {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public void removeModule(File file, IProject project, IProgressMonitor monitor) {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public void setProject(IProject project, IPythonNature nature, boolean restoreDeltas) {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public int pushTemporaryModule(String moduleName, IModule module) {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public void popTemporaryModule(String moduleName, int handle) {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
     public void saveToFile(File workspaceMetadataFile) {
         throw new RuntimeException("Not implemented");
     }
@@ -416,6 +457,11 @@ public class JavaProjectModulesManager implements IModulesManager, IProjectModul
 
     @Override
     public Object getCompiledModuleCreationLock(String name) {
+        throw new RuntimeException("not implemented");
+    }
+
+    @Override
+    public Tuple<List<ModulesKey>, List<ModulesKey>> diffModules(AbstractMap<ModulesKey, ModulesKey> keysFound) {
         throw new RuntimeException("not implemented");
     }
 }

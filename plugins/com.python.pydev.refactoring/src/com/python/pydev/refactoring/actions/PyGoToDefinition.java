@@ -21,6 +21,7 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jface.action.IAction;
 import org.eclipse.jface.dialogs.ErrorDialog;
+import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IDocumentExtension4;
 import org.eclipse.jface.viewers.ILabelProvider;
@@ -109,6 +110,7 @@ public class PyGoToDefinition extends PyRefactorAction {
         /**
          * As soon as the reparse is done, this method is called.
          */
+        @Override
         public void parserChanged(ISimpleNode root, IAdaptable file, IDocument doc, long docModificationStamp) {
             editToReparse.getParser().removeParseListener(this); //we'll only listen for this single parse
             doFindIfLast();
@@ -117,6 +119,7 @@ public class PyGoToDefinition extends PyRefactorAction {
         /**
          * We want to work in the event of parse errors too.
          */
+        @Override
         public void parserError(Throwable error, IAdaptable file, IDocument doc) {
             editToReparse.getParser().removeParseListener(this); //we'll only listen for this single parse
             doFindIfLast();
@@ -262,13 +265,16 @@ public class PyGoToDefinition extends PyRefactorAction {
                 final Display disp = shell.getDisplay();
                 disp.syncExec(new Runnable() {
 
+                    @Override
                     public void run() {
                         ElementListSelectionDialog dialog = new ElementListSelectionDialog(shell, new ILabelProvider() {
 
+                            @Override
                             public Image getImage(Object element) {
                                 return PyCodeCompletionImages.getImageForType(IToken.TYPE_PACKAGE);
                             }
 
+                            @Override
                             public String getText(Object element) {
                                 ItemPointer pointer = (ItemPointer) element;
                                 File f = (File) (pointer).file;
@@ -276,16 +282,20 @@ public class PyGoToDefinition extends PyRefactorAction {
                                 return f.getName() + "  (" + f.getParent() + ") - line:" + line;
                             }
 
+                            @Override
                             public void addListener(ILabelProviderListener listener) {
                             }
 
+                            @Override
                             public void dispose() {
                             }
 
+                            @Override
                             public boolean isLabelProperty(Object element, String property) {
                                 return false;
                             }
 
+                            @Override
                             public void removeListener(ILabelProviderListener listener) {
                             }
                         }) {
@@ -341,8 +351,10 @@ public class PyGoToDefinition extends PyRefactorAction {
      * @return an array of ItemPointer with the definitions found
      * @throws MisconfigurationException 
      * @throws TooManyMatchesException 
+     * @throws BadLocationException 
      */
-    public ItemPointer[] findDefinition(PyEdit pyEdit) throws TooManyMatchesException, MisconfigurationException {
+    public ItemPointer[] findDefinition(PyEdit pyEdit)
+            throws TooManyMatchesException, MisconfigurationException, BadLocationException {
         IPyRefactoring pyRefactoring = AbstractPyRefactoring.getPyRefactoring();
         return pyRefactoring.findDefinition(getRefactoringRequest());
     }

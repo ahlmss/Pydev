@@ -2,12 +2,12 @@ import sys
 import os
 import unittest
 try:
-    import pydev_monkey
+    from _pydev_bundle import pydev_monkey
 except:
     sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-    import pydev_monkey
+    from _pydev_bundle import pydev_monkey
 from pydevd import SetupHolder
-from pydev_monkey import pydev_src_dir
+from _pydev_bundle.pydev_monkey import pydev_src_dir
 
 
 
@@ -53,6 +53,32 @@ connect(\\"127.0.0.1\\")
                     'connect(\\"127.0.0.1\\")'
                 ) % pydev_src_dir
             ])
+        finally:
+            SetupHolder.setup = original
+
+    def test_monkey_patch_args_module(self):
+        original = SetupHolder.setup
+
+        try:
+            SetupHolder.setup = {'client':'127.0.0.1', 'port': '0'}
+            check=['C:\\bin\\python.exe', '-m', 'test']
+            sys.original_argv = ['pydevd', '--multiprocess']
+            if sys.platform == 'win32':
+                self.assertEqual(pydev_monkey.patch_args(check), [
+                    'C:\\bin\\python.exe',
+                    '"pydevd"',
+                    '"--module"',
+                    '"--multiprocess"',
+                    'test',
+                ])
+            else:
+                self.assertEqual(pydev_monkey.patch_args(check), [
+                    'C:\\bin\\python.exe',
+                    'pydevd',
+                    '--module',
+                    '--multiprocess',
+                    'test',
+                ])
         finally:
             SetupHolder.setup = original
 

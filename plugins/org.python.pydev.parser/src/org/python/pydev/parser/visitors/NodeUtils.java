@@ -19,6 +19,7 @@ import org.eclipse.core.runtime.Assert;
 import org.eclipse.jface.text.IDocument;
 import org.python.pydev.core.FullRepIterable;
 import org.python.pydev.core.IGrammarVersionProvider;
+import org.python.pydev.core.ITypeInfo;
 import org.python.pydev.core.MisconfigurationException;
 import org.python.pydev.core.UnpackInfo;
 import org.python.pydev.core.docutils.ParsingUtils;
@@ -32,7 +33,9 @@ import org.python.pydev.parser.jython.ast.BinOp;
 import org.python.pydev.parser.jython.ast.Call;
 import org.python.pydev.parser.jython.ast.ClassDef;
 import org.python.pydev.parser.jython.ast.Compare;
+import org.python.pydev.parser.jython.ast.Comprehension;
 import org.python.pydev.parser.jython.ast.Dict;
+import org.python.pydev.parser.jython.ast.DictComp;
 import org.python.pydev.parser.jython.ast.Expr;
 import org.python.pydev.parser.jython.ast.For;
 import org.python.pydev.parser.jython.ast.FunctionDef;
@@ -55,7 +58,9 @@ import org.python.pydev.parser.jython.ast.VisitorBase;
 import org.python.pydev.parser.jython.ast.While;
 import org.python.pydev.parser.jython.ast.With;
 import org.python.pydev.parser.jython.ast.aliasType;
+import org.python.pydev.parser.jython.ast.argumentsType;
 import org.python.pydev.parser.jython.ast.commentType;
+import org.python.pydev.parser.jython.ast.comprehensionType;
 import org.python.pydev.parser.jython.ast.excepthandlerType;
 import org.python.pydev.parser.jython.ast.exprType;
 import org.python.pydev.parser.jython.ast.keywordType;
@@ -108,6 +113,7 @@ public class NodeUtils {
                 if (functionDef.args != null) {
                     String printed = PrettyPrinterV2.printArguments(new IGrammarVersionProvider() {
 
+                        @Override
                         public int getGrammarVersion() throws MisconfigurationException {
                             return IGrammarVersionProvider.GRAMMAR_PYTHON_VERSION_3_0;
                         }
@@ -210,7 +216,8 @@ public class NodeUtils {
             return val;
         }
 
-        if (node instanceof org.python.pydev.parser.jython.ast.Dict) {
+        if (node instanceof org.python.pydev.parser.jython.ast.Dict
+                || node instanceof org.python.pydev.parser.jython.ast.DictComp) {
             String val = "{}";
             if (useTypeRepr) {
                 val = getBuiltinType(val);
@@ -326,7 +333,7 @@ public class NodeUtils {
     }
 
     public static String getFullRepresentationString(SimpleNode node, boolean fullOnSubscriptOrCall) {
-        if (node instanceof Dict) {
+        if (node instanceof Dict || node instanceof DictComp) {
             return "dict";
         }
 
@@ -965,7 +972,8 @@ public class NodeUtils {
      * @param targetAST
      * @return
      */
-    public static boolean isValidInterLoopContext(int sourceLine, int targetLine, ASTEntry sourceAST, ASTEntry targetAST) {
+    public static boolean isValidInterLoopContext(int sourceLine, int targetLine, ASTEntry sourceAST,
+            ASTEntry targetAST) {
         boolean retval = true;
         if (sourceAST.node instanceof TryExcept && targetAST.node instanceof TryExcept
                 && (!isValidTryExceptContext(sourceAST, targetAST, sourceLine, targetLine))) {
@@ -992,7 +1000,8 @@ public class NodeUtils {
      *            : the line at which we need to set next (starts at 0)
      * @return
      */
-    public static boolean isValidTryExceptContext(ASTEntry sourceAST, ASTEntry targetAST, int sourceLine, int targetLine) {
+    public static boolean isValidTryExceptContext(ASTEntry sourceAST, ASTEntry targetAST, int sourceLine,
+            int targetLine) {
 
         excepthandlerType[] exceptionHandlers = ((TryExcept) sourceAST.node).handlers;
         if (((TryExcept) sourceAST.node).specialsAfter != null) {
@@ -1400,6 +1409,54 @@ public class NodeUtils {
         return nodeOffsetBegin;
     }
 
+    public static TypeInfo getTypeForParameterFromAST(String actTok, SimpleNode node) {
+        exprType typeForParameter = NodeUtils.getTypeForParameterFromStaticTyping(actTok, node);
+        if (typeForParameter != null) {
+            return new TypeInfo(typeForParameter);
+        }
+        String typeForParameterFromDocstring = NodeUtils.getTypeForParameterFromDocstring(actTok, node);
+        if (typeForParameterFromDocstring != null) {
+            return new TypeInfo(typeForParameterFromDocstring);
+        }
+        return null;
+    }
+
+    /**
+     * Deal with PEP 484 (Type Hints)
+     */
+    public static exprType getTypeForParameterFromStaticTyping(String actTok, SimpleNode node) {
+        if (node instanceof FunctionDef) {
+            FunctionDef functionDef = (FunctionDef) node;
+            argumentsType args = functionDef.args;
+            if (args == null) {
+                return null;
+            }
+            exprType[] annotation = args.annotation;
+            if (annotation == null) {
+                return null;
+            }
+            exprType[] args2 = args.args;
+            if (args2 == null) {
+                return null;
+            }
+            for (int i = 0; i < args2.length; i++) {
+                exprType argI = args2[i];
+                if (argI != null) {
+                    String rep = NodeUtils.getRepresentationString(argI);
+                    if (actTok.equals(rep)) {
+                        if (annotation.length > i) {
+                            exprType exprType = annotation[i];
+                            if (exprType != null) {
+                                return exprType;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
     public static String getTypeForParameterFromDocstring(String actTok, SimpleNode node) {
         String nodeDocString = NodeUtils.getNodeDocString(node);
         if (nodeDocString != null) {
@@ -1484,6 +1541,29 @@ public class NodeUtils {
         return trimmed;
     }
 
+    public static ITypeInfo getReturnTypeFromFuncDefAST(SimpleNode node) {
+        ITypeInfo returnTypeFromStaticTyping = getReturnTypeFromStaticTyping(node);
+        if (returnTypeFromStaticTyping != null) {
+            return returnTypeFromStaticTyping;
+        }
+        String returnTypeFromDocstring = getReturnTypeFromDocstring(node);
+        if (returnTypeFromDocstring != null) {
+            return new TypeInfo(returnTypeFromDocstring);
+        }
+        return null;
+    }
+
+    public static TypeInfo getReturnTypeFromStaticTyping(SimpleNode node) {
+        if (node instanceof FunctionDef) {
+            FunctionDef functionDef = (FunctionDef) node;
+            exprType returns = functionDef.returns;
+            if (returns != null) {
+                return new TypeInfo(returns);
+            }
+        }
+        return null;
+    }
+
     public static String getReturnTypeFromDocstring(SimpleNode node) {
         String nodeDocString = NodeUtils.getNodeDocString(node);
         if (nodeDocString == null) {
@@ -1563,16 +1643,20 @@ public class NodeUtils {
             }
         }
         try {
-            return getValueForContainer(compoundType, 0, checkPosForDict.getUnpackTuple(), -1);
+            //NOTE: the getUnpackTuple(10) isn't really good, but we have to change the strategy
+            //to first parse to get what's available to then know the length (so, right now
+            //we won't work very well with negative numbers in this use-case).
+            return getValueForContainer(compoundType, 0, checkPosForDict.getUnpackTuple(10), -1);
         } catch (SyntaxErrorException e) {
             return "";
         }
 
     }
 
-    private static String getValueForContainer(String substring, int currentPos, int pos, int foundFirstSeparator)
+    private static String getValueForContainer(String substring, int currentPos, int unpackTuple,
+            int foundFirstSeparator)
             throws SyntaxErrorException {
-        if (pos == -1) {
+        if (unpackTuple == -1) {
             return substring;
         }
 
@@ -1586,7 +1670,7 @@ public class NodeUtils {
                 if (j != -1) {
                     String searchIn = substring.substring(i + 1, j);
                     if (foundFirstSeparator == -1) {
-                        return getValueForContainer(searchIn, currentPos, pos, 0);
+                        return getValueForContainer(searchIn, currentPos, unpackTuple, 0);
                     } else {
                         i = j;
                         continue;
@@ -1604,7 +1688,7 @@ public class NodeUtils {
             }
 
             if (found) {
-                if (currentPos == pos) {
+                if (currentPos == unpackTuple) {
                     return substring.substring(lastStart, i).trim();
                 }
                 if (c == '-') {
@@ -1615,10 +1699,14 @@ public class NodeUtils {
                 currentPos++;
             }
         }
-        if (currentPos == pos) {
+        if (currentPos == unpackTuple) {
             return substring.substring(lastStart, substring.length()).trim();
         }
         return substring;
+    }
+
+    public static String getPackedTypeFromDocstring(ITypeInfo docstring) {
+        return getPackedTypeFromDocstring(docstring.getActTok());
     }
 
     public static String getPackedTypeFromDocstring(String docstring) {
@@ -1646,4 +1734,127 @@ public class NodeUtils {
         }
         throw new RuntimeException("Did not expect to get here");
     }
+
+    public static exprType[] getEltsFromCompoundObject(SimpleNode ast) {
+        // Most common at the top!
+        if (ast instanceof org.python.pydev.parser.jython.ast.Tuple) {
+            org.python.pydev.parser.jython.ast.Tuple tuple = (org.python.pydev.parser.jython.ast.Tuple) ast;
+            return tuple.elts;
+        }
+        if (ast instanceof org.python.pydev.parser.jython.ast.List) {
+            org.python.pydev.parser.jython.ast.List list = (org.python.pydev.parser.jython.ast.List) ast;
+            return list.elts;
+        }
+
+        if (ast instanceof org.python.pydev.parser.jython.ast.ListComp) {
+            org.python.pydev.parser.jython.ast.ListComp list = (org.python.pydev.parser.jython.ast.ListComp) ast;
+            exprType[] ret = new exprType[] { list.elt };
+
+            if (list.generators != null && list.generators.length == 1) {
+                comprehensionType comprehensionType = list.generators[0];
+                if (comprehensionType instanceof Comprehension) {
+                    Comprehension comprehension = (Comprehension) comprehensionType;
+                    exprType iter = comprehension.iter;
+                    exprType[] eltsFromIter = getEltsFromCompoundObject(iter);
+
+                    if (comprehension.target instanceof Name && eltsFromIter != null && eltsFromIter.length > 0) {
+                        Name name = (Name) comprehension.target;
+                        String rep = getRepresentationString(name);
+                        if (rep != null) {
+                            if (ret.length == 1) {
+                                if (ret[0] instanceof Name) {
+                                    String nameRep = getRepresentationString(ret[0]);
+                                    if (rep.equals(nameRep)) {
+                                        ret[0] = eltsFromIter[0]; //Note: mutating ret is Ok (it's a local copy).
+                                    }
+
+                                } else if (ret[0] instanceof org.python.pydev.parser.jython.ast.Tuple
+                                        || ret[0] instanceof org.python.pydev.parser.jython.ast.List) {
+                                    ret[0] = (exprType) ret[0].createCopy(); //Careful: we shouldn't mutate the original AST.
+                                    exprType[] tupleElts = getEltsFromCompoundObject(ret[0]);
+                                    for (int i = 0; i < tupleElts.length; i++) {
+                                        exprType tupleArg = tupleElts[i];
+                                        if (tupleArg instanceof Name) {
+                                            if (rep.equals(getRepresentationString(tupleArg))) {
+                                                tupleElts[i] = eltsFromIter[0];
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return ret;
+        }
+        if (ast instanceof org.python.pydev.parser.jython.ast.Set) {
+            org.python.pydev.parser.jython.ast.Set set = (org.python.pydev.parser.jython.ast.Set) ast;
+            return set.elts;
+        }
+        if (ast instanceof org.python.pydev.parser.jython.ast.Dict) {
+            org.python.pydev.parser.jython.ast.Dict dict = (org.python.pydev.parser.jython.ast.Dict) ast;
+            return new exprType[] { dict.keys[0], dict.values[0] };
+        }
+        if (ast instanceof org.python.pydev.parser.jython.ast.DictComp) {
+            org.python.pydev.parser.jython.ast.DictComp dict = (org.python.pydev.parser.jython.ast.DictComp) ast;
+            return new exprType[] { dict.key, dict.value };
+        }
+        if (ast instanceof org.python.pydev.parser.jython.ast.SetComp) {
+            org.python.pydev.parser.jython.ast.SetComp set = (org.python.pydev.parser.jython.ast.SetComp) ast;
+            return new exprType[] { set.elt };
+        }
+        if (ast instanceof Call) {
+            Call call = (Call) ast;
+            exprType func = call.func;
+            if (func instanceof Name) {
+                Name name = (Name) func;
+                if ("dict".equals(name.id) || "list".equals(name.id) || "tuple".equals(name.id)
+                        || "set".equals(name.id)) {
+                    //A dict call
+                    exprType[] args = call.args;
+                    if (args != null && args.length > 0) {
+                        return getEltsFromCompoundObject(args[0]);
+                    }
+                }
+            }
+            if (func instanceof Attribute) {
+                Attribute attribute = (Attribute) func;
+                if (attribute.value instanceof Dict) {
+                    Dict dict = (Dict) attribute.value;
+                    String representationString = getRepresentationString(attribute.attr);
+                    if ("keys".equals(representationString) || "iterkeys".equals(representationString)) {
+                        return dict.keys;
+                    }
+                    if ("values".equals(representationString) || "itervalues".equals(representationString)) {
+                        return dict.values;
+                    }
+                    if ("items".equals(representationString) || "iteritems".equals(representationString)) {
+                        if (dict.keys != null && dict.values != null && dict.keys.length > 0
+                                && dict.values.length > 0) {
+                            return new exprType[] { dict.keys[0], dict.values[0] };
+                        }
+                    }
+                }
+
+                if (attribute.value instanceof DictComp) {
+                    DictComp dict = (DictComp) attribute.value;
+                    String representationString = getRepresentationString(attribute.attr);
+                    if ("keys".equals(representationString) || "iterkeys".equals(representationString)) {
+                        return new exprType[] { dict.key };
+                    }
+                    if ("values".equals(representationString) || "itervalues".equals(representationString)) {
+                        return new exprType[] { dict.value };
+                    }
+                    if ("items".equals(representationString) || "iteritems".equals(representationString)) {
+                        if (dict.key != null && dict.value != null) {
+                            return new exprType[] { dict.key, dict.value };
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
 }

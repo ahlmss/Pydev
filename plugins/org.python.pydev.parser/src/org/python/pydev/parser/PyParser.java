@@ -135,6 +135,7 @@ public class PyParser extends BaseParser implements IPyParser {
         super(PyParserManager.getPyParserManager(new PreferenceStore()));
         if (grammarVersionProvider == null) {
             grammarVersionProvider = new IGrammarVersionProvider() {
+                @Override
                 public int getGrammarVersion() {
                     return IPythonNature.LATEST_GRAMMAR_VERSION;
                 }
@@ -624,7 +625,7 @@ public class PyParser extends BaseParser implements IPyParser {
 
         //Create marker only if possible...
         if (resource != null) {
-            IResource fileAdapter = (IResource) resource.getAdapter(IResource.class);
+            IResource fileAdapter = resource.getAdapter(IResource.class);
             if (fileAdapter != null) {
                 try {
                     Map<String, Object> map = new HashMap<String, Object>();

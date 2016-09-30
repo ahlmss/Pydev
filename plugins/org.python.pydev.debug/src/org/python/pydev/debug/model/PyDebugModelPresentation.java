@@ -30,7 +30,7 @@ import org.eclipse.ui.IEditorInput;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.debug.core.PydevDebugPlugin;
 import org.python.pydev.editor.PyEdit;
-import org.python.pydev.editorinput.PydevFileEditorInput;
+import org.python.pydev.editorinput.EditorInputFactory;
 import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_ui.ImageCache;
 
@@ -72,6 +72,7 @@ public class PyDebugModelPresentation implements IDebugModelPresentation {
     /**
      * @return the image for some debug element
      */
+    @Override
     public Image getImage(Object element) {
         ImageCache imageCache = PydevDebugPlugin.getImageCache();
 
@@ -90,8 +91,7 @@ public class PyDebugModelPresentation implements IDebugModelPresentation {
                             return imageCache.get("icons/breakmarker.gif");
                         }
                     }
-                }
-                else {
+                } else {
                     if (pyBreakpoint.getType().equals(PyBreakpoint.PY_BREAK_TYPE_DJANGO)) {
                         return imageCache.get("icons/breakmarker_django_gray.png");
 
@@ -138,6 +138,7 @@ public class PyDebugModelPresentation implements IDebugModelPresentation {
     /**
      * @return the text for some debug element
      */
+    @Override
     public String getText(Object element) {
         if (element instanceof PyBreakpoint) {
             PyBreakpoint pyBreakpoint = (PyBreakpoint) element;
@@ -259,6 +260,7 @@ public class PyDebugModelPresentation implements IDebugModelPresentation {
      * We've got some work to do to replicate here, because we can't return null, and have LazyModel presentation do the
      * default
      */
+    @Override
     public void computeDetail(IValue value, IValueDetailListener listener) {
         if (value instanceof PyVariable) {
             try {
@@ -273,11 +275,12 @@ public class PyDebugModelPresentation implements IDebugModelPresentation {
     /**
      * Returns editor to be displayed
      */
+    @Override
     public IEditorInput getEditorInput(Object element) {
         if (element instanceof PyBreakpoint) {
             String file = ((PyBreakpoint) element).getFile();
             if (file != null) {
-                return PydevFileEditorInput.create(new File(file), false);
+                return EditorInputFactory.create(new File(file), false);
 
                 //We should not open the editor here, just create the input... the debug framework opens it later on.
                 //IPath path = new Path(file);
@@ -291,10 +294,12 @@ public class PyDebugModelPresentation implements IDebugModelPresentation {
     /**
      * @see org.eclipse.debug.ui.ISourcePresentation#getEditorInput
      */
+    @Override
     public String getEditorId(IEditorInput input, Object element) {
         return PyEdit.EDITOR_ID;
     }
 
+    @Override
     public void setAttribute(String attribute, Object value) {
         if (attribute.equals(IDebugModelPresentation.DISPLAY_VARIABLE_TYPE_NAMES)) {
             displayVariableTypeNames = ((Boolean) value).booleanValue();
@@ -303,17 +308,21 @@ public class PyDebugModelPresentation implements IDebugModelPresentation {
         }
     }
 
+    @Override
     public void addListener(ILabelProviderListener listener) {
         fListeners.add(listener);
     }
 
+    @Override
     public void removeListener(ILabelProviderListener listener) {
         fListeners.remove(listener);
     }
 
+    @Override
     public void dispose() {
     }
 
+    @Override
     public boolean isLabelProperty(Object element, String property) {
         // Not really sure what this does. see IBaseLabelProvider:isLabelProperty
         return false;

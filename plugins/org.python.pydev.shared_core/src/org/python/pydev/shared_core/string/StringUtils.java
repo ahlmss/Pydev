@@ -12,8 +12,6 @@
 ******************************************************************************/
 package org.python.pydev.shared_core.string;
 
-import java.io.ByteArrayOutputStream;
-import java.io.ObjectOutputStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.math.BigInteger;
@@ -22,6 +20,7 @@ import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CodingErrorAction;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -63,6 +62,7 @@ public final class StringUtils {
             this.len = string.length();
         }
 
+        @Override
         public boolean hasNext() {
             if (!calculatedNext) {
                 calculatedNext = true;
@@ -101,6 +101,7 @@ public final class StringUtils {
             return false;
         }
 
+        @Override
         public String next() {
             if (!hasNext()) {
                 throw new NoSuchElementException();
@@ -111,6 +112,7 @@ public final class StringUtils {
             return n;
         }
 
+        @Override
         public void remove() {
             throw new UnsupportedOperationException();
         }
@@ -130,6 +132,7 @@ public final class StringUtils {
     public static Iterable<String> iterLines(final String string) {
         return new Iterable<String>() {
 
+            @Override
             public Iterator<String> iterator() {
                 return new IterLines(string);
             }
@@ -425,7 +428,7 @@ public final class StringUtils {
                 return obj;
             }
             try {
-                byte[] bytes = str.getBytes("UTF-8");
+                byte[] bytes = str.getBytes(StandardCharsets.UTF_8);
                 MessageDigest md = MessageDigest.getInstance("MD5");
                 //MAX_RADIX because we'll generate the shortest string possible... (while still
                 //using only numbers 0-9 and letters a-z)
@@ -940,15 +943,6 @@ public final class StringUtils {
         return count;
     }
 
-    private static Charset latin1Charset;
-
-    private static Charset getLatin1Charset() {
-        if (latin1Charset == null) {
-            latin1Charset = Charset.forName("iso8859-1");
-        }
-        return latin1Charset;
-    }
-
     /**
      * Returns whether the given input (to the number of bytes passed in len) is to be considered a valid text string
      * (otherwise, it's considered a binary string).
@@ -962,7 +956,7 @@ public final class StringUtils {
         if (len > buffer.length) {
             len = buffer.length;
         }
-        String s = new String(buffer, 0, len, getLatin1Charset()); //Decode as latin1
+        String s = new String(buffer, 0, len, StandardCharsets.ISO_8859_1); //Decode as latin1
         int maxLen = s.length();
         for (int i = 0; i < maxLen; i++) {
             char c = s.charAt(i);
@@ -1127,6 +1121,17 @@ public final class StringUtils {
      */
     public static String stripExtension(String input) {
         return stripFromRigthCharOnwards(input, '.');
+    }
+
+    public static String getFileExtension(String name) {
+        int i = name.lastIndexOf('.');
+        if (i == -1) {
+            return null;
+        }
+        if (name.length() - 1 == i) {
+            return "";
+        }
+        return name.substring(i + 1);
     }
 
     public static int rFind(String input, char ch) {
@@ -1483,6 +1488,24 @@ public final class StringUtils {
         return true;
     }
 
+    /**
+     * How come that the Character class doesn't have this?
+     */
+    public static boolean isAsciiLetter(int c) {
+        return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+    }
+
+    /**
+     * How come that the Character class doesn't have this?
+     */
+    public static boolean isAsciiLetterOrUnderline(int c) {
+        return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '_';
+    }
+
+    public static boolean isAsciiLetterOrUnderlineOrNumber(int c) {
+        return isAsciiLetterOrUnderline(c) || Character.isDigit(c);
+    }
+
     public static String asStyleCamelCaseFirstLower(String string) {
         if (isAllUpper(string)) {
             string = string.toLowerCase();
@@ -1568,7 +1591,7 @@ public final class StringUtils {
     public static String safeDecodeByteArray(byte[] b, String baseCharset) {
         try {
             if (baseCharset == null) {
-                baseCharset = "ISO-8859-1";
+                return new String(b, StandardCharsets.ISO_8859_1);
             }
             return new String(b, baseCharset);
         } catch (Exception e) {
@@ -1585,46 +1608,6 @@ public final class StringUtils {
                 return new String("Unable to decode bytearray from Python.");
             }
         }
-    }
-
-    /**
-     * Decodes some string that was encoded as base64
-     */
-    public static byte[] decodeBase64(String persisted) {
-        return Base64Coder.decode(persisted.toCharArray());
-    }
-
-    /**
-     * @param o the object we want as a string
-     * @return the string representing the object as base64
-     */
-    public static String getObjAsStr(Object o) {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        try {
-            ObjectOutputStream stream = new ObjectOutputStream(out);
-            stream.writeObject(o);
-            stream.close();
-        } catch (Exception e) {
-            Log.log(e);
-            throw new RuntimeException(e);
-        }
-
-        return new String(encodeBase64(out));
-    }
-
-    /**
-     * @return the contents of the passed ByteArrayOutputStream as a byte[] encoded with base64.
-     */
-    public static char[] encodeBase64(ByteArrayOutputStream out) {
-        byte[] byteArray = out.toByteArray();
-        return encodeBase64(byteArray);
-    }
-
-    /**
-     * @return the contents of the passed byteArray[] as a byte[] encoded with base64.
-     */
-    public static char[] encodeBase64(byte[] byteArray) {
-        return Base64Coder.encode(byteArray);
     }
 
     public static boolean containsWhitespace(final String name) {
@@ -1673,4 +1656,80 @@ public final class StringUtils {
     public static String reverse(String lineContentsToCursor) {
         return new FastStringBuffer(lineContentsToCursor, 0).reverse().toString();
     }
+
+    /**
+     * Split so that we can create multiple WildcardQuery.
+     *
+     * Note that it accepts wildcards (such as * or ? but if an entry would contain
+     * only wildcards it'd be ignored).
+     *
+     * Also, anything which Character.isJavaIdentifierPart does not match is considered
+     * to be a separator and will be ignored.
+     */
+    public static List<String> splitForIndexMatching(String string) {
+        int len = string.length();
+        if (len == 0) {
+            return new ArrayList<>(0);
+        }
+        ArrayList<String> ret = new ArrayList<String>();
+
+        int last = 0;
+
+        char c = 0;
+
+        for (int i = 0; i < len; i++) {
+            c = string.charAt(i);
+            if (!Character.isJavaIdentifierPart(c) && c != '*' && c != '?') {
+                if (last != i) {
+                    String substring = string.substring(last, i);
+                    if (!containsOnlyWildCards(substring)) {
+                        ret.add(substring);
+                    }
+                }
+                while (!Character.isJavaIdentifierPart(c) && c != '*' && c != '?' && i < len - 1) {
+                    i++;
+                    c = string.charAt(i);
+                }
+                last = i;
+            }
+        }
+        if (Character.isJavaIdentifierPart(c) || c == '*' || c == '?') {
+            if (last == 0 && len > 0) {
+                if (!containsOnlyWildCards(string)) {
+                    ret.add(string); //it is equal to the original (no char to split)
+                }
+
+            } else if (last < len) {
+                String substring = string.substring(last, len);
+                if (!containsOnlyWildCards(substring)) {
+                    //Don't add if it has only wildcards in it.
+                    ret.add(substring);
+                }
+            }
+        }
+        return ret;
+    }
+
+    public static void checkTokensValidForWildcardQuery(String token) {
+        List<String> splitForIndexMatching = StringUtils.splitForIndexMatching(token);
+
+        if (splitForIndexMatching == null || splitForIndexMatching.size() == 0) {
+            throw new RuntimeException(StringUtils.format(
+                    "Token: %s is not a valid token to search for.", token));
+        }
+    }
+
+    public static boolean containsOnlyWildCards(String string) {
+        boolean onlyWildCardsInPart = true;
+        int length = string.length();
+        for (int i = 0; i < length; i++) {
+            char c = string.charAt(i);
+            if (c != '*' && c != '?') {
+                onlyWildCardsInPart = false;
+                break; //break inner for
+            }
+        }
+        return onlyWildCardsInPart;
+    }
+
 }

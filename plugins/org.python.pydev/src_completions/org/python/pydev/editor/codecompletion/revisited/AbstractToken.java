@@ -14,10 +14,14 @@ package org.python.pydev.editor.codecompletion.revisited;
 import org.eclipse.swt.graphics.Image;
 import org.python.pydev.core.FullRepIterable;
 import org.python.pydev.core.IToken;
+import org.python.pydev.core.ITypeInfo;
 import org.python.pydev.editor.codecompletion.PyCodeCompletionImages;
 import org.python.pydev.editor.codecompletion.revisited.modules.SourceToken;
 import org.python.pydev.parser.jython.SimpleNode;
 import org.python.pydev.parser.jython.ast.ClassDef;
+import org.python.pydev.parser.jython.ast.FunctionDef;
+import org.python.pydev.parser.jython.ast.decoratorsType;
+import org.python.pydev.parser.visitors.NodeUtils;
 import org.python.pydev.shared_core.string.FastStringBuffer;
 
 /**
@@ -32,6 +36,7 @@ public abstract class AbstractToken implements IToken {
     protected String parentPackage;
     public int type;
     private boolean originalHasRep;
+    private ITypeInfo generatorType;
 
     public AbstractToken(String rep, String doc, String args, String parentPackage, int type, String originalRep,
             boolean originalHasRep) {
@@ -40,28 +45,43 @@ public abstract class AbstractToken implements IToken {
         this.originalHasRep = originalHasRep;
     }
 
-    public AbstractToken(String rep, String doc, String args, String parentPackage, int type) {
-        if (rep != null)
-            this.rep = rep;
-        else
-            this.rep = "";
+    @Override
+    public void setGeneratorType(ITypeInfo type) {
+        this.generatorType = type;
 
-        if (args != null)
+    }
+
+    @Override
+    public ITypeInfo getGeneratorType() {
+        return this.generatorType;
+    }
+
+    public AbstractToken(String rep, String doc, String args, String parentPackage, int type) {
+        if (rep != null) {
+            this.rep = rep;
+        } else {
+            this.rep = "";
+        }
+
+        if (args != null) {
             this.args = args;
-        else
+        } else {
             this.args = "";
+        }
 
         this.originalRep = this.rep;
 
-        if (doc != null)
+        if (doc != null) {
             this.doc = doc;
-        else
+        } else {
             this.doc = "";
+        }
 
-        if (parentPackage != null)
+        if (parentPackage != null) {
             this.parentPackage = parentPackage;
-        else
+        } else {
             this.parentPackage = "";
+        }
 
         this.type = type;
     }
@@ -69,6 +89,7 @@ public abstract class AbstractToken implements IToken {
     /**
      * @see org.python.pydev.core.IToken#getArgs()
      */
+    @Override
     public String getArgs() {
         return args;
     }
@@ -76,6 +97,7 @@ public abstract class AbstractToken implements IToken {
     /**
      * @see org.python.pydev.core.IToken#setArgs(java.lang.String)
      */
+    @Override
     public void setArgs(String args) {
         this.args = args;
     }
@@ -83,6 +105,7 @@ public abstract class AbstractToken implements IToken {
     /**
      * @see org.python.pydev.editor.javacodecompletion.IToken#getRepresentation()
      */
+    @Override
     public String getRepresentation() {
         return rep;
     }
@@ -90,6 +113,7 @@ public abstract class AbstractToken implements IToken {
     /**
      * @see org.python.pydev.core.IToken#setDocStr(java.lang.String)
      */
+    @Override
     public void setDocStr(String docStr) {
         this.doc = docStr;
     }
@@ -97,6 +121,7 @@ public abstract class AbstractToken implements IToken {
     /**
      * @see org.python.pydev.editor.javacodecompletion.IToken#getDocStr()
      */
+    @Override
     public String getDocStr() {
         return doc;
     }
@@ -104,6 +129,7 @@ public abstract class AbstractToken implements IToken {
     /**
      * @see org.python.pydev.core.IToken#getParentPackage()
      */
+    @Override
     public String getParentPackage() {
         return parentPackage;
     }
@@ -111,10 +137,12 @@ public abstract class AbstractToken implements IToken {
     /**
      * @see org.python.pydev.core.IToken#getType()
      */
+    @Override
     public int getType() {
         return type;
     }
 
+    @Override
     public Image getImage() {
         return PyCodeCompletionImages.getImageForType(type);
     }
@@ -122,6 +150,7 @@ public abstract class AbstractToken implements IToken {
     /**
      * @see java.lang.Object#equals(java.lang.Object)
      */
+    @Override
     public boolean equals(Object obj) {
         if (!(obj instanceof AbstractToken)) {
             return false;
@@ -148,6 +177,7 @@ public abstract class AbstractToken implements IToken {
     /**
      * @see java.lang.Object#hashCode()
      */
+    @Override
     public int hashCode() {
         return getRepresentation().hashCode() * getType();
     }
@@ -155,6 +185,7 @@ public abstract class AbstractToken implements IToken {
     /**
      * @see java.lang.Comparable#compareTo(java.lang.Object)
      */
+    @Override
     public int compareTo(Object o) {
         AbstractToken comp = (AbstractToken) o;
 
@@ -162,27 +193,34 @@ public abstract class AbstractToken implements IToken {
         int otherT = comp.getType();
 
         if (thisT != otherT) {
-            if (thisT == IToken.TYPE_PARAM || thisT == IToken.TYPE_LOCAL || thisT == IToken.TYPE_OBJECT_FOUND_INTERFACE)
+            if (thisT == IToken.TYPE_PARAM || thisT == IToken.TYPE_LOCAL
+                    || thisT == IToken.TYPE_OBJECT_FOUND_INTERFACE) {
                 return -1;
+            }
 
             if (otherT == IToken.TYPE_PARAM || otherT == IToken.TYPE_LOCAL
-                    || otherT == IToken.TYPE_OBJECT_FOUND_INTERFACE)
+                    || otherT == IToken.TYPE_OBJECT_FOUND_INTERFACE) {
                 return 1;
+            }
 
-            if (thisT == IToken.TYPE_IMPORT)
+            if (thisT == IToken.TYPE_IMPORT) {
                 return -1;
+            }
 
-            if (otherT == IToken.TYPE_IMPORT)
+            if (otherT == IToken.TYPE_IMPORT) {
                 return 1;
+            }
         }
 
         int c = getRepresentation().compareTo(comp.getRepresentation());
-        if (c != 0)
+        if (c != 0) {
             return c;
+        }
 
         c = getParentPackage().compareTo(comp.getParentPackage());
-        if (c != 0)
+        if (c != 0) {
             return c;
+        }
 
         return c;
     }
@@ -190,6 +228,7 @@ public abstract class AbstractToken implements IToken {
     /**
      * @see java.lang.Object#toString()
      */
+    @Override
     public String toString() {
 
         if (getParentPackage() != null && getParentPackage().length() > 0) {
@@ -216,15 +255,17 @@ public abstract class AbstractToken implements IToken {
 
     /**
      * Make our complete path relative to the base module.
-     * 
+     *
      * @see org.python.pydev.core.IToken#getAsRelativeImport(java.lang.String)
      */
+    @Override
     public String getAsRelativeImport(String baseModule) {
         String completePath = getOriginalRep(true);
 
         return makeRelative(baseModule, completePath);
     }
 
+    @Override
     public String getAsAbsoluteImport() {
         return getAsRelativeImport(".");
     }
@@ -232,8 +273,8 @@ public abstract class AbstractToken implements IToken {
     /**
      * @param baseModule this is the 'parent package'. The path passed will be made relative to it
      * @param completePath this is the path that we want to make relative
-     * @return the relative path. 
-     * 
+     * @return the relative path.
+     *
      * e.g.: if the baseModule is aa.xx and the completePath is aa.xx.foo.bar, this
      * funcion would return aa.foo.bar
      */
@@ -265,6 +306,7 @@ public abstract class AbstractToken implements IToken {
      * @return the original representation (useful for imports)
      * e.g.: if it was import coilib.Exceptions as Exceptions, would return coilib.Exceptions
      */
+    @Override
     public String getOriginalRep() {
         return originalRep;
     }
@@ -273,11 +315,12 @@ public abstract class AbstractToken implements IToken {
      * @return the original representation without the actual representation (useful for imports, because
      * we have to look within __init__ to check if the token is defined before trying to gather modules, if
      * we have a name clash).
-     * 
+     *
      * e.g.: if it was from coilib.test import Exceptions, it would return coilib.test
-     * 
+     *
      * @note: if the rep is not a part of the original representation, this function will return an empty string.
      */
+    @Override
     public String getOriginalWithoutRep() {
         int i = originalRep.length() - rep.length() - 1;
         if (!originalHasRep) {
@@ -286,33 +329,40 @@ public abstract class AbstractToken implements IToken {
         return i > 0 ? originalRep.substring(0, i) : "";
     }
 
+    @Override
     public int getLineDefinition() {
         return UNDEFINED;
     }
 
+    @Override
     public int getColDefinition() {
         return UNDEFINED;
     }
 
+    @Override
     public boolean isImport() {
         return false;
     }
 
+    @Override
     public boolean isImportFrom() {
         return false;
     }
 
+    @Override
     public boolean isWildImport() {
         return false;
     }
 
+    @Override
     public boolean isString() {
         return false;
     }
 
     /**
-     * This representation may not be accurate depending on which tokens we are dealing with. 
+     * This representation may not be accurate depending on which tokens we are dealing with.
      */
+    @Override
     public int[] getLineColEnd() {
         return new int[] { UNDEFINED, UNDEFINED };
     }
@@ -327,4 +377,27 @@ public abstract class AbstractToken implements IToken {
         }
         return false;
     }
+
+    public static boolean isFunctionDefProperty(IToken element) {
+        if (element instanceof SourceToken) {
+            SourceToken token = (SourceToken) element;
+            SimpleNode ast = token.getAst();
+            if (ast instanceof FunctionDef) {
+                FunctionDef functionDef = (FunctionDef) ast;
+                decoratorsType[] decs = functionDef.decs;
+                if (decs != null) {
+                    for (int i = 0; i < decs.length; i++) {
+                        decoratorsType dec = decs[i];
+                        if (dec != null && dec.func != null) {
+                            if ("property".equals(NodeUtils.getRepresentationString(dec.func))) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
 }

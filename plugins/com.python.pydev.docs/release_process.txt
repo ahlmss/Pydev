@@ -3,16 +3,17 @@ Update the version:
 
 x:
 cd x:\pydev
-python update_version.py 3.9.2
+python update_version.py 5.2.0
 
 X:\pydev\builders\org.python.pydev.build\build_cmd.bat
-C:\bin\Python27\python.exe X:\pydev_build\deploy_dir\pydev_uploader.py -s X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\repository -d pydev/nightly
+C:\bin\Python27\python.exe X:\release_tools\pydev_uploader_bintray.py -s X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\repository -d https://api.bintray.com/content/fabioz/pydev/nightly/
 
 
 --------- For full build ---------
 
 		Update homepage
 			- index.rst
+			- download.contents.rst
 			- history_pydev.rst (move contents from index.rst if needed)
 
 		Update the version of all plugins to the new version.
@@ -24,7 +25,13 @@ C:\bin\Python27\python.exe X:\pydev_build\deploy_dir\pydev_uploader.py -s X:\pyd
 		Commit everything
         Merge with master
 
-		Execute in cmd.exe: X:\pydev\builders\org.python.pydev.build\build_cmd.bat
+		Check that
+
+			C:\tools\Miniconda32\envs\py27_32\python -c "import pydevd"
+
+		throws an exception (it cannot be installed in the environment)
+
+		Create tab in cmdermini: X:\pydev\builders\org.python.pydev.build\build_cmd.bat
 
 		Copy features and plugins folders from X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\repository to X:\pydev_build\update_site_dir\updates
 
@@ -33,61 +40,55 @@ copy X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\rep
 
 		Update the site.xml at X:\pydev_build\update_site_dir\updates
 
-		Remove the artifacts.jar and content.jar from X:\pydev_build\update_site_dir\updates
-
-del X:\pydev_build\update_site_dir\updates\artifacts.jar
-del X:\pydev_build\update_site_dir\updates\content.jar
-
-		Update artifacts.jar and content.jar
-
-
-C:\bin\eclipse44_1_final\eclipse.exe -application org.eclipse.equinox.p2.publisher.EclipseGenerator -updateSite X:\pydev_build\update_site_dir\updates\ -site file:X:\pydev_build\update_site_dir\updates\site.xml -metadataRepository file:X:\pydev_build\update_site_dir\updates -metadataRepositoryName "PyDev Update Site" -artifactRepository file:X:\pydev_build\update_site_dir\updates -artifactRepositoryName "PyDev Artifacts" -publishArtifacts -publishArtifactRepository -compress -reusePack200Files -noDefaultIUs -vmargs -Xmx256m
-
-
-		** Copy site.xml, artifacts.jar and content.jar to X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\repository
-
-copy X:\pydev_build\update_site_dir\updates\site.xml X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\repository\site.xml /Y
-copy X:\pydev_build\update_site_dir\updates\artifacts.jar X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\repository\artifacts.jar /Y
-copy X:\pydev_build\update_site_dir\updates\content.jar X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\repository\content.jar /Y
-
-
 		** Create zips to distribute
-
 
 x:\
 cd X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\runnable
-"C:\Program Files\7-Zip\7z" a -tzip -r "PyDev 3.9.2.zip" features plugins
+"C:\Program Files\7-Zip\7z" a -tzip -r "PyDev 5.1.2.zip" features plugins
 cd X:\pydev_build\build_dir\pydev
-git archive -o "X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\runnable\PyDev 3.9.2-sources.zip" origin/master
-
-		** Copy zips from X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\runnable to sourceforge:
-
+git archive -o "X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\runnable\PyDev 5.1.2-sources.zip" origin/master
 
         ** Submit feature and sources .zip in folder X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\runnable to:
 
-c:\bin\FileZilla\filezilla.exe sftp://fabioz,pydev@frs.sourceforge.net/home/pfs/project/p/py/pydev/pydev/ --local="X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\runnable"
+p:\FileZilla\filezilla.exe sftp://fabioz,pydev@frs.sourceforge.net/home/pfs/project/p/py/pydev/pydev/ --local="X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\runnable"
 
 Note: check pageant if it does not connect.
 
 Check if the main download button points to the proper place (not to the sources) --
-https://sourceforge.net/projects/pydev/files/pydev/PyDev 3.9.2/ -- choose file > file info > set default and give better name.
+https://sourceforge.net/projects/pydev/files/pydev/PyDev 5.1.2/ -- choose file > file info > set default.
 
 
 		** Add contents to the update site
 
 
-c:\bin\Python27\python.exe X:\pydev_build\deploy_dir\pydev_uploader.py -s X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\repository -d pydev/updates
+cdd X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\
 
+mkdir org.python.pydev.p2-repo-5.1.2-SNAPSHOT
+
+cd org.python.pydev.p2-repo-5.1.2-SNAPSHOT
+
+"C:\Program Files\7-Zip\7z" x ..\org.python.pydev.p2-repo-5.1.2-SNAPSHOT.zip
+
+c:\bin\Python27\python.exe X:\release_tools\pydev_uploader_bintray.py -s X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\org.python.pydev.p2-repo-5.1.2-SNAPSHOT -d https://api.bintray.com/content/fabioz/pydev/nightly/
+Note: if unable to send: remove at https://bintray.com/fabioz/pydev/pydev/nightly/edit add back at https://bintray.com/fabioz/pydev/pydev/new/version
+
+
+Create "5.1.2" version in "https://bintray.com/fabioz/pydev/pydev/new/version"
+Add "5.1.2" in X:\release_tools\pydev_uploader_bintray.py
+c:\bin\Python27\python.exe X:\release_tools\pydev_uploader_bintray.py -s X:\pydev_build\build_dir\pydev\features\org.python.pydev.p2-repo\target\org.python.pydev.p2-repo-5.1.2-SNAPSHOT -d https://api.bintray.com/content/fabioz/pydev/5.1.2/
 
 		** Update homepage:
 
+robocopy X:\pydev\plugins\com.python.pydev.docs\merged_homepage\final X:\openshift\pydev.page2\ /xd .git /xd .openshift  /s
+cd /D X:\openshift\pydev.page2\
+mu st
+mu acp "Updated to 5.1.2"
 
-c:\bin\FileZilla\filezilla.exe sftp://fabioz,pydev@frs.sourceforge.net/home/project-web/pydev/htdocs --local="x:\pydev\plugins\com.python.pydev.docs\merged_homepage\final"
-c:\bin\FileZilla\filezilla.exe sftp://deploy@173.45.225.54/var/www --local="x:\pydev\plugins\com.python.pydev.docs\merged_homepage\final"
+p:\FileZilla\filezilla.exe sftp://fabioz,pydev@frs.sourceforge.net/home/project-web/pydev/htdocs --local="x:\pydev\plugins\com.python.pydev.docs\merged_homepage\final"
 
 
 		** Tag repository:
-		  git tag pydev_3_9_2 -a -m "PyDev 3.9.2"
+		  git tag pydev_5_1_2 -a -m "PyDev 5.1.2"
 		  git push --tags
 
 
@@ -104,6 +105,6 @@ c:\bin\FileZilla\filezilla.exe sftp://deploy@173.45.225.54/var/www --local="x:\p
 		** Twitter
 
         ** Update the versions:
-            x:
-            cd x:\pydev
-            python update_version.py 3.9.2
+			x:
+			cd x:\pydev
+			python update_version.py 5.1.2

@@ -36,7 +36,7 @@ public class PydevPrefsInitializer extends AbstractPreferenceInitializer {
 
     @Override
     public void initializeDefaultPreferences() {
-        Preferences node = new DefaultScope().getNode(PydevPlugin.DEFAULT_PYDEV_SCOPE);
+        Preferences node = DefaultScope.INSTANCE.getNode(PydevPlugin.DEFAULT_PYDEV_SCOPE);
 
         //ironpython
         node.put(IInterpreterManager.IRONPYTHON_INTERNAL_SHELL_VM_ARGS,
@@ -45,6 +45,7 @@ public class PydevPrefsInitializer extends AbstractPreferenceInitializer {
         //text
         node.putBoolean(PydevTypingPrefs.SMART_INDENT_PAR, PydevTypingPrefs.DEFAULT_SMART_INDENT_PAR);
         node.putBoolean(PydevTypingPrefs.AUTO_PAR, PydevTypingPrefs.DEFAULT_AUTO_PAR);
+        node.putBoolean(PydevTypingPrefs.INDENT_AFTER_PAR_AS_PEP8, PydevTypingPrefs.DEFAULT_INDENT_AFTER_PAR_AS_PEP8);
         node.putBoolean(PydevTypingPrefs.AUTO_LINK, PydevTypingPrefs.DEFAULT_AUTO_LINK);
         node.putBoolean(PydevTypingPrefs.AUTO_INDENT_TO_PAR_LEVEL, PydevTypingPrefs.DEFAULT_AUTO_INDENT_TO_PAR_LEVEL);
         node.putBoolean(PydevTypingPrefs.AUTO_DEDENT_ELSE, PydevTypingPrefs.DEFAULT_AUTO_DEDENT_ELSE);
@@ -98,8 +99,10 @@ public class PydevPrefsInitializer extends AbstractPreferenceInitializer {
         node.put(PydevEditorPrefs.STRING_COLOR, StringConverter.asString(PydevEditorPrefs.DEFAULT_STRING_COLOR));
         node.put(PydevEditorPrefs.UNICODE_COLOR, StringConverter.asString(PydevEditorPrefs.DEFAULT_UNICODE_COLOR));
         node.put(PydevEditorPrefs.COMMENT_COLOR, StringConverter.asString(PydevEditorPrefs.DEFAULT_COMMENT_COLOR));
-        node.put(PydevEditorPrefs.BACKQUOTES_COLOR, StringConverter.asString(PydevEditorPrefs.DEFAULT_BACKQUOTES_COLOR));
-        node.put(PydevEditorPrefs.CLASS_NAME_COLOR, StringConverter.asString(PydevEditorPrefs.DEFAULT_CLASS_NAME_COLOR));
+        node.put(PydevEditorPrefs.BACKQUOTES_COLOR,
+                StringConverter.asString(PydevEditorPrefs.DEFAULT_BACKQUOTES_COLOR));
+        node.put(PydevEditorPrefs.CLASS_NAME_COLOR,
+                StringConverter.asString(PydevEditorPrefs.DEFAULT_CLASS_NAME_COLOR));
         node.put(PydevEditorPrefs.FUNC_NAME_COLOR, StringConverter.asString(PydevEditorPrefs.DEFAULT_FUNC_NAME_COLOR));
         node.put(PydevEditorPrefs.PARENS_COLOR, StringConverter.asString(PydevEditorPrefs.DEFAULT_PARENS_COLOR));
         node.put(PydevEditorPrefs.OPERATORS_COLOR, StringConverter.asString(PydevEditorPrefs.DEFAULT_OPERATORS_COLOR));
@@ -152,16 +155,70 @@ public class PydevPrefsInitializer extends AbstractPreferenceInitializer {
 
         //code folding
         node.putBoolean(PyDevCodeFoldingPrefPage.USE_CODE_FOLDING, PyDevCodeFoldingPrefPage.DEFAULT_USE_CODE_FOLDING);
-        node.putBoolean(PyDevCodeFoldingPrefPage.FOLD_IF, PyDevCodeFoldingPrefPage.DEFAULT_FOLD_IF);
-        node.putBoolean(PyDevCodeFoldingPrefPage.FOLD_WHILE, PyDevCodeFoldingPrefPage.DEFAULT_FOLD_WHILE);
-        node.putBoolean(PyDevCodeFoldingPrefPage.FOLD_FOR, PyDevCodeFoldingPrefPage.DEFAULT_FOLD_FOR);
-        node.putBoolean(PyDevCodeFoldingPrefPage.FOLD_CLASSDEF, PyDevCodeFoldingPrefPage.DEFAULT_FOLD_CLASSDEF);
-        node.putBoolean(PyDevCodeFoldingPrefPage.FOLD_FUNCTIONDEF, PyDevCodeFoldingPrefPage.DEFAULT_FOLD_FUNCTIONDEF);
-        node.putBoolean(PyDevCodeFoldingPrefPage.FOLD_COMMENTS, PyDevCodeFoldingPrefPage.DEFAULT_FOLD_COMMENTS);
-        node.putBoolean(PyDevCodeFoldingPrefPage.FOLD_STRINGS, PyDevCodeFoldingPrefPage.DEFAULT_FOLD_STRINGS);
-        node.putBoolean(PyDevCodeFoldingPrefPage.FOLD_WITH, PyDevCodeFoldingPrefPage.DEFAULT_FOLD_WITH);
-        node.putBoolean(PyDevCodeFoldingPrefPage.FOLD_TRY, PyDevCodeFoldingPrefPage.DEFAULT_FOLD_TRY);
-        node.putBoolean(PyDevCodeFoldingPrefPage.FOLD_IMPORTS, PyDevCodeFoldingPrefPage.DEFAULT_FOLD_IMPORTS);
+
+        /*[[[cog
+        import cog
+        template = '''node.putBoolean(PyDevCodeFoldingPrefPage.%s,
+                PyDevCodeFoldingPrefPage.DEFAULT_%s);
+        node.putBoolean(PyDevCodeFoldingPrefPage.INITIALLY_%s,
+                PyDevCodeFoldingPrefPage.DEFAULT_INITIALLY_%s);
+        '''
+        import folding_entries
+        for s in folding_entries.FOLDING_ENTRIES:
+            cog.outl(template % (s, s, s, s))
+        
+        ]]]*/
+        node.putBoolean(PyDevCodeFoldingPrefPage.FOLD_IMPORTS,
+                PyDevCodeFoldingPrefPage.DEFAULT_FOLD_IMPORTS);
+        node.putBoolean(PyDevCodeFoldingPrefPage.INITIALLY_FOLD_IMPORTS,
+                PyDevCodeFoldingPrefPage.DEFAULT_INITIALLY_FOLD_IMPORTS);
+
+        node.putBoolean(PyDevCodeFoldingPrefPage.FOLD_CLASSDEF,
+                PyDevCodeFoldingPrefPage.DEFAULT_FOLD_CLASSDEF);
+        node.putBoolean(PyDevCodeFoldingPrefPage.INITIALLY_FOLD_CLASSDEF,
+                PyDevCodeFoldingPrefPage.DEFAULT_INITIALLY_FOLD_CLASSDEF);
+
+        node.putBoolean(PyDevCodeFoldingPrefPage.FOLD_FUNCTIONDEF,
+                PyDevCodeFoldingPrefPage.DEFAULT_FOLD_FUNCTIONDEF);
+        node.putBoolean(PyDevCodeFoldingPrefPage.INITIALLY_FOLD_FUNCTIONDEF,
+                PyDevCodeFoldingPrefPage.DEFAULT_INITIALLY_FOLD_FUNCTIONDEF);
+
+        node.putBoolean(PyDevCodeFoldingPrefPage.FOLD_COMMENTS,
+                PyDevCodeFoldingPrefPage.DEFAULT_FOLD_COMMENTS);
+        node.putBoolean(PyDevCodeFoldingPrefPage.INITIALLY_FOLD_COMMENTS,
+                PyDevCodeFoldingPrefPage.DEFAULT_INITIALLY_FOLD_COMMENTS);
+
+        node.putBoolean(PyDevCodeFoldingPrefPage.FOLD_STRINGS,
+                PyDevCodeFoldingPrefPage.DEFAULT_FOLD_STRINGS);
+        node.putBoolean(PyDevCodeFoldingPrefPage.INITIALLY_FOLD_STRINGS,
+                PyDevCodeFoldingPrefPage.DEFAULT_INITIALLY_FOLD_STRINGS);
+
+        node.putBoolean(PyDevCodeFoldingPrefPage.FOLD_IF,
+                PyDevCodeFoldingPrefPage.DEFAULT_FOLD_IF);
+        node.putBoolean(PyDevCodeFoldingPrefPage.INITIALLY_FOLD_IF,
+                PyDevCodeFoldingPrefPage.DEFAULT_INITIALLY_FOLD_IF);
+
+        node.putBoolean(PyDevCodeFoldingPrefPage.FOLD_WHILE,
+                PyDevCodeFoldingPrefPage.DEFAULT_FOLD_WHILE);
+        node.putBoolean(PyDevCodeFoldingPrefPage.INITIALLY_FOLD_WHILE,
+                PyDevCodeFoldingPrefPage.DEFAULT_INITIALLY_FOLD_WHILE);
+
+        node.putBoolean(PyDevCodeFoldingPrefPage.FOLD_WITH,
+                PyDevCodeFoldingPrefPage.DEFAULT_FOLD_WITH);
+        node.putBoolean(PyDevCodeFoldingPrefPage.INITIALLY_FOLD_WITH,
+                PyDevCodeFoldingPrefPage.DEFAULT_INITIALLY_FOLD_WITH);
+
+        node.putBoolean(PyDevCodeFoldingPrefPage.FOLD_TRY,
+                PyDevCodeFoldingPrefPage.DEFAULT_FOLD_TRY);
+        node.putBoolean(PyDevCodeFoldingPrefPage.INITIALLY_FOLD_TRY,
+                PyDevCodeFoldingPrefPage.DEFAULT_INITIALLY_FOLD_TRY);
+
+        node.putBoolean(PyDevCodeFoldingPrefPage.FOLD_FOR,
+                PyDevCodeFoldingPrefPage.DEFAULT_FOLD_FOR);
+        node.putBoolean(PyDevCodeFoldingPrefPage.INITIALLY_FOLD_FOR,
+                PyDevCodeFoldingPrefPage.DEFAULT_INITIALLY_FOLD_FOR);
+
+        //[[[end]]]
 
         //coding style
         node.putBoolean(PyCodeStylePreferencesPage.USE_LOCALS_AND_ATTRS_CAMELCASE,
@@ -232,10 +289,12 @@ public class PydevPrefsInitializer extends AbstractPreferenceInitializer {
         node.putBoolean(ImportsPreferencesPage.SORT_NAMES_GROUPED, ImportsPreferencesPage.DEFAULT_SORT_NAMES_GROUPED);
 
         //hover
-        node.putBoolean(PyHoverPreferencesPage.SHOW_DOCSTRING_ON_HOVER,
-                PyHoverPreferencesPage.DEFAULT_SHOW_DOCSTRING_ON_HOVER);
+        node.putBoolean(PyHoverPreferencesPage.COMBINE_HOVER_INFO,
+                PyHoverPreferencesPage.DEFAULT_SHOW_DEBUG_VARIABLES_VALUES_ON_HOVER);
         node.putBoolean(PyHoverPreferencesPage.SHOW_DEBUG_VARIABLES_VALUES_ON_HOVER,
                 PyHoverPreferencesPage.DEFAULT_SHOW_DEBUG_VARIABLES_VALUES_ON_HOVER);
+        node.putBoolean(PyHoverPreferencesPage.USE_HOVER_DIVIDER,
+                PyHoverPreferencesPage.DEFAULT_USE_HOVER_DIVIDER);
 
         //source locator
         node.putInt(PySourceLocatorPrefs.ON_SOURCE_NOT_FOUND,

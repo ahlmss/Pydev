@@ -19,6 +19,7 @@ import org.python.pydev.parser.jython.ParseException;
 import org.python.pydev.parser.jython.SimpleNode;
 import org.python.pydev.parser.jython.ast.Assert;
 import org.python.pydev.parser.jython.ast.Assign;
+import org.python.pydev.parser.jython.ast.Await;
 import org.python.pydev.parser.jython.ast.Call;
 import org.python.pydev.parser.jython.ast.ClassDef;
 import org.python.pydev.parser.jython.ast.Ellipsis;
@@ -55,8 +56,10 @@ public final class TreeBuilder30 extends AbstractTreeBuilder implements ITreeBui
 
     public TreeBuilder30(JJTPythonGrammarState stack) {
         super(stack);
+        this.ctx = new org.python.pydev.parser.grammarcommon.CtxVisitor30(stack);
     }
 
+    @Override
     public final SimpleNode onCloseNode(SimpleNode n, int arity) throws Exception {
         exprType value;
         exprType[] exprs;
@@ -65,6 +68,7 @@ public final class TreeBuilder30 extends AbstractTreeBuilder implements ITreeBui
         Suite suite;
 
         int l;
+        exprType awaitExpr;
         switch (n.getId()) {
             case JJTEXPR_STMT:
                 value = (exprType) stack.popNode();
@@ -162,7 +166,8 @@ public final class TreeBuilder30 extends AbstractTreeBuilder implements ITreeBui
                 argumentsType arguments = makeArguments(arity - 1);
                 NameTok nameTok = makeName(NameTok.FunctionName);
                 //decorator is always null at this point... it's decorated later on
-                FunctionDef funcDef = new FunctionDef(nameTok, arguments, body, null, actualReturnAnnotation);
+                FunctionDef funcDef = new FunctionDef(nameTok, arguments, body, null, actualReturnAnnotation,
+                        this.stack.getGrammar().getInsideAsync());
                 addSpecialsAndClearOriginal(suite, funcDef);
                 setParentForFuncOrClass(body, funcDef);
                 return funcDef;
@@ -427,8 +432,8 @@ public final class TreeBuilder30 extends AbstractTreeBuilder implements ITreeBui
                 return new Set(null);
             case JJTDICTIONARY:
                 return makeDictionaryOrSet(arity);
-                //        case JJTSTR_1OP: #No more backticks in python 3.0
-                //            return new Repr(((exprType) stack.popNode()));
+            //        case JJTSTR_1OP: #No more backticks in python 3.0
+            //            return new Repr(((exprType) stack.popNode()));
             case JJTTEST:
                 if (arity == 2) {
                     IfExp node = (IfExp) stack.popNode();
@@ -508,6 +513,10 @@ public final class TreeBuilder30 extends AbstractTreeBuilder implements ITreeBui
 
             case JJTIMPORTFROM:
                 return makeImportFrom25Onwards(arity);
+
+            case JJTAWAIT_ATOM_EXPR:
+                awaitExpr = (exprType) stack.popNode();
+                return new Await(awaitExpr);
 
             default:
                 Log.log(("Error at TreeBuilder: default not treated:" + n.getId()));
@@ -591,7 +600,7 @@ public final class TreeBuilder30 extends AbstractTreeBuilder implements ITreeBui
                         addSpecialsAndClearOriginal(node, stararg);
                     }
                 } else {
-                    list.add((DefaultArg) popped);
+                    list.add(popped);
                 }
             } catch (ClassCastException e) {
                 throw new ParseException("Internal error (ClassCastException):" + e.getMessage() + "\n" + popped,
@@ -599,7 +608,7 @@ public final class TreeBuilder30 extends AbstractTreeBuilder implements ITreeBui
             }
         }
         Collections.reverse(list);//we get them in reverse order in the stack
-        argumentsType arguments = __makeArguments((DefaultArg[]) list.toArray(new DefaultArg[0]), stararg, kwarg);
+        argumentsType arguments = __makeArguments(list.toArray(new DefaultArg[0]), stararg, kwarg);
         arguments.varargannotation = varargannotation;
         arguments.kwargannotation = kwargannotation;
         return arguments;

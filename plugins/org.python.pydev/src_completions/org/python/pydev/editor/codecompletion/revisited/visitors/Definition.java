@@ -20,6 +20,7 @@ import org.python.pydev.core.ILocalScope;
 import org.python.pydev.core.IModule;
 import org.python.pydev.core.IPythonNature;
 import org.python.pydev.core.IToken;
+import org.python.pydev.core.ITypeInfo;
 import org.python.pydev.editor.codecompletion.revisited.CompletionState;
 import org.python.pydev.editor.codecompletion.revisited.modules.SourceToken;
 import org.python.pydev.parser.jython.SimpleNode;
@@ -70,6 +71,8 @@ public class Definition implements IDefinition {
      * Determines whether this definition was found as a local.
      */
     public final boolean foundAsLocal;
+
+    private ITypeInfo generatorType;
 
     /**
      * The line and col are defined starting at 1 (and not 0)
@@ -122,6 +125,7 @@ public class Definition implements IDefinition {
     /** 
      * @see java.lang.Object#toString()
      */
+    @Override
     public String toString() {
         FastStringBuffer buffer = new FastStringBuffer("Definition=", 30 + value.length());
         buffer.append(value);
@@ -141,6 +145,7 @@ public class Definition implements IDefinition {
     /** 
      * @see java.lang.Object#equals(java.lang.Object)
      */
+    @Override
     public boolean equals(Object obj) {
         if (!(obj instanceof Definition)) {
             return false;
@@ -179,18 +184,22 @@ public class Definition implements IDefinition {
         return value.hashCode() + col + line;
     }
 
+    @Override
     public IModule getModule() {
         return module;
     }
 
+    @Override
     public int getLine() {
         return line;
     }
 
+    @Override
     public int getCol() {
         return col;
     }
 
+    @Override
     public String getDocstring(IPythonNature nature, ICompletionCache cache) {
         if (this.ast != null) {
             return NodeUtils.getNodeDocString(this.ast);
@@ -221,5 +230,13 @@ public class Definition implements IDefinition {
         }
 
         return null;
+    }
+
+    public void setGeneratorType(ITypeInfo generatorType) {
+        this.generatorType = generatorType;
+    }
+
+    public ITypeInfo getGeneratorType() {
+        return generatorType;
     }
 }

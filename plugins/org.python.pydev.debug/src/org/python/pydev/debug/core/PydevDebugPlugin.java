@@ -20,6 +20,7 @@ import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
 import org.python.pydev.debug.newconsole.prefs.ColorManager;
+import org.python.pydev.debug.pyunit.PyUnitViewTestsHolder;
 import org.python.pydev.plugin.PydevPlugin;
 import org.python.pydev.shared_core.SharedCorePlugin;
 import org.python.pydev.shared_ui.ImageCache;
@@ -42,11 +43,13 @@ public class PydevDebugPlugin extends AbstractUIPlugin {
     @Override
     public void start(BundleContext context) throws Exception {
         super.start(context);
+        PyUnitViewTestsHolder.restoreTestsRunState();
         imageCache = new ImageCache(PydevDebugPlugin.getDefault().getBundle().getEntry("/"));
     }
 
     @Override
     public void stop(BundleContext context) throws Exception {
+        PyUnitViewTestsHolder.saveTestsRunState(true);
         super.stop(context);
         ColorManager.getDefault().dispose();
         imageCache.dispose();
@@ -72,6 +75,9 @@ public class PydevDebugPlugin extends AbstractUIPlugin {
     }
 
     public static ImageCache getImageCache() {
+        if (plugin == null) {
+            return null;
+        }
         return plugin.imageCache;
     }
 
@@ -97,11 +103,12 @@ public class PydevDebugPlugin extends AbstractUIPlugin {
     public static void errorDialog(final String message, final Throwable t) {
         Display disp = Display.getDefault();
         disp.asyncExec(new Runnable() {
+            @Override
             public void run() {
                 IWorkbenchWindow window = getDefault().getWorkbench().getActiveWorkbenchWindow();
                 Shell shell = window == null ? null : window.getShell();
                 if (shell != null) {
-                    IStatus status = makeStatus(IStatus.ERROR, "Error logged from Pydev Debug: ", t);
+                    IStatus status = makeStatus(IStatus.ERROR, "Error logged from PyDev Debug: ", t);
                     ErrorDialog.openError(shell, "Its an error", message, status);
                 }
             }

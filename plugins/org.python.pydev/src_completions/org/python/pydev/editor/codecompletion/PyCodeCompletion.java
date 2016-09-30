@@ -13,11 +13,11 @@ package org.python.pydev.editor.codecompletion;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
@@ -73,6 +73,7 @@ import org.python.pydev.shared_core.callbacks.ICallback;
 import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_core.structure.FastStack;
 import org.python.pydev.shared_core.structure.ImmutableTuple;
+import org.python.pydev.shared_core.structure.LinkedListWarningOnSlowOperations;
 import org.python.pydev.shared_core.structure.OrderedMap;
 import org.python.pydev.shared_core.structure.Tuple;
 import org.python.pydev.shared_ui.UIConstants;
@@ -88,6 +89,7 @@ public class PyCodeCompletion extends AbstractPyCodeCompletion {
      */
     public static ICallback<Object, CompletionRecursionException> onCompletionRecursionException;
 
+    @Override
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public List getCodeCompletionProposals(ITextViewer viewer, CompletionRequest request) throws CoreException,
             BadLocationException, IOException, MisconfigurationException, PythonNatureWithoutProjectException {
@@ -105,114 +107,14 @@ public class PyCodeCompletion extends AbstractPyCodeCompletion {
 
         //let's see if we should do a code-completion in the current scope...
 
-        //this engine does not work 'correctly' in the default scope on: 
+        //this engine does not work 'correctly' in the default scope on:
         //- class definitions - after 'class' and before '('
-        //- method definitions - after 'def' and before '(' 
+        //- method definitions - after 'def' and before '('
         PySelection ps = request.getPySelection();
-        int lineCtx = ps.isInDeclarationLine();
+        int lineCtx = ps.isRightAfterDeclarationInLine();
         if (lineCtx != PySelection.DECLARATION_NONE) {
             if (lineCtx == PySelection.DECLARATION_METHOD) {
-                Image imageOverride = PydevPlugin.getImageCache().get(UIConstants.METHOD_ICON);
-                String lineContentsToCursor = ps.getLineContentsToCursor();
-                LineStartingScope scopeStart = ps.getPreviousLineThatStartsScope(PySelection.CLASS_TOKEN, false,
-                        PySelection.getFirstCharPosition(lineContentsToCursor));
-
-                String className = null;
-                if (scopeStart != null) {
-                    className = PySelection.getClassNameInLine(scopeStart.lineStartingScope);
-                    if (className != null && className.length() > 0) {
-                        Tuple<List<String>, Integer> insideParensBaseClasses = ps.getInsideParentesisToks(true,
-                                scopeStart.iLineStartingScope);
-                        if (insideParensBaseClasses != null) {
-
-                            //representation -> token and base class
-                            OrderedMap<String, ImmutableTuple<IToken, String>> map = new OrderedMap<String, ImmutableTuple<IToken, String>>();
-
-                            for (String baseClass : insideParensBaseClasses.o1) {
-                                try {
-                                    ICompletionState state = new CompletionState(-1, -1, null, request.nature,
-                                            baseClass);
-                                    state.setActivationToken(baseClass);
-                                    state.setIsInCalltip(false);
-
-                                    IPythonNature pythonNature = request.nature;
-                                    checkPythonNature(pythonNature);
-
-                                    ICodeCompletionASTManager astManager = pythonNature.getAstManager();
-                                    if (astManager == null) {
-                                        //we're probably still loading it.
-                                        return ret;
-                                    }
-                                    //Ok, looking for a token in globals.
-                                    IModule module = request.getModule();
-                                    if (module == null) {
-                                        continue;
-                                    }
-                                    IToken[] comps = astManager.getCompletionsForModule(module, state, true, true);
-                                    for (int i = 0; i < comps.length; i++) {
-                                        IToken iToken = comps[i];
-                                        String representation = iToken.getRepresentation();
-                                        ImmutableTuple<IToken, String> curr = map.get(representation);
-                                        if (curr != null && curr.o1 instanceof SourceToken) {
-                                            continue; //source tokens are never reset!
-                                        }
-
-                                        int type = iToken.getType();
-                                        if (iToken instanceof SourceToken
-                                                && ((SourceToken) iToken).getAst() instanceof FunctionDef) {
-                                            map.put(representation, new ImmutableTuple<IToken, String>(iToken,
-                                                    baseClass));
-
-                                        } else if (type == IToken.TYPE_FUNCTION || type == IToken.TYPE_UNKNOWN
-                                                || type == IToken.TYPE_BUILTIN) {
-                                            map.put(representation, new ImmutableTuple<IToken, String>(iToken,
-                                                    baseClass));
-
-                                        }
-                                    }
-                                } catch (Exception e) {
-                                    Log.log(e);
-                                }
-                            }
-
-                            for (ImmutableTuple<IToken, String> tokenAndBaseClass : map.values()) {
-                                FunctionDef functionDef = null;
-
-                                //No checkings needed for type (we already did that above).
-                                if (tokenAndBaseClass.o1 instanceof SourceToken) {
-                                    SourceToken sourceToken = (SourceToken) tokenAndBaseClass.o1;
-                                    SimpleNode ast = sourceToken.getAst();
-                                    if (ast instanceof FunctionDef) {
-                                        functionDef = (FunctionDef) ast;
-                                    } else {
-                                        functionDef = sourceToken.getAliased().createCopy();
-                                        NameTok t = (NameTok) functionDef.name;
-                                        t.id = sourceToken.getRepresentation();
-                                    }
-                                } else {
-                                    //unfortunately, for builtins we usually cannot trust the parameters.
-                                    String representation = tokenAndBaseClass.o1.getRepresentation();
-                                    PyAstFactory factory = new PyAstFactory(new AdapterPrefs(ps.getEndLineDelim(),
-                                            request.nature));
-                                    functionDef = factory.createFunctionDef(representation);
-                                    functionDef.args = factory.createArguments(true);
-                                    functionDef.args.vararg = new NameTok("args", NameTok.VarArg);
-                                    functionDef.args.kwarg = new NameTok("kwargs", NameTok.KwArg);
-                                    if (!representation.equals("__init__")) {
-                                        functionDef.body = new stmtType[] { new Return(null) }; //signal that the return should be added
-                                    }
-                                }
-
-                                if (functionDef != null) {
-                                    ret.add(new OverrideMethodCompletionProposal(ps.getAbsoluteCursorOffset(), 0, 0,
-                                            imageOverride, functionDef, tokenAndBaseClass.o2, //baseClass
-                                            className));
-                                }
-                            }
-
-                        }
-                    }
-                }
+                createOverrideCodeCompletions(request, ret, ps);
             }
             request.showTemplates = false;
             return ret;
@@ -245,8 +147,11 @@ public class PyCodeCompletion extends AbstractPyCodeCompletion {
 
             boolean importsTip = false;
 
-            if (importsTipper.importsTipperStr.length() != 0) {
-                //code completion in imports 
+            if (request.activationToken.startsWith("super()")) {
+                createSuperCodeCompletions(request, tokensList, ps);
+
+            } else if (importsTipper.importsTipperStr.length() != 0) {
+                //code completion in imports
                 request.isInCalltip = false; //if found after (, but in an import, it is not a calltip!
                 request.isInMethodKeywordParam = false; //if found after (, but in an import, it is not a calltip!
                 importsTip = doImportCompletion(request, astManager, tokensList, importsTipper);
@@ -277,7 +182,7 @@ public class PyCodeCompletion extends AbstractPyCodeCompletion {
                                 tokensList.size(), request));
                         //With too many items it's possible that we have too many removals,
                         //so, switch to a linked list (where removal is fast).
-                        tokensList = new LinkedList(tokensList.subList(0, 10000));
+                        tokensList = new LinkedListWarningOnSlowOperations(tokensList.subList(0, 10000));
                     }
                     int i = 0;
                     for (Iterator<Object> it = tokensList.listIterator(); it.hasNext();) {
@@ -336,8 +241,9 @@ public class PyCodeCompletion extends AbstractPyCodeCompletion {
                                         break;
                                     }
                                     if (token2 == null
-                                            || (token2.equals(token) && token2.getArgs().equals(token.getArgs()) && token2
-                                                    .getParentPackage().equals(token.getParentPackage()))) {
+                                            || (token2.equals(token) && token2.getArgs().equals(token.getArgs())
+                                                    && token2
+                                                            .getParentPackage().equals(token.getParentPackage()))) {
                                         break;
                                     }
                                     token = token2;
@@ -374,6 +280,155 @@ public class PyCodeCompletion extends AbstractPyCodeCompletion {
         }
 
         return ret;
+    }
+
+    private void createSuperCodeCompletions(CompletionRequest request, List<Object> tokensList,
+            PySelection ps) throws BadLocationException, CompletionRecursionException, MisconfigurationException {
+        String lineContentsToCursor = ps.getLineContentsToCursor();
+        LineStartingScope scopeStart = ps.getPreviousLineThatStartsScope(PySelection.CLASS_TOKEN, false,
+                PySelection.getFirstCharPosition(lineContentsToCursor));
+        String className = null;
+        if (scopeStart != null) {
+            className = PySelection.getClassNameInLine(scopeStart.lineStartingScope);
+            if (className != null && className.length() > 0) {
+                Tuple<List<String>, Integer> insideParensBaseClasses = ps.getInsideParentesisToks(true,
+                        scopeStart.iLineStartingScope);
+                if (insideParensBaseClasses != null) {
+                    for (String baseClass : insideParensBaseClasses.o1) {
+                        ICompletionState state = new CompletionState(-1, -1, null, request.nature,
+                                baseClass);
+                        String actTok = request.activationToken.replace("super()", baseClass);
+                        if (actTok.endsWith(".")) {
+                            actTok = actTok.substring(0, actTok.length() - 1);
+                        }
+                        state.setActivationToken(actTok);
+                        state.setIsInCalltip(false);
+
+                        IPythonNature pythonNature = request.nature;
+                        checkPythonNature(pythonNature);
+
+                        ICodeCompletionASTManager astManager = pythonNature.getAstManager();
+                        if (astManager == null) {
+                            //we're probably still loading it.
+                            return;
+                        }
+                        //Ok, looking for a token in globals.
+                        IModule module = request.getModule();
+                        if (module == null) {
+                            continue;
+                        }
+                        IToken[] comps = astManager.getCompletionsForModule(module, state, true, true);
+                        tokensList.addAll(Arrays.asList(comps));
+                    }
+                }
+            }
+        }
+    }
+
+    private void createOverrideCodeCompletions(CompletionRequest request,
+            ArrayList<ICompletionProposal> ret,
+            PySelection ps) throws BadLocationException {
+        Image imageOverride = PydevPlugin.getImageCache().get(UIConstants.METHOD_ICON);
+        String lineContentsToCursor = ps.getLineContentsToCursor();
+        LineStartingScope scopeStart = ps.getPreviousLineThatStartsScope(PySelection.CLASS_TOKEN, false,
+                PySelection.getFirstCharPosition(lineContentsToCursor));
+
+        String className = null;
+        if (scopeStart != null) {
+            className = PySelection.getClassNameInLine(scopeStart.lineStartingScope);
+            if (className != null && className.length() > 0) {
+                Tuple<List<String>, Integer> insideParensBaseClasses = ps.getInsideParentesisToks(true,
+                        scopeStart.iLineStartingScope);
+                if (insideParensBaseClasses != null) {
+
+                    //representation -> token and base class
+                    OrderedMap<String, ImmutableTuple<IToken, String>> map = new OrderedMap<String, ImmutableTuple<IToken, String>>();
+
+                    for (String baseClass : insideParensBaseClasses.o1) {
+                        try {
+                            ICompletionState state = new CompletionState(-1, -1, null, request.nature,
+                                    baseClass);
+                            state.setActivationToken(baseClass);
+                            state.setIsInCalltip(false);
+
+                            IPythonNature pythonNature = request.nature;
+                            checkPythonNature(pythonNature);
+
+                            ICodeCompletionASTManager astManager = pythonNature.getAstManager();
+                            if (astManager == null) {
+                                //we're probably still loading it.
+                                return;
+                            }
+                            //Ok, looking for a token in globals.
+                            IModule module = request.getModule();
+                            if (module == null) {
+                                continue;
+                            }
+                            IToken[] comps = astManager.getCompletionsForModule(module, state, true, true);
+                            for (int i = 0; i < comps.length; i++) {
+                                IToken iToken = comps[i];
+                                String representation = iToken.getRepresentation();
+                                ImmutableTuple<IToken, String> curr = map.get(representation);
+                                if (curr != null && curr.o1 instanceof SourceToken) {
+                                    continue; //source tokens are never reset!
+                                }
+
+                                int type = iToken.getType();
+                                if (iToken instanceof SourceToken
+                                        && ((SourceToken) iToken).getAst() instanceof FunctionDef) {
+                                    map.put(representation, new ImmutableTuple<IToken, String>(iToken,
+                                            baseClass));
+
+                                } else if (type == IToken.TYPE_FUNCTION || type == IToken.TYPE_UNKNOWN
+                                        || type == IToken.TYPE_BUILTIN) {
+                                    map.put(representation, new ImmutableTuple<IToken, String>(iToken,
+                                            baseClass));
+
+                                }
+                            }
+                        } catch (Exception e) {
+                            Log.log(e);
+                        }
+                    }
+
+                    for (ImmutableTuple<IToken, String> tokenAndBaseClass : map.values()) {
+                        FunctionDef functionDef = null;
+
+                        //No checkings needed for type (we already did that above).
+                        if (tokenAndBaseClass.o1 instanceof SourceToken) {
+                            SourceToken sourceToken = (SourceToken) tokenAndBaseClass.o1;
+                            SimpleNode ast = sourceToken.getAst();
+                            if (ast instanceof FunctionDef) {
+                                functionDef = (FunctionDef) ast;
+                            } else {
+                                functionDef = sourceToken.getAliased().createCopy();
+                                NameTok t = (NameTok) functionDef.name;
+                                t.id = sourceToken.getRepresentation();
+                            }
+                        } else {
+                            //unfortunately, for builtins we usually cannot trust the parameters.
+                            String representation = tokenAndBaseClass.o1.getRepresentation();
+                            PyAstFactory factory = new PyAstFactory(new AdapterPrefs(ps.getEndLineDelim(),
+                                    request.nature));
+                            functionDef = factory.createFunctionDef(representation);
+                            functionDef.args = factory.createArguments(true);
+                            functionDef.args.vararg = new NameTok("args", NameTok.VarArg);
+                            functionDef.args.kwarg = new NameTok("kwargs", NameTok.KwArg);
+                            if (!representation.equals("__init__")) {
+                                functionDef.body = new stmtType[] { new Return(null) }; //signal that the return should be added
+                            }
+                        }
+
+                        if (functionDef != null) {
+                            ret.add(new OverrideMethodCompletionProposal(ps.getAbsoluteCursorOffset(), 0, 0,
+                                    imageOverride, functionDef, tokenAndBaseClass.o2, //baseClass
+                                    className));
+                        }
+                    }
+
+                }
+            }
+        }
     }
 
     private void fillTokensWithJediCompletions(CompletionRequest request, PySelection ps, IPythonNature nature,
@@ -457,7 +512,7 @@ public class PyCodeCompletion extends AbstractPyCodeCompletion {
 
     /**
      * Does a code-completion that will retrieve the globals in the module
-     * @throws MisconfigurationException 
+     * @throws MisconfigurationException
      */
     private void doGlobalsCompletion(CompletionRequest request, ICodeCompletionASTManager astManager,
             List<Object> tokensList, ICompletionState state) throws CompletionRecursionException,
@@ -488,10 +543,10 @@ public class PyCodeCompletion extends AbstractPyCodeCompletion {
 
     /**
      * Does a code-completion that will retrieve the all matches for some token in the module
-     * @throws MisconfigurationException 
-     * @throws PythonNatureWithoutProjectException 
-     * @throws CoreException 
-     * @throws IOException 
+     * @throws MisconfigurationException
+     * @throws PythonNatureWithoutProjectException
+     * @throws CoreException
+     * @throws IOException
      */
     private void doTokenCompletion(CompletionRequest request, ICodeCompletionASTManager astManager,
             List<Object> tokensList, String trimmed, ICompletionState state) throws CompletionRecursionException,
@@ -539,7 +594,7 @@ public class PyCodeCompletion extends AbstractPyCodeCompletion {
 
     /**
      * Does a code-completion that will check for imports
-     * @throws MisconfigurationException 
+     * @throws MisconfigurationException
      */
     private boolean doImportCompletion(CompletionRequest request, ICodeCompletionASTManager astManager,
             List<Object> tokensList, ImportInfo importsTipper) throws CompletionRecursionException,
@@ -569,7 +624,7 @@ public class PyCodeCompletion extends AbstractPyCodeCompletion {
 
     /**
      * @return completions added from contributors
-     * @throws MisconfigurationException 
+     * @throws MisconfigurationException
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     private Collection<Object> getGlobalsFromParticipants(CompletionRequest request, ICompletionState state)
@@ -589,9 +644,9 @@ public class PyCodeCompletion extends AbstractPyCodeCompletion {
      * @param theList OUT - returned completions are added here. (IToken instances)
      * @param getOnlySupers whether we should only get things from super classes (in this case, we won't get things from the current class)
      * @param checkIfInCorrectScope if true, we'll first check if we're in a scope that actually has a method with 'self' or 'cls'
-     * 
+     *
      * @return true if we actually tried to get the completions for self or cls.
-     * @throws MisconfigurationException 
+     * @throws MisconfigurationException
      */
     @SuppressWarnings("unchecked")
     public static boolean getSelfOrClsCompletions(CompletionRequest request, List theList, ICompletionState state,
@@ -611,7 +666,8 @@ public class PyCodeCompletion extends AbstractPyCodeCompletion {
                     boolean scopeCorrect = false;
 
                     FastStack<SimpleNode> scopeStack = visitor.scope.getScopeStack();
-                    for (Iterator<SimpleNode> it = scopeStack.topDownIterator(); scopeCorrect == false && it.hasNext();) {
+                    for (Iterator<SimpleNode> it = scopeStack.topDownIterator(); scopeCorrect == false
+                            && it.hasNext();) {
                         SimpleNode node = it.next();
                         if (node instanceof FunctionDef) {
                             FunctionDef funcDef = (FunctionDef) node;
@@ -644,7 +700,7 @@ public class PyCodeCompletion extends AbstractPyCodeCompletion {
 
     /**
      * Get self completions when you already have a scope
-     * @throws MisconfigurationException 
+     * @throws MisconfigurationException
      */
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public static void getSelfOrClsCompletions(ILocalScope scope, CompletionRequest request, List theList,
@@ -675,7 +731,7 @@ public class PyCodeCompletion extends AbstractPyCodeCompletion {
                         }
                     }
                 } else {
-                    //ok, get the completions for the class, only thing we have to take care now is that we may 
+                    //ok, get the completions for the class, only thing we have to take care now is that we may
                     //not have only 'self' for completion, but something like self.foo.
                     //so, let's analyze our activation token to see what should we do.
 
@@ -702,7 +758,7 @@ public class PyCodeCompletion extends AbstractPyCodeCompletion {
 
                     } else {
                         //it's not only self, so, first we have to get the definition of the token
-                        //the first one is self, so, just discard it, and go on, token by token to know what is the last 
+                        //the first one is self, so, just discard it, and go on, token by token to know what is the last
                         //one we are completing (e.g.: self.foo.bar)
                         int line = request.doc.getLineOfOffset(request.documentOffset);
                         IRegion region = request.doc.getLineInformationOfOffset(request.documentOffset);
@@ -713,7 +769,8 @@ public class PyCodeCompletion extends AbstractPyCodeCompletion {
 
                         AbstractASTManager astMan = ((AbstractASTManager) request.nature.getAstManager());
                         theList.addAll(new AssignAnalysis().getAssignCompletions(astMan, module, new CompletionState(
-                                line, col, request.activationToken, request.nature, request.qualifier)).completions);
+                                line, col, request.activationToken, request.nature, request.qualifier),
+                                scope).completions);
                     }
                 }
             }

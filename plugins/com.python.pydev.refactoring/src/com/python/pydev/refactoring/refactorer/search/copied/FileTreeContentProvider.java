@@ -21,8 +21,6 @@ import org.eclipse.search.ui.text.Match;
 
 import com.python.pydev.refactoring.refactorer.search.AbstractPythonSearchQuery;
 import com.python.pydev.refactoring.refactorer.search.PythonFileSearchResult;
-import com.python.pydev.ui.search.FileMatch;
-import com.python.pydev.ui.search.LineElement;
 
 public class FileTreeContentProvider implements ITreeContentProvider, IFileSearchContentProvider {
 
@@ -38,6 +36,7 @@ public class FileTreeContentProvider implements ITreeContentProvider, IFileSearc
         fTreeViewer = viewer;
     }
 
+    @Override
     public Object[] getElements(Object inputElement) {
         Object[] children = getChildren(inputElement);
         int elementLimit = getElementLimit();
@@ -58,10 +57,12 @@ public class FileTreeContentProvider implements ITreeContentProvider, IFileSearc
         }
     }
 
+    @Override
     public void dispose() {
         // nothing to do
     }
 
+    @Override
     public void inputChanged(Viewer viewer, Object oldInput, Object newInput) {
         if (newInput instanceof PythonFileSearchResult) {
             initialize((PythonFileSearchResult) newInput);
@@ -170,6 +171,7 @@ public class FileTreeContentProvider implements ITreeContentProvider, IFileSearc
         }
     }
 
+    @Override
     public Object[] getChildren(Object parentElement) {
         Set children = (Set) fChildrenMap.get(parentElement);
         if (children == null)
@@ -177,6 +179,7 @@ public class FileTreeContentProvider implements ITreeContentProvider, IFileSearc
         return children.toArray();
     }
 
+    @Override
     public boolean hasChildren(Object element) {
         return getChildren(element).length > 0;
     }
@@ -185,6 +188,7 @@ public class FileTreeContentProvider implements ITreeContentProvider, IFileSearc
      * (non-Javadoc)
      * @see org.eclipse.search.internal.ui.text.IFileSearchContentProvider#elementsChanged(java.lang.Object[])
      */
+    @Override
     public synchronized void elementsChanged(Object[] updatedElements) {
         for (int i = 0; i < updatedElements.length; i++) {
             if (!(updatedElements[i] instanceof LineElement)) {
@@ -210,11 +214,13 @@ public class FileTreeContentProvider implements ITreeContentProvider, IFileSearc
         }
     }
 
+    @Override
     public void clear() {
         initialize(fResult);
         fTreeViewer.refresh();
     }
 
+    @Override
     public Object getParent(Object element) {
         if (element instanceof IProject)
             return null;

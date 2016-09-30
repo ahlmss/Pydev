@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Refactoring Plug-in
 Bundle-SymbolicName: com.python.pydev.refactoring; singleton:=true
-Bundle-Version: 3.9.3.qualifier
+Bundle-Version: 5.2.0.qualifier
 Bundle-Activator: com.python.pydev.refactoring.RefactoringPlugin
 Bundle-Vendor: Aptana
 Bundle-Localization: plugin
@@ -13,21 +13,21 @@ Require-Bundle: org.eclipse.ui,
  org.eclipse.ui.workbench.texteditor,
  org.eclipse.core.runtime,
  org.eclipse.jface.text,
- org.python.pydev;bundle-version="[3.9.3,3.9.4)",
- com.python.pydev;bundle-version="[3.9.3,3.9.4)",
+ org.python.pydev;bundle-version="[5.2.0,5.2.1)",
+ com.python.pydev;bundle-version="[5.2.0,5.2.1)",
  org.junit;bundle-version="4.0";resolution:=optional,
  org.eclipse.search,
- org.python.pydev.ast;bundle-version="[3.9.3,3.9.4)",
- org.python.pydev.shared_ui;bundle-version="[3.9.3,3.9.4)",
- org.python.pydev.core;bundle-version="[3.9.3,3.9.4)",
- org.python.pydev.parser;bundle-version="[3.9.3,3.9.4)",
+ org.python.pydev.ast;bundle-version="[5.2.0,5.2.1)",
+ org.python.pydev.shared_ui;bundle-version="[5.2.0,5.2.1)",
+ org.python.pydev.core;bundle-version="[5.2.0,5.2.1)",
+ org.python.pydev.parser;bundle-version="[5.2.0,5.2.1)",
  org.eclipse.core.resources,
- com.python.pydev.analysis;bundle-version="[3.9.3,3.9.4)",
  org.eclipse.ltk.core.refactoring,
  org.eclipse.ltk.ui.refactoring,
+ org.python.pydev.refactoring;bundle-version="[5.2.0,5.2.1)",
+ com.python.pydev.analysis;bundle-version="[5.2.0,5.2.1)",
  org.eclipse.jdt.core;resolution:=optional,
- org.eclipse.jdt.ui;resolution:=optional,
- org.python.pydev.refactoring;bundle-version="[3.9.3,3.9.4)"
+ org.eclipse.jdt.ui;resolution:=optional
 Bundle-ActivationPolicy: lazy
 Bundle-ClassPath: refactoring.jar
 Export-Package: com.python.pydev.refactoring.actions,com.python.pydev.
@@ -41,4 +41,4 @@ Export-Package: com.python.pydev.refactoring.actions,com.python.pydev.
  ydev.refactoring.ui.findreplace,com.python.pydev.refactoring.wizards,
  com.python.pydev.refactoring.wizards.rename,com.python.pydev.refactor
  ing.wizards.rename.visitors
-Bundle-RequiredExecutionEnvironment: JavaSE-1.7
+Bundle-RequiredExecutionEnvironment: JavaSE-1.8

@@ -29,6 +29,7 @@ import org.python.pydev.core.docutils.PyStringUtils;
 import org.python.pydev.editor.refactoring.IPyRefactoringRequest;
 import org.python.pydev.editor.refactoring.MultiModuleMoveRefactoringRequest;
 import org.python.pydev.plugin.preferences.PydevPrefs;
+import org.python.pydev.shared_core.string.StringUtils;
 
 import com.python.pydev.refactoring.wizards.TextInputWizardPage;
 
@@ -148,6 +149,7 @@ public class PyRenameRefactoringWizard extends RefactoringWizard {
                 }
             }
 
+            @Override
             public void createControl(Composite parent) {
                 Composite superComposite = new Composite(parent, SWT.NONE);
                 setControl(superComposite);
@@ -158,16 +160,17 @@ public class PyRenameRefactoringWizard extends RefactoringWizard {
                 composite.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
 
                 GridLayout layout = new GridLayout();
-                layout.numColumns = 2;
+                layout.numColumns = 4;
                 layout.verticalSpacing = 8;
                 composite.setLayout(layout);
 
                 Label label = new Label(composite, SWT.NONE);
                 label.setText("New &value:");
 
-                Text text = createTextInputField(composite);
+                final Text text = createTextInputField(composite);
                 GridData gd = new GridData(GridData.FILL_HORIZONTAL);
                 gd.widthHint = convertWidthInCharsToPixels(25);
+                gd.horizontalSpan = 3;
                 text.setLayoutData(gd);
 
                 // layouter.perform(label, text, 1);
@@ -180,6 +183,37 @@ public class PyRenameRefactoringWizard extends RefactoringWizard {
                         addResourceRenameCheckbox(composite, updateReferencesButton);
                     }
                 }
+
+                //spacer
+                new Label(composite, SWT.NONE);
+
+                Button bt = new Button(composite, SWT.PUSH);
+                bt.setText("as_&lower_underscore");
+                bt.addSelectionListener(new SelectionAdapter() {
+                    @Override
+                    public void widgetSelected(SelectionEvent e) {
+                        text.setText(StringUtils.asStyleLowercaseUnderscores(text.getText()));
+                    }
+                });
+
+                Button bt2 = new Button(composite, SWT.PUSH);
+                bt2.setText("CamelCaseFirst&Upper");
+                bt2.addSelectionListener(new SelectionAdapter() {
+                    @Override
+                    public void widgetSelected(SelectionEvent e) {
+                        text.setText(StringUtils.asStyleCamelCaseFirstUpper(text.getText()));
+                    }
+                });
+
+                Button bt3 = new Button(composite, SWT.PUSH);
+                bt3.addSelectionListener(new SelectionAdapter() {
+                    @Override
+                    public void widgetSelected(SelectionEvent e) {
+                        text.setText(StringUtils.asStyleCamelCaseFirstLower(text.getText()));
+                    }
+                });
+                bt3.setText("&camelCaseFirstLower");
+
                 // addOptionalUpdateTextualMatches(composite, layouter);
                 // addOptionalUpdateQualifiedNameComponent(composite, layouter, layout.marginWidth);
 
@@ -214,7 +248,7 @@ public class PyRenameRefactoringWizard extends RefactoringWizard {
 
                 });
                 GridData gridData = new GridData(GridData.FILL_HORIZONTAL);
-                gridData.horizontalSpan = 2;
+                gridData.horizontalSpan = 3;
                 resourceRename.setLayoutData(gridData);
                 updateReferencesButton.setVisible(!simpleResourceRenameBool);
                 if (simpleResourceRenameBool) {
@@ -243,7 +277,7 @@ public class PyRenameRefactoringWizard extends RefactoringWizard {
 
                 });
                 GridData gridData = new GridData(GridData.FILL_HORIZONTAL);
-                gridData.horizontalSpan = 2;
+                gridData.horizontalSpan = 3;
                 updateReferences.setLayoutData(gridData);
                 return updateReferences;
 

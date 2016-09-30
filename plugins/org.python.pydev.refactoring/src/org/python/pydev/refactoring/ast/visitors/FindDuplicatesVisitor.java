@@ -20,6 +20,7 @@ import org.python.pydev.parser.jython.ast.Assert;
 import org.python.pydev.parser.jython.ast.Assign;
 import org.python.pydev.parser.jython.ast.Attribute;
 import org.python.pydev.parser.jython.ast.AugAssign;
+import org.python.pydev.parser.jython.ast.Await;
 import org.python.pydev.parser.jython.ast.BinOp;
 import org.python.pydev.parser.jython.ast.BoolOp;
 import org.python.pydev.parser.jython.ast.Break;
@@ -206,6 +207,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return duplicates;
     }
 
+    @Override
     public Object visitFunctionDef(FunctionDef node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -214,6 +216,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitClassDef(ClassDef node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -222,6 +225,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitModule(Module node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -230,6 +234,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitInteractive(Interactive node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -238,6 +243,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitExpression(Expression node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -246,6 +252,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitNameTok(NameTok node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -254,6 +261,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitSuite(Suite node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -262,6 +270,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitWithItem(WithItem node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -270,6 +279,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitReturn(Return node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -278,6 +288,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitDelete(Delete node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -286,6 +297,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitAssign(Assign node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -294,6 +306,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitAugAssign(AugAssign node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -302,6 +315,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitPrint(Print node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -310,6 +324,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitFor(For node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -318,6 +333,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitWhile(While node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -326,6 +342,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitIf(If node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -334,6 +351,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitWith(With node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -342,6 +360,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitRaise(Raise node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -350,6 +369,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitTryExcept(TryExcept node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -358,6 +378,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitTryFinally(TryFinally node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -366,6 +387,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitAssert(Assert node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -374,6 +396,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitImport(Import node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -382,6 +405,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitImportFrom(ImportFrom node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -390,6 +414,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitExec(Exec node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -398,6 +423,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitGlobal(Global node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -406,6 +432,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitNonLocal(NonLocal node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -414,6 +441,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitExpr(Expr node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -422,6 +450,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitPass(Pass node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -430,6 +459,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitBreak(Break node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -438,6 +468,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitContinue(Continue node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -446,6 +477,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitBoolOp(BoolOp node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -454,6 +486,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitBinOp(BinOp node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -462,6 +495,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitUnaryOp(UnaryOp node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -470,6 +504,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitLambda(Lambda node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -478,6 +513,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitIfExp(IfExp node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -486,6 +522,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitDict(Dict node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -494,6 +531,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitSet(Set node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -502,6 +540,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitListComp(ListComp node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -510,6 +549,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitSetComp(SetComp node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -518,6 +558,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitDictComp(DictComp node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -526,6 +567,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitGeneratorExp(GeneratorExp node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -534,6 +576,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitYield(Yield node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -542,6 +585,16 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
+    public Object visitAwait(Await node) throws Exception {
+        boolean ret = unhandled_node(node);
+        if (ret) {
+            traverse(node);
+        }
+        return null;
+    }
+
+    @Override
     public Object visitCompare(Compare node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -550,6 +603,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitCall(Call node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -558,6 +612,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitRepr(Repr node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -566,6 +621,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitNum(Num node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -574,6 +630,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitStr(Str node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -582,6 +639,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitStrJoin(StrJoin node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -590,6 +648,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitAttribute(Attribute node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -598,6 +657,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitSubscript(Subscript node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -606,6 +666,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitStarred(Starred node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -614,6 +675,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitName(Name node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -622,6 +684,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitList(org.python.pydev.parser.jython.ast.List node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -630,6 +693,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitTuple(org.python.pydev.parser.jython.ast.Tuple node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -638,6 +702,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitEllipsis(Ellipsis node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -646,6 +711,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitSlice(Slice node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -654,6 +720,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitExtSlice(ExtSlice node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -662,6 +729,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitIndex(Index node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {
@@ -670,6 +738,7 @@ public class FindDuplicatesVisitor implements VisitorIF {
         return null;
     }
 
+    @Override
     public Object visitComprehension(Comprehension node) throws Exception {
         boolean ret = unhandled_node(node);
         if (ret) {

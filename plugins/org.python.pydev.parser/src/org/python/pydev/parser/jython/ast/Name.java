@@ -15,6 +15,7 @@ public final class Name extends exprType implements expr_contextType {
         this.reserved = reserved;
     }
 
+    @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
@@ -24,45 +25,38 @@ public final class Name extends exprType implements expr_contextType {
         return result;
     }
 
+    @Override
     public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
+        if (this == obj) return true;
+        if (obj == null) return false;
+        if (getClass() != obj.getClass()) return false;
         Name other = (Name) obj;
-        if (id == null) {
-            if (other.id != null)
-                return false;
-        } else if (!id.equals(other.id))
-            return false;
-        if (this.ctx != other.ctx)
-            return false;
-        if (this.reserved != other.reserved)
-            return false;
+        if (id == null) { if (other.id != null) return false;}
+        else if (!id.equals(other.id)) return false;
+        if(this.ctx != other.ctx) return false;
+        if(this.reserved != other.reserved) return false;
         return true;
     }
-
+    @Override
     public Name createCopy() {
         return createCopy(true);
     }
-
+    @Override
     public Name createCopy(boolean copyComments) {
         Name temp = new Name(id, ctx, reserved);
         temp.beginLine = this.beginLine;
         temp.beginColumn = this.beginColumn;
-        if (this.specialsBefore != null && copyComments) {
-            for (Object o : this.specialsBefore) {
-                if (o instanceof commentType) {
+        if(this.specialsBefore != null && copyComments){
+            for(Object o:this.specialsBefore){
+                if(o instanceof commentType){
                     commentType commentType = (commentType) o;
                     temp.getSpecialsBefore().add(commentType.createCopy(copyComments));
                 }
             }
         }
-        if (this.specialsAfter != null && copyComments) {
-            for (Object o : this.specialsAfter) {
-                if (o instanceof commentType) {
+        if(this.specialsAfter != null && copyComments){
+            for(Object o:this.specialsAfter){
+                if(o instanceof commentType){
                     commentType commentType = (commentType) o;
                     temp.getSpecialsAfter().add(commentType.createCopy(copyComments));
                 }
@@ -71,6 +65,7 @@ public final class Name extends exprType implements expr_contextType {
         return temp;
     }
 
+    @Override
     public String toString() {
         StringBuffer sb = new StringBuffer("Name[");
         sb.append("id=");
@@ -85,10 +80,12 @@ public final class Name extends exprType implements expr_contextType {
         return sb.toString();
     }
 
+    @Override
     public Object accept(VisitorIF visitor) throws Exception {
         return visitor.visitName(this);
     }
 
+    @Override
     public void traverse(VisitorIF visitor) throws Exception {
     }
 

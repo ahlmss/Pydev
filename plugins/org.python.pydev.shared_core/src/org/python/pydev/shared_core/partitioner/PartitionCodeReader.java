@@ -33,6 +33,9 @@ import org.python.pydev.shared_core.utils.ArrayUtils;
  */
 public class PartitionCodeReader implements ICharacterScanner, IMarkScanner {
 
+    /**
+     * Note: not suitable for sub-partitions.
+     */
     public static final String ALL_CONTENT_TYPES_AVAILABLE = "ALL_CONTENT_TYPES_AVAILABLE";
 
     /** The EOF character */
@@ -197,6 +200,7 @@ public class PartitionCodeReader implements ICharacterScanner, IMarkScanner {
     /*
      * @see SingleCharReader#read()
      */
+    @Override
     public int read() {
         try {
             return fForward ? readForwards() : readBackwards();
@@ -205,6 +209,7 @@ public class PartitionCodeReader implements ICharacterScanner, IMarkScanner {
         }
     }
 
+    @Override
     public char[][] getLegalLineDelimiters() {
         if (fDelimiters == null) {
             String[] delimiters = fDocument.getLegalLineDelimiters();
@@ -216,6 +221,7 @@ public class PartitionCodeReader implements ICharacterScanner, IMarkScanner {
         return fDelimiters;
     }
 
+    @Override
     public int getColumn() {
         try {
             final int offset = getOffset();
@@ -228,6 +234,7 @@ public class PartitionCodeReader implements ICharacterScanner, IMarkScanner {
         return -1;
     }
 
+    @Override
     public void unread() {
         if (fForward) {
             if (fCurrentPosition == null) { //unread EOF
@@ -334,10 +341,12 @@ public class PartitionCodeReader implements ICharacterScanner, IMarkScanner {
         return EOF;
     }
 
+    @Override
     public int getMark() {
         return fOffset;
     }
 
+    @Override
     public void setMark(int offset) {
         if (fForward) {
             fCurrentPosition = null;

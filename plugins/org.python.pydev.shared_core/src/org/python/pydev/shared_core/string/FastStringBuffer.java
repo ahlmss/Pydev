@@ -122,10 +122,10 @@ public final class FastStringBuffer implements CharSequence {
 
     /**
      * Resizes the internal buffer to have at least the minimum capacity passed (but may be more)
-     * This code was  inlined on all methods and it's kept here to use as a reference when needed.
+     * This code was  inlined on all methods and it's kept here to use as a reference when needed
+     * (and to be used from clients to pre-reserve space).
      */
-    @SuppressWarnings("unused")
-    private void resizeForMinimum(int minimumCapacity) {
+    public void resizeForMinimum(int minimumCapacity) {
         int newCapacity = (value.length + 1) * 2;
         if (minimumCapacity > newCapacity) {
             newCapacity = minimumCapacity;
@@ -359,6 +359,7 @@ public final class FastStringBuffer implements CharSequence {
     /**
      * @return the length of this buffer
      */
+    @Override
     public int length() {
         return this.count;
     }
@@ -395,12 +396,14 @@ public final class FastStringBuffer implements CharSequence {
 
     /**
      * @param length
+     * @return
      */
-    public void deleteLastChars(int charsToDelete) {
+    public FastStringBuffer deleteLastChars(int charsToDelete) {
         this.count -= charsToDelete;
         if (this.count < 0) {
             this.count = 0;
         }
+        return this;
     }
 
     public void deleteFirstChars(int charsToDelete) {
@@ -411,6 +414,7 @@ public final class FastStringBuffer implements CharSequence {
     /**
      * @return the char given at a specific position of the buffer (no bounds check)
      */
+    @Override
     public char charAt(int i) {
         return this.value[i];
     }
@@ -695,17 +699,21 @@ public final class FastStringBuffer implements CharSequence {
             i = fastStringBuffer.length();
         }
 
+        @Override
         public Iterator<Character> iterator() {
             return new Iterator<Character>() {
 
+                @Override
                 public boolean hasNext() {
                     return i > 0;
                 }
 
+                @Override
                 public Character next() {
                     return fastStringBuffer.value[--i];
                 }
 
+                @Override
                 public void remove() {
                     throw new RuntimeException("Not implemented");
                 }
@@ -931,10 +939,12 @@ public final class FastStringBuffer implements CharSequence {
             this.fEnd = end;
         }
 
+        @Override
         public int length() {
             return fEnd - fStart;
         }
 
+        @Override
         public char charAt(int index) {
             if (index < 0 || index >= fEnd - fStart) {
                 throw new IndexOutOfBoundsException();
@@ -942,6 +952,7 @@ public final class FastStringBuffer implements CharSequence {
             return value[fStart + index];
         }
 
+        @Override
         public CharSequence subSequence(int start, int end) {
             return new BufCharSequence(value, fStart + start, fStart + end);
         }
@@ -952,6 +963,7 @@ public final class FastStringBuffer implements CharSequence {
         }
     }
 
+    @Override
     public CharSequence subSequence(int start, int end) {
         return new BufCharSequence(this.value, start, end);
     }

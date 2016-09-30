@@ -205,7 +205,8 @@ public interface ICodeCompletionASTManager {
      * @param col
      * @param line
      */
-    public abstract IToken[] getCompletionsForModule(IModule module, ICompletionState state, boolean searchSameLevelMods)
+    public abstract IToken[] getCompletionsForModule(IModule module, ICompletionState state,
+            boolean searchSameLevelMods)
             throws CompletionRecursionException;
 
     public abstract IToken[] getCompletionsForModule(IModule module, ICompletionState state,
@@ -263,7 +264,7 @@ public interface ICodeCompletionASTManager {
      * @throws CompletionRecursionException
      */
     public void getCompletionsForClassInLocalScope(IModule module, ICompletionState state, boolean searchSameLevelMods,
-            boolean lookForArgumentCompletion, List<String> lookForClass, HashSet<IToken> hashSet)
+            boolean lookForArgumentCompletion, List<ITypeInfo> lookForClass, HashSet<IToken> hashSet)
             throws CompletionRecursionException;
 
     /**
@@ -324,5 +325,9 @@ public interface ICodeCompletionASTManager {
 
     public abstract IToken[] getCompletionsUnpackingObject(IModule module, ICompletionState copy, ILocalScope scope,
             UnpackInfo unpackPos) throws CompletionRecursionException;
+
+    public IToken[] getCompletionsFromTokenInLocalScope(IModule module, ICompletionState state,
+            boolean searchSameLevelMods, boolean lookForArgumentCompletion, ILocalScope localScope)
+            throws CompletionRecursionException;
 
 }

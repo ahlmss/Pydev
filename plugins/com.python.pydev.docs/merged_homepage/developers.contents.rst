@@ -10,13 +10,14 @@ Getting the code
 The first thing you probably want to do in order to code in PyDev is
 **getting its code**.
 
-**Pre-requisites:** Eclipse SDK 4.4.0, Git and Java 7.0 (note that other
-versions of those should work too but details may differ a bit)
+**Pre-requisites:** Eclipse SDK 4.6.0 (Neon), Git and Java 8.0 (note that other
+versions of those may work too but details may differ a bit and there may be 
+compilation errors that need to be manually fixed).
 
 Before getting the code, there's an important step you need to make:
-Change your java 'compiler compliance-level' to 7.0. To do this, go to
-**window > preferences > Java > compiler** and change that setting from
-**1.4 to 1.7**.
+Change your java 'compiler compliance-level' to 8.0. To do this, go to
+**window > preferences > Java > compiler** and change that setting
+**to 1.8**.
 
 Repository
 ----------
@@ -24,7 +25,7 @@ Repository
 Get the code with Git from
 `https://github.com/fabioz/Pydev <https://github.com/fabioz/Pydev>`_
 (ideally, fork it at github, create your own branch at the forked
-repository -- usually based in the **development** branch -- and later send
+repository -- usually based in the **master** branch -- and later send
 a pull request on github so that the code can be merged back). Later, if
 you want to provide some other feature/bugfix, a new branch should be
 created again.
@@ -39,11 +40,10 @@ Configuring the environment after getting the code
 ==================================================
 
 Important: Before doing any changes to the code it's important to note
-that you should create a new branch (usually based on the development
+that you should create a new branch (usually based on the master
 branch) for doing code changes. See:
-`http://book.git-scm.com/3\_basic\_branching\_and\_merging.html <http://book.git-scm.com/3_basic_branching_and_merging.html>`_
-and also `http://nvie.com/git-model <http://nvie.com/git-model>`_ for
-details on creating and using branches.
+`https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging <https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging>`_
+for details on creating and using branches.
 
 **Note**: for running the tests the file:
 **org.python.pydev.core/tests/org.python.pydev.core/TestDependent.OS.properties**
@@ -90,7 +90,7 @@ creating a grammar that can parse it while providing a Python like AST.
 See: `PyDev Grammar <developers_grammar.html>`_ for instructions on
 that.
 
-And that's it. If you have further doubts about how to code in PyDev,
+And that's it. If you have further questions about how to code in PyDev,
 direct your questions to the `pydev-code
 list <http://lists.sourceforge.net/lists/listinfo/pydev-code>`_ at
 sourceforge.
@@ -111,8 +111,8 @@ structure:
      /org.python.pydev
      ... (other plugins)
 
-Now, on to the build: PyDev uses maven to do the build, so, it should be a matter of 
-using "mvn install". 
+Now, on to the build: PyDev uses maven to do the build, so, it should be a matter of
+using "mvn install".
 
 There's a bat file at: builders/org.python.pydev.build/build_cmd.bat
 which can be used as a base to know which environment variables are needed to do a build

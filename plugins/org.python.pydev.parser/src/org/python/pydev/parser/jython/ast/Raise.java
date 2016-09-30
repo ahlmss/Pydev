@@ -17,6 +17,7 @@ public final class Raise extends stmtType {
         this.cause = cause;
     }
 
+    @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
@@ -27,59 +28,45 @@ public final class Raise extends stmtType {
         return result;
     }
 
+    @Override
     public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
+        if (this == obj) return true;
+        if (obj == null) return false;
+        if (getClass() != obj.getClass()) return false;
         Raise other = (Raise) obj;
-        if (type == null) {
-            if (other.type != null)
-                return false;
-        } else if (!type.equals(other.type))
-            return false;
-        if (inst == null) {
-            if (other.inst != null)
-                return false;
-        } else if (!inst.equals(other.inst))
-            return false;
-        if (tback == null) {
-            if (other.tback != null)
-                return false;
-        } else if (!tback.equals(other.tback))
-            return false;
-        if (cause == null) {
-            if (other.cause != null)
-                return false;
-        } else if (!cause.equals(other.cause))
-            return false;
+        if (type == null) { if (other.type != null) return false;}
+        else if (!type.equals(other.type)) return false;
+        if (inst == null) { if (other.inst != null) return false;}
+        else if (!inst.equals(other.inst)) return false;
+        if (tback == null) { if (other.tback != null) return false;}
+        else if (!tback.equals(other.tback)) return false;
+        if (cause == null) { if (other.cause != null) return false;}
+        else if (!cause.equals(other.cause)) return false;
         return true;
     }
-
+    @Override
     public Raise createCopy() {
         return createCopy(true);
     }
-
+    @Override
     public Raise createCopy(boolean copyComments) {
-        Raise temp = new Raise(type != null ? (exprType) type.createCopy(copyComments) : null,
-                inst != null ? (exprType) inst.createCopy(copyComments) : null,
-                tback != null ? (exprType) tback.createCopy(copyComments) : null,
-                cause != null ? (exprType) cause.createCopy(copyComments) : null);
+        Raise temp = new Raise(type!=null?(exprType)type.createCopy(copyComments):null,
+        inst!=null?(exprType)inst.createCopy(copyComments):null,
+        tback!=null?(exprType)tback.createCopy(copyComments):null,
+        cause!=null?(exprType)cause.createCopy(copyComments):null);
         temp.beginLine = this.beginLine;
         temp.beginColumn = this.beginColumn;
-        if (this.specialsBefore != null && copyComments) {
-            for (Object o : this.specialsBefore) {
-                if (o instanceof commentType) {
+        if(this.specialsBefore != null && copyComments){
+            for(Object o:this.specialsBefore){
+                if(o instanceof commentType){
                     commentType commentType = (commentType) o;
                     temp.getSpecialsBefore().add(commentType.createCopy(copyComments));
                 }
             }
         }
-        if (this.specialsAfter != null && copyComments) {
-            for (Object o : this.specialsAfter) {
-                if (o instanceof commentType) {
+        if(this.specialsAfter != null && copyComments){
+            for(Object o:this.specialsAfter){
+                if(o instanceof commentType){
                     commentType commentType = (commentType) o;
                     temp.getSpecialsAfter().add(commentType.createCopy(copyComments));
                 }
@@ -88,6 +75,7 @@ public final class Raise extends stmtType {
         return temp;
     }
 
+    @Override
     public String toString() {
         StringBuffer sb = new StringBuffer("Raise[");
         sb.append("type=");
@@ -105,10 +93,12 @@ public final class Raise extends stmtType {
         return sb.toString();
     }
 
+    @Override
     public Object accept(VisitorIF visitor) throws Exception {
         return visitor.visitRaise(this);
     }
 
+    @Override
     public void traverse(VisitorIF visitor) throws Exception {
         if (type != null) {
             type.accept(visitor);
