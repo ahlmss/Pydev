@@ -163,7 +163,7 @@ public class TextSelectionUtils {
         try {
             return getDoc().getLineInformation(getStartLineIndex());
         } catch (BadLocationException e) {
-            Log.log(e);
+            //Log.log(e);
         }
         return null;
     }
@@ -1217,5 +1217,17 @@ public class TextSelectionUtils {
             Log.log(e);
         }
 
+    }
+
+    public String getContentsFromLineRange(int startLine, int endLine) {
+        try {
+            IRegion startRegion = doc.getLineInformation(startLine);
+            IRegion endRegion = doc.getLineInformation(endLine);
+            String contents = doc.get(startRegion.getOffset(),
+                    endRegion.getOffset() + endRegion.getLength() - startRegion.getOffset());
+            return contents;
+        } catch (BadLocationException e) {
+            return "";
+        }
     }
 }

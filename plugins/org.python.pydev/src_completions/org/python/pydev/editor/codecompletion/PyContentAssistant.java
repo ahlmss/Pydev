@@ -18,12 +18,19 @@ import org.eclipse.jface.text.source.ISourceViewer;
 import org.eclipse.swt.widgets.Shell;
 import org.python.copiedfromeclipsesrc.JDTNotAvailableException;
 import org.python.pydev.editor.PyInformationPresenter;
+import org.python.pydev.shared_ui.content_assist.ContentAssistHackingAroundBugs;
 import org.python.pydev.shared_ui.content_assist.DefaultContentAssist;
 
 /**
  * @author Fabio Zadrozny
  */
 public class PyContentAssistant extends DefaultContentAssist {
+
+    public PyContentAssistant() {
+        super();
+        enableColoredLabels(true);
+        ContentAssistHackingAroundBugs.fixAssistBugs(this);
+    }
 
     /**
      * Shows the completions available and sets the lastAutoActivated flag

@@ -1,10 +1,9 @@
-import time
 from pydevd_concurrency_analyser.pydevd_thread_wrappers import ObjectWrapper, wrap_attr
 
 import pydevd_file_utils
-from _pydevd_bundle import pydevd_vars
+from _pydevd_bundle import pydevd_xml
 from _pydev_bundle._pydev_filesystem_encoding import getfilesystemencoding
-from _pydevd_bundle.pydevd_constants import dict_contains, get_thread_id, IS_PY3K
+from _pydevd_bundle.pydevd_constants import get_thread_id, IS_PY3K
 
 file_system_encoding = getfilesystemencoding()
 
@@ -72,10 +71,10 @@ def get_text_list_for_frame(frame):
             #print "line is ", myLine
 
             #the variables are all gotten 'on-demand'
-            #variables = pydevd_vars.frame_vars_to_xml(curFrame.f_locals)
+            #variables = pydevd_xml.frame_vars_to_xml(curFrame.f_locals)
 
             variables = ''
-            cmdTextList.append('<frame id="%s" name="%s" ' % (myId , pydevd_vars.make_valid_xml_value(myName)))
+            cmdTextList.append('<frame id="%s" name="%s" ' % (myId , pydevd_xml.make_valid_xml_value(myName)))
             cmdTextList.append('file="%s" line="%s">' % (quote(myFile, '/>_= \t'), myLine))
             cmdTextList.append(variables)
             cmdTextList.append("</frame>")
@@ -91,17 +90,17 @@ def send_message(event_class, time, name, thread_id, type, event, file, line, fr
     cmdTextList = ['<xml>']
 
     cmdTextList.append('<' + event_class)
-    cmdTextList.append(' time="%s"' % pydevd_vars.make_valid_xml_value(str(time)))
-    cmdTextList.append(' name="%s"' % pydevd_vars.make_valid_xml_value(name))
-    cmdTextList.append(' thread_id="%s"' % pydevd_vars.make_valid_xml_value(thread_id))
-    cmdTextList.append(' type="%s"' % pydevd_vars.make_valid_xml_value(type))
+    cmdTextList.append(' time="%s"' % pydevd_xml.make_valid_xml_value(str(time)))
+    cmdTextList.append(' name="%s"' % pydevd_xml.make_valid_xml_value(name))
+    cmdTextList.append(' thread_id="%s"' % pydevd_xml.make_valid_xml_value(thread_id))
+    cmdTextList.append(' type="%s"' % pydevd_xml.make_valid_xml_value(type))
     if type == "lock":
-        cmdTextList.append(' lock_id="%s"' % pydevd_vars.make_valid_xml_value(str(lock_id)))
+        cmdTextList.append(' lock_id="%s"' % pydevd_xml.make_valid_xml_value(str(lock_id)))
     if parent is not None:
-        cmdTextList.append(' parent="%s"' % pydevd_vars.make_valid_xml_value(parent))
-    cmdTextList.append(' event="%s"' % pydevd_vars.make_valid_xml_value(event))
-    cmdTextList.append(' file="%s"' % pydevd_vars.make_valid_xml_value(file))
-    cmdTextList.append(' line="%s"' % pydevd_vars.make_valid_xml_value(str(line)))
+        cmdTextList.append(' parent="%s"' % pydevd_xml.make_valid_xml_value(parent))
+    cmdTextList.append(' event="%s"' % pydevd_xml.make_valid_xml_value(event))
+    cmdTextList.append(' file="%s"' % pydevd_xml.make_valid_xml_value(file))
+    cmdTextList.append(' line="%s"' % pydevd_xml.make_valid_xml_value(str(line)))
     cmdTextList.append('></' + event_class + '>')
 
     cmdTextList += get_text_list_for_frame(frame)
@@ -129,7 +128,7 @@ class ThreadingLogger:
     def log_event(self, frame):
         write_log = False
         self_obj = None
-        if dict_contains(frame.f_locals, "self"):
+        if "self" in frame.f_locals:
             self_obj = frame.f_locals["self"]
             if isinstance(self_obj, threading.Thread) or self_obj.__class__ == ObjectWrapper:
                 write_log = True
@@ -137,7 +136,7 @@ class ThreadingLogger:
             back = frame.f_back
             if hasattr(back, "f_back") and back.f_back is not None:
                 back = back.f_back
-                if dict_contains(back.f_locals, "self"):
+                if "self" in back.f_locals:
                     if isinstance(back.f_locals["self"], threading.Thread):
                         write_log = True
         try:
@@ -172,7 +171,7 @@ class ThreadingLogger:
                                 return
                             thread_id = get_thread_id(t)
                             name = t.getName()
-                            setattr(self_obj, "_pydev_join_called", True)
+                            self_obj._pydev_join_called = True
 
                         if real_method == "start":
                             parent = get_thread_id(t)
@@ -186,7 +185,7 @@ class ThreadingLogger:
                         back = frame.f_back
                         if hasattr(back, "f_back") and back.f_back is not None:
                             back = back.f_back
-                        if dict_contains(back.f_locals, "self"):
+                        if "self" in back.f_locals:
                             if isinstance(back.f_locals["self"], threading.Thread):
                                 my_self_obj = frame.f_back.f_back.f_locals["self"]
                                 my_back = frame.f_back.f_back
@@ -211,7 +210,7 @@ class ThreadingLogger:
                     if method_name == "__init__":
                         send_message("threading_event", event_time, t.getName(), get_thread_id(t), "lock",
                                      method_name, back.f_code.co_filename, back.f_lineno, back, lock_id=str(id(frame.f_locals["self"])))
-                    if dict_contains(frame.f_locals, "attr") and \
+                    if "attr" in frame.f_locals and \
                             (frame.f_locals["attr"] in LOCK_METHODS or
                             frame.f_locals["attr"] in QUEUE_METHODS):
                         real_method = frame.f_locals["attr"]
@@ -260,7 +259,7 @@ class AsyncioLogger:
 
     def get_task_id(self, frame):
         while frame is not None:
-            if dict_contains(frame.f_locals, "self"):
+            if "self" in frame.f_locals:
                 self_obj = frame.f_locals["self"]
                 if isinstance(self_obj,  asyncio.Task):
                     method_name = frame.f_code.co_name
@@ -281,7 +280,7 @@ class AsyncioLogger:
             return
         back = frame.f_back
 
-        if dict_contains(frame.f_locals, "self"):
+        if "self" in frame.f_locals:
             self_obj = frame.f_locals["self"]
             if isinstance(self_obj, asyncio.Task):
                 method_name = frame.f_code.co_name

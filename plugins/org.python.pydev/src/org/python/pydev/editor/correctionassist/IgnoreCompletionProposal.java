@@ -26,7 +26,7 @@ public class IgnoreCompletionProposal extends PyCompletionProposal {
             int cursorPosition, Image image, String displayString, IContextInformation contextInformation,
             String additionalProposalInfo, int priority, PyEdit edit) {
         super(replacementString, replacementOffset, replacementLength, cursorPosition, image, displayString,
-                contextInformation, additionalProposalInfo, priority);
+                contextInformation, additionalProposalInfo, priority, null);
         this.edit = edit;
     }
 
@@ -37,12 +37,16 @@ public class IgnoreCompletionProposal extends PyCompletionProposal {
             document.replace(fReplacementOffset, fReplacementLength, fReplacementString);
 
             //ok, after doing it, let's call for a reparse
-            if (edit != null) {
+            if (edit != null && getForceReparse()) {
                 edit.getParser().forceReparse();
             }
         } catch (BadLocationException x) {
             Log.log(x);
         }
+    }
+
+    protected boolean getForceReparse() {
+        return true;
     }
 
     @Override

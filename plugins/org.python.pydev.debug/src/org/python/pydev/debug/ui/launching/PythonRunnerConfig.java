@@ -33,7 +33,6 @@ import org.eclipse.debug.core.DebugPlugin;
 import org.eclipse.debug.core.ILaunch;
 import org.eclipse.debug.core.ILaunchConfiguration;
 import org.eclipse.debug.core.ILaunchManager;
-import org.eclipse.jface.preference.IPreferenceStore;
 import org.python.copiedfromeclipsesrc.JDTNotAvailableException;
 import org.python.copiedfromeclipsesrc.JavaVmLocationFinder;
 import org.python.pydev.core.ExtensionHelper;
@@ -53,6 +52,7 @@ import org.python.pydev.debug.model.remote.ListenConnector;
 import org.python.pydev.debug.profile.PyProfilePreferences;
 import org.python.pydev.debug.pyunit.PyUnitServer;
 import org.python.pydev.debug.ui.DebugPrefsPage;
+import org.python.pydev.debug.ui.RunPreferencesPage;
 import org.python.pydev.debug.ui.launching.PythonRunnerCallbacks.CreatedCommandLineParams;
 import org.python.pydev.editor.preferences.PydevEditorPrefs;
 import org.python.pydev.plugin.PydevPlugin;
@@ -73,8 +73,8 @@ import org.python.pydev.ui.pythonpathconf.InterpreterInfo;
 
 /**
  * Holds configuration for PythonRunner.
- * 
- * It knows how to extract proper launching arguments from disparate sources. 
+ *
+ * It knows how to extract proper launching arguments from disparate sources.
  * Has many launch utility functions (getCommandLine & friends).
  */
 public class PythonRunnerConfig {
@@ -132,11 +132,11 @@ public class PythonRunnerConfig {
     /*
      * Expands and returns the location attribute of the given launch configuration. The location is verified to point
      * to an existing file, in the local file system.
-     * 
+     *
      * @param configuration launch configuration
-     * 
+     *
      * @return an absolute path to a file in the local file system
-     * 
+     *
      * @throws CoreException if unable to retrieve the associated launch configuration attribute, if unable to resolve
      * any variables, or if the resolved location does not point to an existing file in the local file system
      */
@@ -168,7 +168,7 @@ public class PythonRunnerConfig {
     /**
      * Expands and returns the arguments attribute of the given launch
      * configuration. Returns <code>null</code> if arguments are not specified.
-     * 
+     *
      * @param configuration launch configuration
      * @return an array of resolved arguments, or <code>null</code> if
      * unspecified
@@ -189,10 +189,10 @@ public class PythonRunnerConfig {
      * Parses the argument text into an array of individual
      * strings using the space character as the delimiter.
      * An individual argument containing spaces must have a
-     * double quote (") at the start and end. Two double 
+     * double quote (") at the start and end. Two double
      * quotes together is taken to mean an embedded double
      * quote in the argument text.
-     * 
+     *
      * @param arguments the arguments as one string
      * @return the array of arguments
      */
@@ -209,7 +209,7 @@ public class PythonRunnerConfig {
      * configuration. Returns <code>null</code> if a working directory is not
      * specified. If specified, the working is verified to point to an existing
      * directory in the local file system.
-     * 
+     *
      * @param configuration launch configuration
      * @return an absolute path to a directory in the local file system, or
      * <code>null</code> if unspecified
@@ -232,7 +232,8 @@ public class PythonRunnerConfig {
                 }
                 throw new CoreException(PydevDebugPlugin.makeStatus(IStatus.ERROR,
                         "Unable to get working location for the run \n(the location: '" + expandedLocation
-                                + "' is not a valid directory).", null));
+                                + "' is not a valid directory).",
+                        null));
             }
         }
         return null;
@@ -242,9 +243,9 @@ public class PythonRunnerConfig {
      * Returns the location of the selected interpreter in the launch configuration
      * @param conf
      * @return the string location of the selected interpreter in the launch configuration
-     * @throws CoreException if unable to retrieve the launch configuration attribute or if unable to 
+     * @throws CoreException if unable to retrieve the launch configuration attribute or if unable to
      * resolve the default interpreter.
-     * @throws MisconfigurationException 
+     * @throws MisconfigurationException
      */
     public static IInterpreterInfo getInterpreterLocation(ILaunchConfiguration conf, IPythonNature nature,
             IInterpreterManager interpreterManager) throws InvalidRunException, CoreException,
@@ -297,14 +298,14 @@ public class PythonRunnerConfig {
      * Expands and returns the python interpreter attribute of the given launch
      * configuration. The interpreter path is verified to point to an existing
      * file in the local file system.
-     * 
+     *
      * @param configuration launch configuration
      * @return an absolute path to the interpreter in the local file system
      * @throws CoreException if unable to retrieve the associated launch
      * configuration attribute, if unable to resolve any variables, or if the
      * resolved location does not point to an existing directory in the local
      * file system
-     * @throws InvalidRunException 
+     * @throws InvalidRunException
      */
     private IPath getInterpreter(IInterpreterInfo location, ILaunchConfiguration configuration, IPythonNature nature)
             throws CoreException, InvalidRunException {
@@ -347,12 +348,12 @@ public class PythonRunnerConfig {
 
     /**
      * Can be used to extract the pythonpath used from a given configuration.
-     * 
+     *
      * @param conf the configuration from where we want to get the pythonpath
      * @return a string with the pythonpath used (with | as a separator)
      * @throws CoreException
-     * @throws InvalidRunException 
-     * @throws MisconfigurationException 
+     * @throws InvalidRunException
+     * @throws MisconfigurationException
      */
     public static String getPythonpathFromConfiguration(ILaunchConfiguration conf, IInterpreterManager manager)
             throws CoreException, InvalidRunException, MisconfigurationException {
@@ -373,8 +374,8 @@ public class PythonRunnerConfig {
 
     /**
      * Sets defaults.
-     * @throws InvalidRunException 
-     * @throws MisconfigurationException 
+     * @throws InvalidRunException
+     * @throws MisconfigurationException
      */
     @SuppressWarnings("unchecked")
     public PythonRunnerConfig(ILaunchConfiguration conf, String mode, String run,
@@ -555,9 +556,9 @@ public class PythonRunnerConfig {
 
     /**
      * Check if map the passed env var key.
-     * 
+     *
      * Variables names are considered not case sensitive on Windows.
-     * 
+     *
      * @param envMap mapping of env variables and their values
      * @return {@code true} if passed map contain PYTHONPATH key.
      */
@@ -590,6 +591,9 @@ public class PythonRunnerConfig {
     }
 
     public static String getRunningName(IPath[] paths) {
+        if (paths == null || paths.length == 0) {
+            return "";
+        }
         FastStringBuffer buf = new FastStringBuffer(20 * paths.length);
         for (IPath p : paths) {
             if (buf.length() > 0) {
@@ -601,8 +605,31 @@ public class PythonRunnerConfig {
 
     }
 
-    public String getRunningName() {
-        return getRunningName(resource);
+    public String getConsoleLabel(String[] commandLine) {
+        ArrayList<String> lst = new ArrayList<>();
+        lst.add(getRunningName(resource));
+        if (isDebug) {
+            lst.add(" [debug]");
+        }
+        if (isUnittest()) {
+            lst.add(" [unittest]");
+        }
+        if (isInteractive) {
+            lst.add(" [interactive]");
+        }
+        if (PyProfilePreferences.getAllRunsDoProfile()) {
+            lst.add(" [profile]");
+        }
+        if (PyCoveragePreferences.getAllRunsDoCoverage()) {
+            lst.add(" [coverage]");
+        }
+
+        if (commandLine.length > 0) {
+            lst.add(" [");
+            lst.add(commandLine[0]);
+            lst.add("]");
+        }
+        return StringUtils.join("", lst);
     }
 
     /**
@@ -613,9 +640,9 @@ public class PythonRunnerConfig {
         return FileUtils.getFileAbsolutePath(PydevDebugPlugin.getScriptWithinPySrc("pydev_coverage.py"));
     }
 
-    /** 
+    /**
      * Gets location of pydevd.py
-     * @note: Used on scripting (variables related to debugger location). 
+     * @note: Used on scripting (variables related to debugger location).
      */
     public static String getDebugScript() throws CoreException {
         return FileUtils.getFileAbsolutePath(PydevDebugPlugin.getScriptWithinPySrc("pydevd.py"));
@@ -627,18 +654,32 @@ public class PythonRunnerConfig {
 
     /**
      * Create a command line for launching.
-     * 
+     *
      * @param actualRun if true it'll make the variable substitution and start the listen connector in the case
      * of a debug session.
-     * 
+     *
      * @return command line ready to be exec'd
-     * @throws CoreException 
-     * @throws JDTNotAvailableException 
+     * @throws CoreException
+     * @throws JDTNotAvailableException
      */
     public String[] getCommandLine(boolean actualRun) throws CoreException, JDTNotAvailableException {
         List<String> cmdArgs = new ArrayList<String>();
 
         boolean profileRun = PyProfilePreferences.getAllRunsDoProfile();
+        boolean coverageRun = PyCoveragePreferences.getAllRunsDoCoverage();
+
+        boolean addWithDashMFlag = false;
+        String modName = null;
+        if (resource.length == 1 && RunPreferencesPage.getLaunchWithMFlag() && !isUnittest() && !coverageRun
+                && !isInteractive) {
+            IPath p = resource[0];
+            String osString = p.toOSString();
+            PythonNature pythonNature = PythonNature.getPythonNature(project);
+            modName = pythonNature.resolveModule(osString);
+            if (modName != null) {
+                addWithDashMFlag = true;
+            }
+        }
 
         if (isJython()) {
             //"java.exe" -classpath "C:\bin\jython21\jython.jar" org.python.util.jython script %ARGS%
@@ -668,12 +709,12 @@ public class PythonRunnerConfig {
             addProfileArgs(cmdArgs, profileRun, actualRun);
 
             if (isDebug) {
-                //This was removed because it cannot be used. See: 
+                //This was removed because it cannot be used. See:
                 //http://bugs.jython.org/issue1438
-                //cmdArgs.add("-Dpython.security.respectJavaAccessibility=false"); 
+                //cmdArgs.add("-Dpython.security.respectJavaAccessibility=false");
 
                 cmdArgs.add("org.python.util.jython");
-                addDebugArgs(cmdArgs, "jython", actualRun);
+                addDebugArgs(cmdArgs, "jython", actualRun, addWithDashMFlag, modName);
             } else {
                 cmdArgs.add("org.python.util.jython");
             }
@@ -692,11 +733,10 @@ public class PythonRunnerConfig {
                 addIronPythonDebugVmArgs(cmdArgs);
             }
 
-            addDebugArgs(cmdArgs, "python", actualRun);
+            addDebugArgs(cmdArgs, "python", actualRun, addWithDashMFlag, modName);
         }
 
         //Check if we should do code-coverage...
-        boolean coverageRun = PyCoveragePreferences.getAllRunsDoCoverage();
         if (coverageRun && isDebug) {
             if (actualRun) {
                 RunInUiThread.async(new Runnable() {
@@ -730,8 +770,15 @@ public class PythonRunnerConfig {
             }
         }
 
-        for (IPath p : resource) {
-            cmdArgs.add(p.toOSString());
+        if (!addWithDashMFlag) {
+            for (IPath p : resource) {
+                cmdArgs.add(p.toOSString());
+            }
+        } else {
+            if (!isDebug) {
+                cmdArgs.add("-m");
+                cmdArgs.add(modName);
+            }
         }
 
         if (!isUnittest()) {
@@ -749,7 +796,7 @@ public class PythonRunnerConfig {
             }
 
         } else {
-            //Last thing (first the files and last the special parameters the user passed -- i.e.: nose parameters) 
+            //Last thing (first the files and last the special parameters the user passed -- i.e.: nose parameters)
             addUnittestArgs(cmdArgs, actualRun, coverageRun);
         }
 
@@ -781,7 +828,7 @@ public class PythonRunnerConfig {
     }
 
     private void addIronPythonDebugVmArgs(List<String> cmdArgs) {
-        if (cmdArgs.contains("-X:Frames") || cmdArgs.contains("-X:FullFrames")) {
+        if (cmdArgs.contains("-X:FullFrames")) {
             return;
         }
         //The iron python debugger must have frames (preferably FullFrames), otherwise it won't work.
@@ -796,7 +843,7 @@ public class PythonRunnerConfig {
     private void addUnittestArgs(List<String> cmdArgs, boolean actualRun, boolean coverageRun) throws CoreException {
         if (isUnittest()) {
 
-            //The tests are either written to a configuration file or passed as a parameter. 
+            //The tests are either written to a configuration file or passed as a parameter.
             String configurationFile = this.configuration.getAttribute(Constants.ATTR_UNITTEST_CONFIGURATION_FILE, "");
             if (configurationFile.length() > 0) {
                 cmdArgs.add("--config_file");
@@ -835,7 +882,7 @@ public class PythonRunnerConfig {
                 }
             }
 
-            if (PyUnitPrefsPage2.getUsePyUnitView()) {
+            if (PyUnitPrefsPage2.getUsePyUnitView(project)) {
                 //If we want to use the PyUnitView, we need to get the port used so that the python side can connect.
                 cmdArgs.add("--port");
                 if (actualRun) {
@@ -853,8 +900,7 @@ public class PythonRunnerConfig {
                 cmdArgs.add(PyCodeCoverageView.getChosenDir().getLocation().toOSString());
 
                 if (actualRun) {
-                    IPreferenceStore prefs = PydevPrefs.getPreferenceStore();
-                    int testRunner = prefs.getInt(PyUnitPrefsPage2.TEST_RUNNER);
+                    int testRunner = PyUnitPrefsPage2.getTestRunner(this.configuration, project);
 
                     switch (testRunner) {
                         case PyUnitPrefsPage2.TEST_RUNNER_NOSE:
@@ -880,21 +926,7 @@ public class PythonRunnerConfig {
 
                             break;
                         case PyUnitPrefsPage2.TEST_RUNNER_PY_TEST:
-                            RunInUiThread.async(new Runnable() {
-
-                                @Override
-                                public void run() {
-                                    PyDialogHelpers
-                                            .openCritical(
-                                                    "PyUnit coverage not compatible with the Py.test test runner.",
-
-                                                    "Currently the PyDev PyUnit integration is not able to provide coverage "
-                                                            + "info using the py.test test runner (please enter a "
-                                                            + "feature request if you'd like that added)\n"
-                                                            + "\n"
-                                                            + "Note: the run will be continued anyways (without gathering coverage info).");
-                                }
-                            });
+                            // Now works (using pytest-cov)
                             break;
                     }
                 }
@@ -910,8 +942,11 @@ public class PythonRunnerConfig {
 
     /**
      * Adds a set of arguments needed for debugging.
+     * @param modName
+     * @param addWithDashMFlag
      */
-    private void addDebugArgs(List<String> cmdArgs, String vmType, boolean actualRun) throws CoreException {
+    private void addDebugArgs(List<String> cmdArgs, String vmType, boolean actualRun, boolean addWithDashMFlag,
+            String modName) throws CoreException {
         if (isDebug) {
             cmdArgs.add(getDebugScript());
             if (DebugPrefsPage.getDebugMultiprocessingEnabled()) {
@@ -919,6 +954,19 @@ public class PythonRunnerConfig {
             }
 
             cmdArgs.add("--print-in-debugger-startup");
+
+            String qtThreadsDebugMode = DebugPrefsPage.getQtThreadsDebugMode();
+            if (qtThreadsDebugMode != null && qtThreadsDebugMode.length() > 0 && !qtThreadsDebugMode.equals("none")) {
+                switch (qtThreadsDebugMode) {
+                    case "auto":
+                    case "pyqt5":
+                    case "pyqt4":
+                    case "pyside":
+                        cmdArgs.add("--qt-support=" + qtThreadsDebugMode);
+                        break;
+                }
+            }
+
             cmdArgs.add("--vm_type");
             cmdArgs.add(vmType);
             cmdArgs.add("--client");
@@ -933,7 +981,14 @@ public class PythonRunnerConfig {
             } else {
                 cmdArgs.add("0");
             }
-            cmdArgs.add("--file");
+            if (addWithDashMFlag) {
+                cmdArgs.add("--module");
+                cmdArgs.add("--file");
+                cmdArgs.add(modName);
+
+            } else {
+                cmdArgs.add("--file");
+            }
         }
     }
 

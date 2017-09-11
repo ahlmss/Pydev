@@ -23,10 +23,12 @@ set GIT_EXECUTABLE="p:\git\bin\git.exe"
 set ECLIPSE_CLEAN=C:\bin\eclipse46m7
 set LAUNCHER_PLUGIN=org.eclipse.equinox.launcher_1.3.200.v20160318-1642.jar
 set BUILDER_PLUGIN=org.eclipse.pde.build_3.9.200.v20160204-0642
-set KEYSTORE=X:\release_tools\pydevkeystore
-set KEYSTORE_ALIAS=pydev
-set SIGN_KEYSTORE=X:\release_tools\pydevkeystore
-set SIGN_ALIAS=pydev
+@echo Expected in env var: SIGN_KEYPASS
+@echo Expected in env var: SIGN_STOREPASS
+@echo Expected in env var: SIGN_ALIAS
+@echo Expected in env var: SIGN_KEYSTORE
+@echo Expected in env var: SIGN_STORETYPE
+@echo Expected in env var: SIGN_TSA
 SET MAVEN_OPTS=-Xmx1024m
 
 
@@ -62,10 +64,11 @@ git pull origin %BRANCH%
 
 @echo Create builtin modules
 set PYTHONPATH=%BUILD_DIR%/Pydev/plugins/org.python.pydev/pysrc
+C:\tools\Miniconda32\envs\py27_32\python %BUILD_DIR%/Pydev/plugins/org.python.pydev/pysrc/build_tools/build.py
 C:\tools\Miniconda32\envs\py27_32\python %BUILD_DIR%/Pydev/plugins/org.python.pydev/pysrc/build_tools/build_binaries_windows.py
 
 @echo to clean after the build: -DcleanAfter.set=true
-mvn install
+mvn install -e -X
 
 
 

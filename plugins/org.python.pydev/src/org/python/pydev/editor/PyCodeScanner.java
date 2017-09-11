@@ -16,6 +16,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.eclipse.jface.text.BadLocationException;
+import org.eclipse.jface.text.IRegion;
 import org.eclipse.jface.text.rules.IRule;
 import org.eclipse.jface.text.rules.IToken;
 import org.eclipse.jface.text.rules.IWhitespaceDetector;
@@ -38,7 +40,8 @@ import org.python.pydev.ui.ColorAndStyleCache;
 public class PyCodeScanner extends RuleBasedScanner {
 
     // keywords list has to be alphabetized for the keyword detector to work properly
-    static final public String[] DEFAULT_KEYWORDS = { "and", "as", "assert", "break", "class", "continue", "def",
+    static final public String[] DEFAULT_KEYWORDS = { "and", "as", "assert", "async", "await", "break", "class",
+            "continue", "def",
             "del", "elif", "else", "except", "exec", "finally", "for", "from", "global", "if", "import", "in", "is",
             "lambda", "nonlocal", "not", "or", "pass", "print", "raise", "return", "self", "try", "while", "with",
             "yield", "False", "None", "True",
@@ -103,26 +106,6 @@ public class PyCodeScanner extends RuleBasedScanner {
         public boolean isWordPart(char c) {
             return Character.isJavaIdentifierPart(c);
         }
-    }
-
-    static private class DecoratorDetector implements IWordDetector {
-
-        /**
-         * @see org.eclipse.jface.text.rules.IWordDetector#isWordStart(char)
-         */
-        @Override
-        public boolean isWordStart(char c) {
-            return c == '@';
-        }
-
-        /**
-         * @see org.eclipse.jface.text.rules.IWordDetector#isWordPart(char)
-         */
-        @Override
-        public boolean isWordPart(char c) {
-            return c != '\n' && c != '\r' && c != '(';
-        }
-
     }
 
     static public class NumberDetector implements IWordDetector {
@@ -254,6 +237,9 @@ public class PyCodeScanner extends RuleBasedScanner {
         Map<String, IToken> defaults = new HashMap<String, IToken>();
         defaults.put("self", selfToken);
 
+        // must be before PyWordRule (to match decorator before matmul as operator).
+        rules.add(new PyDecoratorRule(decoratorToken));
+
         PyWordRule wordRule = new PyWordRule(new GreatKeywordDetector(), defaultToken, classNameToken, funcNameToken,
                 parensToken, operatorsToken);
         for (String keyword : keywords) {
@@ -266,7 +252,6 @@ public class PyCodeScanner extends RuleBasedScanner {
 
         rules.add(wordRule);
 
-        rules.add(new WordRule(new DecoratorDetector(), decoratorToken));
         rules.add(new WordRule(new NumberDetector(), numberToken));
 
         setRules(rules.toArray(new IRule[0]));
@@ -278,5 +263,12 @@ public class PyCodeScanner extends RuleBasedScanner {
     public void setKeywords(String[] keywords) {
         this.keywords = keywords;
         this.setupRules();
+    }
+
+    public String getLineContentsToCursor(int diffOffset) throws BadLocationException {
+        int currLine = this.fDocument.getLineOfOffset(fOffset);
+        IRegion lineInformation = fDocument.getLineInformation(currLine);
+        int lineOffset = lineInformation.getOffset();
+        return fDocument.get(lineOffset, fOffset - lineOffset + diffOffset);
     }
 }

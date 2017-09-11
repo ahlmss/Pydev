@@ -188,7 +188,7 @@ public abstract class AbstractShell {
     }
 
     /**
-     * Stops all registered shells (should only be called at plugin shutdown). 
+     * Stops all registered shells (should only be called at plugin shutdown).
      */
     public static void shutdownAllShells() {
         ShellsContainer.shutdownAllShells();
@@ -452,7 +452,7 @@ public abstract class AbstractShell {
                 while (true) {
 
                     int len = this.socket.getInputStream().read(b);
-                    if (len == 0) {
+                    if (len <= 0) {
                         break;
                     }
 
@@ -694,7 +694,7 @@ public abstract class AbstractShell {
             }
 
         } catch (Exception e) {
-            String message = "ERROR reading shell.";
+            String message = "ERROR reading shell. Message sent: " + str + "\n";
             if (process != null) {
                 message += "\n" + process.getProcessLog();
             }
@@ -762,7 +762,7 @@ public abstract class AbstractShell {
      * @param moduleName the name of the module where the token is defined
      * @param token the token we are looking for
      * @return the file where the token was defined, its line and its column (or null if it was not found)
-     * @throws Exception 
+     * @throws Exception
      */
     public Tuple<String[], int[]> getLineCol(String moduleName, String token, List<String> pythonpath)
             throws Exception {
@@ -819,7 +819,7 @@ public abstract class AbstractShell {
         ArrayList<CompiledToken> lst = new ArrayList<>(theCompletions.o2.size());
         for (String[] s : theCompletions.o2) {
             //new CompiledToken(rep, doc, args, parentPackage, type);
-            lst.add(new CompiledToken(s[0], s[1], "", "", Integer.parseInt(s[3])));
+            lst.add(new CompiledToken(s[0], s[1], "", "", Integer.parseInt(s[3]), null));
         }
         return lst;
     }

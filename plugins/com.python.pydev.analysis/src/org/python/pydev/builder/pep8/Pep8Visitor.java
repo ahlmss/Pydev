@@ -21,6 +21,7 @@ import org.python.pydev.core.docutils.PySelection;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.editor.actions.PyFormatStd;
 import org.python.pydev.editor.codecompletion.revisited.modules.SourceModule;
+import org.python.pydev.editor.correctionassist.CheckAnalysisErrors;
 import org.python.pydev.jython.IPythonInterpreter;
 import org.python.pydev.jython.JythonPlugin;
 import org.python.pydev.plugin.JythonModules;
@@ -39,14 +40,14 @@ import com.python.pydev.analysis.ui.AnalysisPreferencesPage;
 public class Pep8Visitor {
 
     private static final String EXECUTE_PEP8 = "import sys\n"
-            + "argv = ['pep8.py', r'%s'%s]\n"
+            + "argv = ['pycodestyle.py', r'%s'%s]\n"
             + "sys.argv=argv\n"
             //It always accesses sys.argv[0] in process_options, so, it must be set.
             + "\n"
             + "\n"
-            + "pep8style = pep8.StyleGuide(parse_argv=True, config_file=False)\n"
+            + "pep8style = pycodestyle.StyleGuide(parse_argv=True, config_file=False)\n"
             + "\n"
-            + "checker = pep8.Checker(options=pep8style.options, filename='%s', lines=lines)\n"
+            + "checker = pycodestyle.Checker(options=pep8style.options, filename='%s', lines=lines)\n"
             + "\n"
             + "if ReportError is None: #Only redefine if it wasn't defined already\n"
             + "    class ReportError:\n"
@@ -98,14 +99,14 @@ public class Pep8Visitor {
             File pep8Loc = JythonModules.getPep8Location();
 
             if (pep8Loc == null) {
-                Log.log("Unable to get pep8 module.");
+                Log.log("Unable to get pycodestyle module.");
                 return messages;
             }
 
             IAdaptable projectAdaptable = prefs.getProjectAdaptable();
             if (AnalysisPreferencesPage.useSystemInterpreter(projectAdaptable)) {
                 String parameters = AnalysisPreferencesPage.getPep8CommandLineAsStr(projectAdaptable);
-                String output = PyFormatStd.runWithPep8BaseScript(document.get(), parameters, "pep8.py", "");
+                String output = PyFormatStd.runWithPep8BaseScript(document.get(), parameters, "pycodestyle.py", "");
                 List<String> splitInLines = StringUtils.splitInLines(output, false);
 
                 for (String line : splitInLines) {
@@ -144,7 +145,7 @@ public class Pep8Visitor {
                 interpreter.set("ReportError", Py.None);
             }
             PyObject pep8Module = JythonModules.getPep8Module(interpreter);
-            interpreter.set("pep8", pep8Module);
+            interpreter.set("pycodestyle", pep8Module);
 
             String formatted = StringUtils.format(EXECUTE_PEP8, file,
                     args.toString(),
@@ -178,7 +179,7 @@ public class Pep8Visitor {
         if (messageToIgnore != null) {
             int startLine = lineNumber - 1;
             String line = PySelection.getLine(document, startLine);
-            if (line.indexOf(messageToIgnore) != -1) {
+            if (CheckAnalysisErrors.isCodeAnalysisErrorHandled(line, messageToIgnore)) {
                 //keep going... nothing to see here...
                 return;
             }

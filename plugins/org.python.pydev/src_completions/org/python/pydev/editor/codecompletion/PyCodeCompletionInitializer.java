@@ -26,6 +26,8 @@ public class PyCodeCompletionInitializer extends AbstractPreferenceInitializer {
                 PyCodeCompletionPreferencesPage.DEFAULT_USE_CODECOMPLETION);
         node.putBoolean(PyCodeCompletionPreferencesPage.USE_CODE_COMPLETION_ON_DEBUG_CONSOLES,
                 PyCodeCompletionPreferencesPage.DEFAULT_USE_CODE_COMPLETION_ON_DEBUG_CONSOLES);
+        node.putBoolean(PyCodeCompletionPreferencesPage.MATCH_BY_SUBSTRING_IN_CODE_COMPLETION,
+                PyCodeCompletionPreferencesPage.DEFAULT_MATCH_BY_SUBSTRING_IN_CODE_COMPLETION);
 
         //Request
         node.putBoolean(PyCodeCompletionPreferencesPage.AUTOCOMPLETE_ON_DOT,
@@ -54,6 +56,8 @@ public class PyCodeCompletionInitializer extends AbstractPreferenceInitializer {
                 PyCodeCompletionPreferencesPage.DEFAULT_AUTOCOMPLETE_DELAY);
         node.putInt(PyCodeCompletionPreferencesPage.ARGUMENTS_DEEP_ANALYSIS_N_CHARS,
                 PyCodeCompletionPreferencesPage.DEFAULT_ARGUMENTS_DEEP_ANALYSIS_N_CHARS);
+        node.putBoolean(PyCodeCompletionPreferencesPage.PUT_LOCAL_IMPORTS_IN_TOP_OF_METHOD,
+                PyCodeCompletionPreferencesPage.DEFAULT_PUT_LOCAL_IMPORTS_IN_TOP_OF_METHOD);
 
         //Debug
         node.putBoolean(PyLoggingPreferencesPage.DEBUG_CODE_COMPLETION,

@@ -11,6 +11,7 @@ import java.util.List;
 
 import org.eclipse.jface.text.contentassist.CompletionProposal;
 import org.eclipse.jface.text.contentassist.ICompletionProposal;
+import org.python.pydev.shared_core.string.StringUtils;
 
 import junit.framework.TestCase;
 
@@ -23,7 +24,9 @@ public class PyCodeCompletionUtilsTest extends TestCase {
         String qualifier = "foo";
         boolean onlyForCalltips = false;
 
-        ICompletionProposal[] proposals = PyCodeCompletionUtils.onlyValidSorted(props, qualifier, onlyForCalltips);
+        ICompletionProposal[] proposals = PyCodeCompletionUtils.onlyValid(props, qualifier, onlyForCalltips,
+                false, null);
+        PyCodeCompletionUtils.sort(proposals, qualifier, null);
         compare(new String[] { "foo1", "foo1(a, b)" }, proposals);
     }
 
@@ -37,8 +40,10 @@ public class PyCodeCompletionUtilsTest extends TestCase {
         String qualifier = "_";
         boolean onlyForCalltips = false;
 
-        ICompletionProposal[] proposals = PyCodeCompletionUtils.onlyValidSorted(props, qualifier, onlyForCalltips);
-        compare(new String[] { "_foo1(a, b)", "__foo1()", "__foo1 - __something__", "__foo1__", "__foo1__()", },
+        ICompletionProposal[] proposals = PyCodeCompletionUtils.onlyValid(props, qualifier, onlyForCalltips,
+                false, null);
+        PyCodeCompletionUtils.sort(proposals, qualifier, null);
+        compare(new String[] { "_foo1(a, b)", "__foo1 - __something__", "__foo1()", "__foo1__", "__foo1__()", },
                 proposals);
     }
 
@@ -49,7 +54,9 @@ public class PyCodeCompletionUtilsTest extends TestCase {
         String qualifier = "sys";
         boolean onlyForCalltips = false;
 
-        ICompletionProposal[] proposals = PyCodeCompletionUtils.onlyValidSorted(props, qualifier, onlyForCalltips);
+        ICompletionProposal[] proposals = PyCodeCompletionUtils.onlyValid(props, qualifier, onlyForCalltips,
+                false, null);
+        PyCodeCompletionUtils.sort(proposals, qualifier, null);
         compare(new String[] { "system", "SystemError", }, proposals);
     }
 
@@ -58,9 +65,12 @@ public class PyCodeCompletionUtilsTest extends TestCase {
         //            System.out.println(proposals[i].getDisplayString());
         //        }
         assertEquals(strings.length, proposals.length);
+        List<String> lst = new ArrayList<>();
         for (int i = 0; i < proposals.length; i++) {
-            assertEquals(strings[i], proposals[i].getDisplayString());
+            lst.add(proposals[i].getDisplayString());
         }
+        assertEquals(StringUtils.join("\n", strings),
+                StringUtils.join("\n", lst));
 
     }
 }

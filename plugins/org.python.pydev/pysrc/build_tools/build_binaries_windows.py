@@ -1,4 +1,4 @@
-'''
+r'''
 Creating the needed environments for creating the pre-compiled distribution on Windods:
 
 1. Download:
@@ -52,6 +52,59 @@ pip install -U "pip>=1.4" "wheel>=0.21" twine
 deactivate
 
 
+C:\tools\Miniconda32\Scripts\conda create -y -f -n py36_32 python=3.6 cython numpy nose ipython pip
+C:\tools\Miniconda32\Scripts\activate py36_32
+pip install "django>=1.9"
+pip install -U "setuptools>=0.9"
+pip install -U "pip>=1.4" "wheel>=0.21" twine
+deactivate
+
+
+C:\tools\Miniconda\Scripts\conda create -y -f -n py36_64 python=3.6 cython numpy nose ipython pip
+C:\tools\Miniconda\Scripts\activate py36_64
+pip install "django>=1.9"
+pip install -U "setuptools>=0.9"
+pip install -U "pip>=1.4" "wheel>=0.21" twine
+deactivate
+
+
+
+
+### UPDATE CYTHON
+
+C:\tools\Miniconda32\Scripts\activate py27_32
+conda update -y cython
+deactivate
+
+C:\tools\Miniconda32\Scripts\activate py34_32
+conda update -y cython
+deactivate
+
+C:\tools\Miniconda32\Scripts\activate py35_32
+conda update -y cython
+deactivate
+
+C:\tools\Miniconda\Scripts\activate py27_64
+conda update -y cython
+deactivate
+
+C:\tools\Miniconda\Scripts\activate py34_64
+conda update -y cython
+deactivate
+
+C:\tools\Miniconda\Scripts\activate py35_64
+conda update -y cython
+deactivate
+
+C:\tools\Miniconda32\Scripts\activate py36_32
+conda update -y cython
+deactivate
+
+C:\tools\Miniconda\Scripts\activate py36_64
+conda update -y cython
+deactivate
+
+
 '''
 
 from __future__ import unicode_literals
@@ -66,10 +119,12 @@ python_installations = [
     r'%s\py27_32\python.exe' % miniconda32_envs,
     r'%s\py34_32\python.exe' % miniconda32_envs,
     r'%s\py35_32\python.exe' % miniconda32_envs,
+    r'%s\py36_32\python.exe' % miniconda32_envs,
 
     r'%s\py27_64\python.exe' % miniconda64_envs,
     r'%s\py34_64\python.exe' % miniconda64_envs,
     r'%s\py35_64\python.exe' % miniconda64_envs,
+    r'%s\py36_64\python.exe' % miniconda64_envs,
 ]
 
 root_dir = os.path.dirname(os.path.dirname(__file__))
@@ -100,11 +155,18 @@ def main():
         raise AssertionError('Binary not removed: %s' % (f,))
 
     for i, python_install in enumerate(python_installations):
+        print()
+        print('*'*80)
+        print('*'*80)
+        print()
         new_name = 'pydevd_cython_%s_%s' % (sys.platform, extract_version(python_install))
         args = [
             python_install, os.path.join(root_dir, 'build_tools', 'build.py'), '--no-remove-binaries', '--target-pyd-name=%s' % new_name, '--force-cython']
         if i != 0:
             args.append('--no-regenerate-files')
+        if extract_version(python_install).startswith('36'):
+            name_frame_eval = 'pydevd_frame_evaluator_%s_%s' % (sys.platform, extract_version(python_install))
+            args.append('--target-pyd-frame-eval=%s' % name_frame_eval)
         print('Calling: %s' % (' '.join(args)))
         subprocess.check_call(args)
 
@@ -113,9 +175,13 @@ def main():
 if __name__ == '__main__':
     main()
 
-'''
+# C:\tools\Miniconda32\envs\py27_32\python build_tools\build.py: generates the .pyx and .c
+# C:\tools\Miniconda32\envs\py27_32\python build_tools\build_binaries_windows.py: builds for multiple python versions
+
+r'''
 To run do:
 cd /D x:\PyDev.Debugger
 set PYTHONPATH=x:\PyDev.Debugger
+C:\tools\Miniconda32\envs\py27_32\python build_tools\build.py
 C:\tools\Miniconda32\envs\py27_32\python build_tools\build_binaries_windows.py
 '''

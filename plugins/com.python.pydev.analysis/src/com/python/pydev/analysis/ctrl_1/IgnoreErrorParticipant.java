@@ -6,7 +6,7 @@
  */
 /*
  * Created on Sep 20, 2005
- * 
+ *
  * @author Fabio Zadrozny
  */
 package com.python.pydev.analysis.ctrl_1;
@@ -23,6 +23,7 @@ import org.python.pydev.core.docutils.PySelection;
 import org.python.pydev.editor.PyEdit;
 import org.python.pydev.editor.actions.PyFormatStd.FormatStd;
 import org.python.pydev.editor.codefolding.MarkerAnnotationAndPosition;
+import org.python.pydev.editor.correctionassist.CheckAnalysisErrors;
 import org.python.pydev.editor.correctionassist.IgnoreCompletionProposal;
 import org.python.pydev.editor.correctionassist.IgnoreCompletionProposalInSameLine;
 import org.python.pydev.plugin.PydevPlugin;
@@ -34,7 +35,7 @@ import com.python.pydev.analysis.builder.AnalysisRunner;
 
 public class IgnoreErrorParticipant implements IAnalysisMarkersParticipant {
 
-    private Set<Integer> handled = new HashSet<Integer>();
+    private Set<Integer> handled = new HashSet<>();
 
     private FormatStd format;
 
@@ -45,12 +46,12 @@ public class IgnoreErrorParticipant implements IAnalysisMarkersParticipant {
     /**
      * Only for tests.
      */
-    /*default*/IgnoreErrorParticipant(FormatStd format) {
+    /*default*/ IgnoreErrorParticipant(FormatStd format) {
         this.format = format;
     }
 
-    /** 
-     * @throws CoreException 
+    /**
+     * @throws CoreException
      * @see com.python.pydev.analysis.ctrl_1.IAnalysisMarkersParticipant#addProps(org.eclipse.core.resources.IMarker, com.python.pydev.analysis.IAnalysisPreferences, java.lang.String, org.python.pydev.core.docutils.PySelection, int, org.python.pydev.editor.PyEdit, java.util.List)
      */
     @Override
@@ -64,9 +65,7 @@ public class IgnoreErrorParticipant implements IAnalysisMarkersParticipant {
         }
         handled.add(id);
         final String messageToIgnore = analysisPreferences.getRequiredMessageToIgnore(id);
-
-        if (line.indexOf(messageToIgnore) != -1) {
-            //ok, move on...
+        if (CheckAnalysisErrors.isCodeAnalysisErrorHandled(line, messageToIgnore)) {
             return;
         }
 

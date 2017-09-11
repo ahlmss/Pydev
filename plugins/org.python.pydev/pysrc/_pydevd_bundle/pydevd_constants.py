@@ -10,13 +10,6 @@ PYTHON_SUSPEND = 1
 DJANGO_SUSPEND = 2
 JINJA2_SUSPEND = 3
 
-try:
-    __setFalse = False
-except:
-    import __builtin__
-
-    setattr(__builtin__, 'True', 1)
-    setattr(__builtin__, 'False', 0)
 
 class DebugInfoHolder:
     #we have to put it here because it can be set through the command line (so, the
@@ -37,18 +30,22 @@ except AttributeError:
 #the communication slower -- as the variables are being gathered lazily in the latest version of eclipse,
 #this value was raised from 200 to 1000.
 MAXIMUM_VARIABLE_REPRESENTATION_SIZE = 1000
+# Prefix for saving functions return values in locals
+RETURN_VALUES_DICT = '__pydevd_ret_val_dict'
 
 import os
 
 from _pydevd_bundle import pydevd_vm_type
 
 IS_JYTHON = pydevd_vm_type.get_vm_type() == pydevd_vm_type.PydevdVmType.JYTHON
+IS_IRONPYTHON = sys.platform == 'cli'
 
 IS_JYTH_LESS25 = False
 if IS_JYTHON:
     if sys.version_info[0] == 2 and sys.version_info[1] < 5:
         IS_JYTH_LESS25 = True
 
+IS_PYTHON_STACKLESS = "stackless" in sys.version.lower()
 CYTHON_SUPPORTED = False
 
 try:
@@ -57,7 +54,7 @@ try:
 except:
     pass
 else:
-    if python_implementation == 'CPython':
+    if python_implementation == 'CPython' and not IS_PYTHON_STACKLESS:
         # Only available for CPython!
         if (
             (sys.version_info[0] == 2 and sys.version_info[1] >= 7)
@@ -91,10 +88,6 @@ except AttributeError:
 
 try:
     SUPPORT_GEVENT = os.getenv('GEVENT_SUPPORT', 'False') == 'True'
-    try:
-        import gevent
-    except:
-        SUPPORT_GEVENT = False
 except:
     # Jython 2.1 doesn't accept that construct
     SUPPORT_GEVENT = False
@@ -103,6 +96,9 @@ except:
 USE_LIB_COPY = SUPPORT_GEVENT and \
                ((not IS_PY3K and sys.version_info[1] >= 6) or
                 (IS_PY3K and sys.version_info[1] >= 3))
+
+
+INTERACTIVE_MODE_AVAILABLE = sys.platform in ('darwin', 'win32') or os.getenv('DISPLAY') is not None
 
 
 def protect_libraries_from_patching():
@@ -138,40 +134,8 @@ if USE_LIB_COPY:
     protect_libraries_from_patching()
 
 
-from _pydev_imps._pydev_saved_modules import threading
-
 from _pydev_imps._pydev_saved_modules import thread
 _nextThreadIdLock = thread.allocate_lock()
-
-#=======================================================================================================================
-# Jython?
-#=======================================================================================================================
-try:
-    dict_contains = dict.has_key
-except:
-    try:
-        #Py3k does not have has_key anymore, and older versions don't have __contains__
-        dict_contains = dict.__contains__
-    except:
-        try:
-            dict_contains = dict.has_key
-        except NameError:
-            def dict_contains(d, key):
-                return d.has_key(key)
-try:
-    dict_pop = dict.pop
-except:
-    #=======================================================================================================================
-    # Jython 2.1
-    #=======================================================================================================================
-    def dict_pop(d, key, default=None):
-        try:
-            ret = d[key]
-            del d[key]
-            return ret
-        except:
-            return default
-
 
 if IS_PY3K:
     def dict_keys(d):
@@ -189,9 +153,13 @@ if IS_PY3K:
         return list(d.items())
 
 else:
+    dict_keys = None
     try:
         dict_keys = dict.keys
     except:
+        pass
+
+    if IS_JYTHON or not dict_keys:
         def dict_keys(d):
             return d.keys()
 
@@ -232,27 +200,6 @@ try:
 except:
     izip = zip
 
-try:
-    object
-except NameError:
-    class object:
-        pass
-
-    import __builtin__
-
-    setattr(__builtin__, 'object', object)
-
-
-try:
-    enumerate
-except:
-    def enumerate(lst):
-        ret = []
-        i = 0
-        for element in lst:
-            ret.append((i, element))
-            i += 1
-        return ret
 
 #=======================================================================================================================
 # StringIO

@@ -556,6 +556,10 @@ public class StringSubstitutionTest extends TestCase {
                         throw new RuntimeException("Not implemented");
                     }
 
+                    public void clearCachedDynamicReferences() {
+
+                    }
+
                     @Override
                     public IPathVariableManager getPathVariableManager() {
                         return new IPathVariableManager() {
@@ -1092,6 +1096,11 @@ public class StringSubstitutionTest extends TestCase {
 
             @Override
             public long getMtime() {
+                throw new RuntimeException("Not implemented");
+            }
+
+            @Override
+            public AdditionalGrammarVersionsToCheck getAdditionalGrammarVersions() throws MisconfigurationException {
                 throw new RuntimeException("Not implemented");
             }
         });

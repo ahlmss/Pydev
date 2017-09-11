@@ -79,6 +79,27 @@ public abstract class ScriptConsole extends TextConsole implements ICommandHandl
         return getActiveScriptConsole();
     }
 
+    public static Iterable<IConsoleView> iterConsoles() {
+        List<IConsoleView> consoles = new ArrayList<>();
+        IWorkbenchWindow window = PlatformUI.getWorkbench().getActiveWorkbenchWindow();
+        if (window != null) {
+            IWorkbenchPage page = window.getActivePage();
+            if (page != null) {
+
+                List<IViewPart> consoleParts = getConsoleParts(page, false);
+                if (consoleParts.size() == 0) {
+                    consoleParts = getConsoleParts(page, true);
+                }
+                for (IViewPart iViewPart : consoleParts) {
+                    if (iViewPart instanceof IConsoleView) {
+                        consoles.add((IConsoleView) iViewPart);
+                    }
+                }
+            }
+        }
+        return consoles;
+    }
+
     /**
      * @return the currently active script console.
      */
@@ -260,6 +281,18 @@ public abstract class ScriptConsole extends TextConsole implements ICommandHandl
     @Override
     public void setOnContentsReceivedCallback(ICallback<Object, Tuple<String, String>> onContentsReceived) {
         interpreter.setOnContentsReceivedCallback(onContentsReceived);
+    }
+
+    @Override
+    public boolean isOnStateWhereCommandHandlingShouldStop(String commandLine) {
+        final Object[] listeners = consoleListeners.getListeners();
+
+        for (Object listener : listeners) {
+            if (((IScriptConsoleListener) listener).isOnStateWhereCommandHandlingShouldStop(commandLine)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

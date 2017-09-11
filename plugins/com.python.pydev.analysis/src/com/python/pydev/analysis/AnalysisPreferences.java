@@ -14,7 +14,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.jface.preference.IPreferenceStore;
 import org.python.pydev.shared_core.preferences.IScopedPreferences;
@@ -73,7 +72,10 @@ public class AnalysisPreferences extends AbstractAnalysisPreferences {
             { IAnalysisPreferences.TYPE_PEP8, AnalysisPreferenceInitializer.SEVERITY_PEP8,
                     AnalysisPreferenceInitializer.DEFAULT_SEVERITY_PEP8 },
             { IAnalysisPreferences.TYPE_ARGUMENTS_MISATCH, AnalysisPreferenceInitializer.SEVERITY_ARGUMENTS_MISMATCH,
-                    AnalysisPreferenceInitializer.DEFAULT_SEVERITY_ARGUMENTS_MISMATCH }, };
+                    AnalysisPreferenceInitializer.DEFAULT_SEVERITY_ARGUMENTS_MISMATCH },
+            { IAnalysisPreferences.TYPE_FSTRING_SYNTAX_ERROR, AnalysisPreferenceInitializer.SEVERITY_FSTRING_ERROR,
+                    AnalysisPreferenceInitializer.DEFAULT_SEVERITY_FSTRING_ERROR },
+    };
 
     private HashMap<Integer, Integer> severityTypeMapCache;
     private final Object lock = new Object();
@@ -94,7 +96,7 @@ public class AnalysisPreferences extends AbstractAnalysisPreferences {
                     }
 
                     //TODO: Add ARGUMENTS_MISMATCH again later on
-                    temp.put(IAnalysisPreferences.TYPE_ARGUMENTS_MISATCH, IMarker.SEVERITY_INFO); //Force it to be disabled for now!
+                    temp.put(IAnalysisPreferences.TYPE_ARGUMENTS_MISATCH, -1); //Force it to be disabled for now!
                     severityTypeMapCache = temp;
                 }
             }
@@ -104,7 +106,7 @@ public class AnalysisPreferences extends AbstractAnalysisPreferences {
 
     /**
      * return the severity based on the user-set values
-     *  
+     *
      * @see com.python.pydev.analysis.IAnalysisPreferences#getSeverityForType(int)
      */
     @Override
@@ -119,7 +121,7 @@ public class AnalysisPreferences extends AbstractAnalysisPreferences {
 
     /**
      * yeah, we always do code analysis...
-     *  
+     *
      * @see com.python.pydev.analysis.IAnalysisPreferences#makeCodeAnalysis()
      */
     @Override
@@ -174,15 +176,6 @@ public class AnalysisPreferences extends AbstractAnalysisPreferences {
             ret.add(string.replaceAll("\\*", ".*"));
         }
         return ret;
-    }
-
-    /**
-     * @see com.python.pydev.analysis.IAnalysisPreferences#getWhenAnalyze()
-     */
-    @Override
-    public int getWhenAnalyze() {
-        return PyAnalysisScopedPreferences.getInt(AnalysisPreferenceInitializer.WHEN_ANALYZE,
-                projectAdaptable, 0);
     }
 
 }

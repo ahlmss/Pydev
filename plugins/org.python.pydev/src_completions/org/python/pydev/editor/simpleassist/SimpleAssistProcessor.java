@@ -27,12 +27,17 @@ import org.eclipse.jface.text.contentassist.IContextInformationPresenter;
 import org.eclipse.jface.text.contentassist.IContextInformationValidator;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.util.PropertyChangeEvent;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.Listener;
 import org.python.pydev.core.ExtensionHelper;
+import org.python.pydev.core.IPythonNature;
 import org.python.pydev.core.docutils.PySelection;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.editor.IPySyntaxHighlightingAndCodeCompletionEditor;
 import org.python.pydev.editor.codecompletion.CompletionError;
-import org.python.pydev.editor.codecompletion.IPyCodeCompletion;
+import org.python.pydev.editor.codecompletion.ProposalsComparator;
+import org.python.pydev.editor.codecompletion.ProposalsComparator.CompareContext;
 import org.python.pydev.editor.codecompletion.PyCodeCompletionPreferencesPage;
 import org.python.pydev.editor.codecompletion.PyContentAssistant;
 import org.python.pydev.editor.codecompletion.PythonCompletionProcessor;
@@ -41,7 +46,7 @@ import org.python.pydev.plugin.PydevPlugin;
 /**
  * This processor controls the completion cycle (and also works as a 'delegator' to the processor that deals
  * with actual python completions -- which may be a bit slower that simple completions).
- * 
+ *
  * @author Fabio
  */
 public class SimpleAssistProcessor implements IContentAssistProcessor {
@@ -144,12 +149,15 @@ public class SimpleAssistProcessor implements IContentAssistProcessor {
      */
     private String lastError = null;
 
+    private KeepProposalsComparatorSynched keepSynched;
+
     @SuppressWarnings("unchecked")
-    public SimpleAssistProcessor(IPySyntaxHighlightingAndCodeCompletionEditor edit,
+    public SimpleAssistProcessor(final IPySyntaxHighlightingAndCodeCompletionEditor edit,
             PythonCompletionProcessor defaultPythonProcessor, final PyContentAssistant assistant) {
         this.edit = edit;
         this.defaultPythonProcessor = defaultPythonProcessor;
         this.assistant = assistant;
+        this.assistant.setSorter(this.sorter);
 
         //Note: in practice, we'll always have at least one participart (for the keywords)
         this.participants = ExtensionHelper.getParticipants(ExtensionHelper.PYDEV_SIMPLE_ASSIST);
@@ -157,6 +165,10 @@ public class SimpleAssistProcessor implements IContentAssistProcessor {
         assistant.addCompletionListener(new ICompletionListener() {
             @Override
             public void assistSessionEnded(ContentAssistEvent event) {
+                if (keepSynched != null) {
+                    keepSynched.dispose();
+                    keepSynched = null;
+                }
             }
 
             @Override
@@ -177,24 +189,76 @@ public class SimpleAssistProcessor implements IContentAssistProcessor {
 
     }
 
+    private static class KeepProposalsComparatorSynched
+            implements Listener {
+
+        private ITextViewer viewer;
+        private ProposalsComparator sorter;
+
+        public KeepProposalsComparatorSynched(ITextViewer viewer, IDocument doc, int offset,
+                ProposalsComparator sorter) {
+            this.viewer = viewer;
+            this.sorter = sorter;
+            viewer.getTextWidget().addListener(SWT.Modify, this);
+            viewer.getTextWidget().addListener(SWT.KeyUp, this);
+        }
+
+        public void dispose() {
+            if (this.viewer != null) {
+                viewer.getTextWidget().removeListener(SWT.Modify, this);
+                viewer.getTextWidget().removeListener(SWT.KeyUp, this);
+                this.viewer = null;
+                this.sorter = null;
+            }
+        }
+
+        @Override
+        public void handleEvent(Event event) {
+            updateQualifier();
+        }
+
+        private void updateQualifier() {
+            IDocument doc = this.viewer.getDocument();
+
+            String[] strs = PySelection.getActivationTokenAndQual(doc, this.viewer.getSelectedRange().x, false);
+
+            String qualifier = strs[1];
+            this.sorter.setQualifier(qualifier);
+        }
+
+    }
+
+    private final ProposalsComparator sorter = new ProposalsComparator("", null);
+
     /**
      * Computes the proposals (may forward for simple or 'complete' proposals)
-     *  
+     *
      * @see org.eclipse.jface.text.contentassist.IContentAssistProcessor#computeCompletionProposals(org.eclipse.jface.text.ITextViewer, int)
      */
     @Override
     public ICompletionProposal[] computeCompletionProposals(ITextViewer viewer, int offset) {
         try {
+            IDocument doc = viewer.getDocument();
+            String[] strs = PySelection.getActivationTokenAndQual(doc, offset, false);
+
+            String activationToken = strs[0];
+            String qualifier = strs[1];
+            IPythonNature pythonNature = edit.getPythonNature();
+            this.sorter.setQualifier(qualifier);
+            this.sorter.setCompareContext(new CompareContext(pythonNature));
+
+            if (this.keepSynched != null) {
+                this.keepSynched.dispose();
+                this.keepSynched = null;
+            }
+            this.keepSynched = new KeepProposalsComparatorSynched(viewer, doc, offset, this.sorter);
+
             if (showDefault()) {
-                return defaultPythonProcessor.computeCompletionProposals(viewer, offset);
+                ICompletionProposal[] ret = defaultPythonProcessor.computeCompletionProposals(viewer, offset);
+                return ret;
 
             } else {
                 updateStatus();
-                IDocument doc = viewer.getDocument();
-                String[] strs = PySelection.getActivationTokenAndQual(doc, offset, false);
-
-                String activationToken = strs[0];
-                String qualifier = strs[1];
 
                 PySelection ps = edit.createPySelection();
                 if (ps == null) {
@@ -203,7 +267,8 @@ public class SimpleAssistProcessor implements IContentAssistProcessor {
                 List<ICompletionProposal> results = new ArrayList<ICompletionProposal>();
 
                 for (ISimpleAssistParticipant participant : participants) {
-                    results.addAll(participant.computeCompletionProposals(activationToken, qualifier, ps, edit, offset));
+                    results.addAll(
+                            participant.computeCompletionProposals(activationToken, qualifier, ps, edit, offset));
                 }
 
                 //don't matter the result... next time we won't ask for simple stuff
@@ -215,7 +280,7 @@ public class SimpleAssistProcessor implements IContentAssistProcessor {
                     }
                     return new ICompletionProposal[0];
                 } else {
-                    Collections.sort(results, IPyCodeCompletion.PROPOSAL_COMPARATOR);
+                    Collections.sort(results, this.sorter);
                     return results.toArray(new ICompletionProposal[0]);
                 }
             }
@@ -268,7 +333,7 @@ public class SimpleAssistProcessor implements IContentAssistProcessor {
 
     /**
      * only very simple proposals should be here, as it is auto-activated for any character
-     *  
+     *
      * @see org.eclipse.jface.text.contentassist.IContentAssistProcessor#getCompletionProposalAutoActivationCharacters()
      */
     @Override
@@ -283,7 +348,7 @@ public class SimpleAssistProcessor implements IContentAssistProcessor {
 
     /**
      * @return the auto-activation chars that should be used: always all chars ascii chars + default options.
-     * 
+     *
      * The logic is that the first is always for the 'simple' keywords (i.e.: print, self, etc.)
      */
     public synchronized static char[] getStaticAutoActivationCharacters() {

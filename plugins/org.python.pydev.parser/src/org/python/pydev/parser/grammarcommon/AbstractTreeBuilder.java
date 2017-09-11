@@ -109,10 +109,6 @@ public abstract class AbstractTreeBuilder extends AbstractTreeBuilderHelpers {
 
         switch (id) {
 
-            case JJTFILE_INPUT:
-                ret = new Module(null);
-                break;
-
             case JJTFALSE:
                 ret = new Name("False", Name.Load, true);
                 break;
@@ -138,8 +134,9 @@ public abstract class AbstractTreeBuilder extends AbstractTreeBuilderHelpers {
             case JJTSTRING:
             case JJTUNICODE:
             case JJTBINARY:
+            case JJTFSTRING:
                 //the actual number will be set during the parsing (token image) -- see Num construct
-                ret = new Str(null, -1, false, false, false);
+                ret = new Str(null, -1, false, false, false, false);
                 break;
 
             case JJTFOR_STMT:
@@ -270,7 +267,15 @@ public abstract class AbstractTreeBuilder extends AbstractTreeBuilderHelpers {
                 ret = new Attribute(null, null, Attribute.Load);
                 break;
             case JJTSTAR_EXPR:
-                ret = new Starred(null, Starred.Store);
+                ret = new Starred(null, stack.getGrammar().getGrammarActions().getStarExprScope());
+                break;
+
+            case JJTFILE_INPUT:
+                ret = new Module(null);
+                break;
+
+            case JJTEVAL_INPUT:
+                ret = new Expr(null);
                 break;
 
             default:
@@ -330,6 +335,7 @@ public abstract class AbstractTreeBuilder extends AbstractTreeBuilderHelpers {
             case JJTSTRING:
             case JJTUNICODE:
             case JJTBINARY:
+            case JJTFSTRING:
             case JJTBEGIN_DECORATOR:
             case JJTCOMMA:
             case JJTCOLON:
@@ -593,12 +599,6 @@ public abstract class AbstractTreeBuilder extends AbstractTreeBuilderHelpers {
                     asname = makeName(NameTok.ImportName);
                 }
                 return new aliasType(makeName(NameTok.ImportName), asname);
-
-            case JJTSTAR_EXPR:
-                Starred s = (Starred) n;
-                s.value = (exprType) this.stack.popNode();
-                ctx.setStore(s);
-                return s;
 
             case JJTSTRJOIN:
                 Str str2 = (Str) stack.popNode();

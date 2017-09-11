@@ -59,6 +59,7 @@ import org.python.pydev.debug.model.remote.SetBreakpointCommand;
 import org.python.pydev.debug.model.remote.SetDjangoExceptionBreakpointCommand;
 import org.python.pydev.debug.model.remote.SetDontTraceEnabledCommand;
 import org.python.pydev.debug.model.remote.SetPropertyTraceCommand;
+import org.python.pydev.debug.model.remote.SetShowReturnValuesEnabledCommand;
 import org.python.pydev.debug.model.remote.ThreadListCommand;
 import org.python.pydev.debug.model.remote.VersionCommand;
 import org.python.pydev.debug.ui.launching.PythonRunnerConfig;
@@ -68,6 +69,7 @@ import org.python.pydev.plugin.PydevPlugin;
 import org.python.pydev.shared_core.string.FastStringBuffer;
 import org.python.pydev.shared_core.string.StringUtils;
 import org.python.pydev.shared_core.structure.Tuple;
+import org.python.pydev.shared_core.utils.ArrayUtils;
 import org.python.pydev.shared_ui.utils.RunInUiThread;
 
 /**
@@ -429,6 +431,21 @@ public abstract class AbstractDebugTarget extends AbstractDebugTargetWithTransmi
             } else if (cmdCode == AbstractDebuggerCommand.CMD_SEND_CURR_EXCEPTION_TRACE_PROCEEDED) {
                 processCaughtExceptionTraceProceededSent(payload);
 
+            } else if (cmdCode == AbstractDebuggerCommand.CMD_INPUT_REQUESTED) {
+                if ("true".equalsIgnoreCase(payload.trim())) {
+                    this.setWaitingForInput(true);
+
+                } else if ("false".equalsIgnoreCase(payload.trim())) {
+                    this.setWaitingForInput(false);
+
+                } else {
+                    PydevDebugPlugin.log(IStatus.WARNING, "Unexpected payload for CMD_INPUT_REQUESTED" +
+                            "\npayload:" + payload, null);
+                }
+
+            } else if (cmdCode == AbstractDebuggerCommand.CMD_PROCESS_CREATED) {
+                // We don't really need to handle process created for now.
+
             } else {
                 PydevDebugPlugin.log(IStatus.WARNING, "Unexpected debugger command:" + sCmdCode +
                         "\nseq:" + sSeqCode
@@ -513,16 +530,7 @@ public abstract class AbstractDebugTarget extends AbstractDebugTargetWithTransmi
             threads = newThreads;
 
         } else {
-            PyThread[] combined = new PyThread[threads.length + newThreads.length];
-            int i = 0;
-            for (i = 0; i < threads.length; i++) {
-                combined[i] = threads[i];
-            }
-
-            for (int j = 0; j < newThreads.length; i++, j++) {
-                combined[i] = newThreads[j];
-            }
-            threads = combined;
+            threads = ArrayUtils.concatArrays(threads, newThreads);
         }
         // Now notify debugger that new threads were added
         for (int i = 0; i < newThreads.length; i++) {
@@ -761,6 +769,9 @@ public abstract class AbstractDebugTarget extends AbstractDebugTargetWithTransmi
             if (property.equals(PydevEditorPrefs.DONT_TRACE_ENABLED)) {
                 sendDontTraceEnabledCommand();
 
+            } else if (property.equals(PydevEditorPrefs.SHOW_RETURN_VALUES)) {
+                sendShowReturnValuesEnabledCommand();
+
             } else if (property.equals(PydevEditorPrefs.TRACE_DJANGO_TEMPLATE_RENDER_EXCEPTIONS)) {
                 sendSetDjangoExceptionBreakpointCommand();
             }
@@ -787,6 +798,7 @@ public abstract class AbstractDebugTarget extends AbstractDebugTargetWithTransmi
         this.onUpdateIgnoreThrownExceptions();
         this.sendSetDjangoExceptionBreakpointCommand();
         this.sendDontTraceEnabledCommand();
+        this.sendShowReturnValuesEnabledCommand();
 
         IPreferenceStore pyPrefsStore = PydevPlugin.getDefault().getPreferenceStore();
         pyPrefsStore.addPropertyChangeListener(listener);
@@ -800,6 +812,13 @@ public abstract class AbstractDebugTarget extends AbstractDebugTargetWithTransmi
         IPreferenceStore pyPrefsStore = PydevPlugin.getDefault().getPreferenceStore();
         SetDontTraceEnabledCommand cmd = new SetDontTraceEnabledCommand(this,
                 pyPrefsStore.getBoolean(PydevEditorPrefs.DONT_TRACE_ENABLED));
+        this.postCommand(cmd);
+    }
+
+    private void sendShowReturnValuesEnabledCommand() {
+        IPreferenceStore pyPrefsStore = PydevPlugin.getDefault().getPreferenceStore();
+        SetShowReturnValuesEnabledCommand cmd = new SetShowReturnValuesEnabledCommand(this,
+                pyPrefsStore.getBoolean(PydevEditorPrefs.SHOW_RETURN_VALUES));
         this.postCommand(cmd);
     }
 
@@ -854,11 +873,18 @@ public abstract class AbstractDebugTarget extends AbstractDebugTargetWithTransmi
             final List<IConsoleInputListener> participants = ExtensionHelper
                     .getParticipants(ExtensionHelper.PYDEV_DEBUG_CONSOLE_INPUT_LISTENER);
             final AbstractDebugTarget target = this;
+
+            target.addProcessConsole(c);
+
             //let's listen the doc for the changes
             c.getDocument().addDocumentListener(new IDocumentListener() {
 
                 @Override
                 public void documentAboutToBeChanged(DocumentEvent event) {
+                    if (target.isWaitingForInput()) {
+                        return;
+                    }
+
                     //only report when we have a new line
                     if (event.fText.indexOf('\r') != -1 || event.fText.indexOf('\n') != -1) {
                         try {
@@ -887,6 +913,10 @@ public abstract class AbstractDebugTarget extends AbstractDebugTargetWithTransmi
 
                 @Override
                 public void documentChanged(DocumentEvent event) {
+                    if (target.isWaitingForInput()) {
+                        return;
+                    }
+
                     //only report when we have a new line
                     if (event.fText.indexOf('\r') != -1 || event.fText.indexOf('\n') != -1) {
                         try {

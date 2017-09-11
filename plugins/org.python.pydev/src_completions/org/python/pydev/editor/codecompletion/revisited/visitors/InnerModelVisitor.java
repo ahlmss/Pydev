@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.python.pydev.core.ICompletionState;
+import org.python.pydev.core.IPythonNature;
 import org.python.pydev.editor.codecompletion.revisited.modules.SourceToken;
 import org.python.pydev.parser.jython.SimpleNode;
 import org.python.pydev.parser.jython.ast.Assign;
@@ -48,12 +49,14 @@ public class InnerModelVisitor extends AbstractVisitor {
         return tok;
     }
 
-    public InnerModelVisitor(String moduleName, ICompletionState state) {
+    public InnerModelVisitor(String moduleName, ICompletionState state, IPythonNature nature) {
+        super(nature);
         this.moduleName = moduleName;
         attrsHeuristics.add(new HeuristicFindAttrs(HeuristicFindAttrs.WHITIN_METHOD_CALL,
-                HeuristicFindAttrs.IN_KEYWORDS, "properties.create", moduleName, state, this.repToTokenWithArgs));
+                HeuristicFindAttrs.IN_KEYWORDS, "properties.create", moduleName, state, this.repToTokenWithArgs,
+                nature));
         attrsHeuristics.add(new HeuristicFindAttrs(HeuristicFindAttrs.WHITIN_ANY, HeuristicFindAttrs.IN_ASSIGN, "",
-                moduleName, state, this.repToTokenWithArgs));
+                moduleName, state, this.repToTokenWithArgs, nature));
     }
 
     /**
@@ -108,7 +111,7 @@ public class InnerModelVisitor extends AbstractVisitor {
 
             //iterate heuristics to find attributes
             for (Iterator<HeuristicFindAttrs> iter = attrsHeuristics.iterator(); iter.hasNext();) {
-                HeuristicFindAttrs element = (HeuristicFindAttrs) iter.next();
+                HeuristicFindAttrs element = iter.next();
                 element.visitFunctionDef(node);
                 addElementTokens(element);
             }
@@ -126,7 +129,7 @@ public class InnerModelVisitor extends AbstractVisitor {
 
             //iterate heuristics to find attributes
             for (Iterator<HeuristicFindAttrs> iter = attrsHeuristics.iterator(); iter.hasNext();) {
-                HeuristicFindAttrs element = (HeuristicFindAttrs) iter.next();
+                HeuristicFindAttrs element = iter.next();
                 element.visitAssign(node);
                 addElementTokens(element);
             }
@@ -143,7 +146,7 @@ public class InnerModelVisitor extends AbstractVisitor {
 
             //iterate heuristics to find attributes
             for (Iterator<HeuristicFindAttrs> iter = attrsHeuristics.iterator(); iter.hasNext();) {
-                HeuristicFindAttrs element = (HeuristicFindAttrs) iter.next();
+                HeuristicFindAttrs element = iter.next();
                 element.visitCall(node);
                 addElementTokens(element);
             }

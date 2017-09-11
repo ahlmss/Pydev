@@ -3,6 +3,8 @@ import sys
 import unittest
 
 from _pydevd_bundle.pydevd_save_locals import save_locals
+from _pydevd_bundle.pydevd_constants import IS_JYTHON, IS_IRONPYTHON
+import pytest
 
 
 def use_save_locals(name, value):
@@ -29,11 +31,11 @@ def check_method(fn):
 
 
 
+@pytest.mark.skipif(IS_JYTHON or IS_IRONPYTHON, reason='CPython/pypy only')
 class TestSetLocals(unittest.TestCase):
     """
     Test setting locals in one function from another function using several approaches.
     """
-
 
     def test_set_locals_using_save_locals(self):
         x = check_method(use_save_locals)

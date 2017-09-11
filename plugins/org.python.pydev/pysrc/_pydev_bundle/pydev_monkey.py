@@ -23,12 +23,13 @@ pydev_src_dir = os.path.dirname(os.path.dirname(__file__))
 
 def _get_python_c_args(host, port, indC, args):
     return ("import sys; sys.path.append(r'%s'); import pydevd; "
-            "pydevd.settrace(host='%s', port=%s, suspend=False, trace_only_current_thread=False, patch_multiprocessing=True); %s"
+            "pydevd.settrace(host='%s', port=%s, suspend=False, trace_only_current_thread=False, patch_multiprocessing=True); "
+            "%s"
             ) % (
-        pydev_src_dir,
-        host,
-        port,
-        args[indC + 1])
+               pydev_src_dir,
+               host,
+               port,
+               args[indC + 1])
 
 def _get_host_port():
     import pydevd
@@ -45,11 +46,9 @@ def _on_forked_process():
     pydevd.threadingCurrentThread().__pydevd_main_thread = True
     pydevd.settrace_forked()
 
-def _on_set_trace_for_new_thread():
-    from _pydevd_bundle.pydevd_comm import get_global_debugger
-    global_debugger = get_global_debugger()
+def _on_set_trace_for_new_thread(global_debugger):
     if global_debugger is not None:
-        global_debugger.SetTrace(global_debugger.trace_dispatch)
+        global_debugger.SetTrace(global_debugger.trace_dispatch, global_debugger.frame_eval_func, global_debugger.dummy_trace_dispatch)
 
 #===============================================================================
 # Things related to monkey-patching
@@ -64,9 +63,40 @@ def is_python(path):
 
     return False
 
+
+def remove_quotes_from_args(args):
+    if sys.platform == "win32":
+        new_args = []
+        for x in args:
+            if len(x) > 1 and x.startswith('"') and x.endswith('"'):
+                x = x[1:-1]
+            new_args.append(x)
+        return new_args
+    else:
+        return args
+
+
+def quote_args(args):
+    if sys.platform == "win32":
+        quoted_args = []
+        for x in args:
+            if x.startswith('"') and x.endswith('"'):
+                quoted_args.append(x)
+            else:
+                if ' ' in x:
+                    x = x.replace('"', '\\"')
+                    quoted_args.append('"%s"' % x)
+                else:
+                    quoted_args.append(x)
+        return quoted_args
+    else:
+        return args
+
+
 def patch_args(args):
     try:
         log_debug("Patching args: %s"% str(args))
+        args = remove_quotes_from_args(args)
 
         import sys
         new_args = []
@@ -86,13 +116,13 @@ def patch_args(args):
                 if port is not None:
                     new_args.extend(args)
                     new_args[indC + 1] = _get_python_c_args(host, port, indC, args)
-                    return new_args
+                    return quote_args(new_args)
             else:
                 # Check for Python ZIP Applications and don't patch the args for them.
                 # Assumes the first non `-<flag>` argument is what we need to check.
                 # There's probably a better way to determine this but it works for most cases.
                 continue_next = False
-                for i in range(1, len(args)):
+                for i in xrange(1, len(args)):
                     if continue_next:
                         continue_next = False
                         continue
@@ -118,7 +148,9 @@ def patch_args(args):
         # Original args should be something as:
         # ['X:\\pysrc\\pydevd.py', '--multiprocess', '--print-in-debugger-startup',
         #  '--vm_type', 'python', '--client', '127.0.0.1', '--port', '56352', '--file', 'x:\\snippet1.py']
-        original = sys.original_argv[:]
+        from _pydevd_bundle.pydevd_command_line_handling import setup_to_argv
+        from pydevd import SetupHolder
+        original = setup_to_argv(SetupHolder.setup) + ['--file']
         while i < len(args):
             if args[i] == '-m':
                 # Always insert at pos == 1 (i.e.: pydevd "--module" --multiprocess ...)
@@ -137,12 +169,8 @@ def patch_args(args):
         if i < len(args) and _is_managed_arg(args[i]):  # no need to add pydevd twice
             return args
 
-        for x in original:  # @UndefinedVariable
-            if sys.platform == "win32" and not x.endswith('"'):
-                arg = '"%s"' % x
-            else:
-                arg = x
-            new_args.append(arg)
+        for x in original:
+            new_args.append(x)
             if x == '--file':
                 break
 
@@ -150,22 +178,10 @@ def patch_args(args):
             new_args.append(args[i])
             i += 1
 
-        return new_args
+        return quote_args(new_args)
     except:
         traceback.print_exc()
         return args
-
-
-def args_to_str(args):
-    quoted_args = []
-    for x in args:
-        if x.startswith('"') and x.endswith('"'):
-            quoted_args.append(x)
-        else:
-            x = x.replace('"', '\\"')
-            quoted_args.append('"%s"' % x)
-
-    return ' '.join(quoted_args)
 
 
 def str_to_args_windows(args):
@@ -257,7 +273,7 @@ def patch_arg_str_win(arg_str):
     # Fix https://youtrack.jetbrains.com/issue/PY-9767 (args may be empty)
     if not args or not is_python(args[0]):
         return arg_str
-    arg_str = args_to_str(patch_args(args))
+    arg_str = ' '.join(patch_args(args))
     log_debug("New args: %s" % arg_str)
     return arg_str
 
@@ -299,6 +315,7 @@ def create_execl(original_name):
         """
         import os
         args = patch_args(args)
+        send_process_created_message()
         return getattr(os, original_name)(path, *args)
     return new_execl
 
@@ -310,6 +327,7 @@ def create_execv(original_name):
         os.execvp(file, args)
         """
         import os
+        send_process_created_message()
         return getattr(os, original_name)(path, patch_args(args))
     return new_execv
 
@@ -321,6 +339,7 @@ def create_execve(original_name):
     """
     def new_execve(path, args, env):
         import os
+        send_process_created_message()
         return getattr(os, original_name)(path, patch_args(args), env)
     return new_execve
 
@@ -333,6 +352,7 @@ def create_spawnl(original_name):
         """
         import os
         args = patch_args(args)
+        send_process_created_message()
         return getattr(os, original_name)(mode, path, *args)
     return new_spawnl
 
@@ -344,6 +364,7 @@ def create_spawnv(original_name):
         os.spawnvp(mode, file, args)
         """
         import os
+        send_process_created_message()
         return getattr(os, original_name)(mode, path, patch_args(args))
     return new_spawnv
 
@@ -355,6 +376,7 @@ def create_spawnve(original_name):
     """
     def new_spawnve(mode, path, args, env):
         import os
+        send_process_created_message()
         return getattr(os, original_name)(mode, path, patch_args(args), env)
     return new_spawnve
 
@@ -366,6 +388,7 @@ def create_fork_exec(original_name):
     def new_fork_exec(args, *other_args):
         import _posixsubprocess  # @UnresolvedImport
         args = patch_args(args)
+        send_process_created_message()
         return getattr(_posixsubprocess, original_name)(args, *other_args)
     return new_fork_exec
 
@@ -393,6 +416,7 @@ def create_CreateProcess(original_name):
             import _subprocess
         except ImportError:
             import _winapi as _subprocess
+        send_process_created_message()
         return getattr(_subprocess, original_name)(app_name, patch_arg_str_win(cmd_line), *args)
     return new_CreateProcess
 
@@ -414,11 +438,11 @@ def create_CreateProcessWarnMultiproc(original_name):
 def create_fork(original_name):
     def new_fork():
         import os
-        
+
         # A simple fork will result in a new python process
-        is_new_python_process = True 
+        is_new_python_process = True
         frame = sys._getframe()
-        
+
         while frame is not None:
             if frame.f_code.co_name == '_execute_child' and 'subprocess' in frame.f_code.co_filename:
                 # If we're actually in subprocess.Popen creating a child, it may
@@ -430,16 +454,26 @@ def create_fork(original_name):
                     if is_python(executable):
                         is_new_python_process = True
                 break
-                
+
             frame = frame.f_back
         frame = None  # Just make sure we don't hold on to it.
-        
+
         child_process = getattr(os, original_name)()  # fork
         if not child_process:
             if is_new_python_process:
                 _on_forked_process()
+        else:
+            if is_new_python_process:
+                send_process_created_message()
         return child_process
     return new_fork
+
+
+def send_process_created_message():
+    from _pydevd_bundle.pydevd_comm import get_global_debugger
+    debugger = get_global_debugger()
+    if debugger is not None:
+        debugger.send_process_created_message()
 
 
 def patch_new_process_functions():
@@ -534,11 +568,15 @@ class _NewThreadStartupWithTrace:
         self.original_func = original_func
         self.args = args
         self.kwargs = kwargs
+        self.global_debugger = self.get_debugger()
+
+    def get_debugger(self):
+        from _pydevd_bundle.pydevd_comm import get_global_debugger
+        return get_global_debugger()
 
     def __call__(self):
-        _on_set_trace_for_new_thread()
-        from _pydevd_bundle.pydevd_comm import get_global_debugger
-        global_debugger = get_global_debugger()
+        _on_set_trace_for_new_thread(self.global_debugger)
+        global_debugger = self.global_debugger
 
         if global_debugger is not None and global_debugger.thread_analyser is not None:
             # we can detect start_new_thread only here
@@ -567,7 +605,10 @@ _UseNewThreadStartup = _NewThreadStartupWithTrace
 def _get_threading_modules_to_patch():
     threading_modules_to_patch = []
 
-    from _pydev_imps._pydev_saved_modules import thread as _thread
+    try:
+        import thread as _thread
+    except:
+        import _thread
     threading_modules_to_patch.append(_thread)
 
     return threading_modules_to_patch

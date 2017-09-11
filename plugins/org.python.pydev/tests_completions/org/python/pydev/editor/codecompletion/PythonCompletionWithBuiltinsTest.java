@@ -503,7 +503,7 @@ public class PythonCompletionWithBuiltinsTest extends CodeCompletionTestsBase {
     public void testFindDefinition() throws Exception {
         isInTestFindDefinition = true;
         try {
-            CompiledModule mod = new CompiledModule("os", nature.getAstManager().getModulesManager());
+            CompiledModule mod = new CompiledModule("os", nature.getAstManager().getModulesManager(), nature);
             Definition[] findDefinition = mod.findDefinition(
                     CompletionStateFactory.getEmptyCompletionState("walk", nature, new CompletionCache()), -1, -1,
                     nature);
@@ -666,4 +666,15 @@ public class PythonCompletionWithBuiltinsTest extends CodeCompletionTestsBase {
         assertTrue(comps.length > 10); //dict completions
     }
 
+    public void testEnum() throws Exception {
+        String s;
+        s = "" +
+                "from enum import Enum\n" +
+                "\n" +
+                "class Color(Enum):\n" +
+                "    Black = '#000000'\n" +
+                "    White = '#ffffff'\n" +
+                "Color.Black.";
+        requestCompl(s, s.length(), -1, new String[] { "name", "value" });
+    }
 }
