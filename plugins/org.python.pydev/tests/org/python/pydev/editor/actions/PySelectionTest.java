@@ -19,6 +19,7 @@ import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.TextSelection;
 import org.python.pydev.core.docutils.PyDocIterator;
 import org.python.pydev.core.docutils.PySelection;
+import org.python.pydev.core.docutils.PySelection.DocstringInfo;
 import org.python.pydev.core.docutils.PySelection.LineStartingScope;
 import org.python.pydev.core.docutils.PySelection.TddPossibleMatches;
 import org.python.pydev.core.docutils.PythonPairMatcher;
@@ -870,5 +871,61 @@ public class PySelectionTest extends TestCase {
         ps = new PySelection(doc, line, col, len);
         Tuple<Integer, Integer> startEndLines = ps.getCurrentMethodStartEndLines();
         assertEquals(new Tuple<Integer, Integer>(1, 2), startEndLines);
+    }
+
+    /**
+     * Test that we are identifying the correct strings to suppress completions for.
+     */
+    public void testIsCompletionForLiteralNumber() throws Exception {
+        // activation token must end with a dot to be considered for suppression
+        assertFalse(PySelection.isCompletionForLiteralNumber(""));
+        assertFalse(PySelection.isCompletionForLiteralNumber("a"));
+        assertFalse(PySelection.isCompletionForLiteralNumber("1.0"));
+
+        // things which don't look like numbers aren't considered for suppression
+        assertFalse(PySelection.isCompletionForLiteralNumber("a."));
+        assertFalse(PySelection.isCompletionForLiteralNumber("a1."));
+        assertFalse(PySelection.isCompletionForLiteralNumber("(1)."));
+
+        // floating points are allowed completions
+        assertFalse(PySelection.isCompletionForLiteralNumber("1.0."));
+        // hex numbers are also allowed completions
+        assertFalse(PySelection.isCompletionForLiteralNumber("0x0."));
+
+        // decimal numbers cannot have completions (it would be a syntax error)
+        assertTrue(PySelection.isCompletionForLiteralNumber("1."));
+        assertTrue(PySelection.isCompletionForLiteralNumber("1234."));
+
+        // Python 3.6 numbers allow _ (underscore) for readability
+        assertTrue(PySelection.isCompletionForLiteralNumber("1_1."));
+    }
+
+    public void testGetDocstringFromLine() throws BadLocationException {
+        doc = new Document("def m1():\n    'docstring'");
+        ps = new PySelection(doc);
+        DocstringInfo docstringFromLine = ps.getDocstringFromLine(1);
+        assertEquals("DocstringInfo [startLiteralOffset=14, endLiteralOffset=25, string='docstring']",
+                docstringFromLine.toString());
+        assertEquals(11, docstringFromLine.getLength());
+        assertEquals("'docstring'",
+                doc.get(docstringFromLine.startLiteralOffset, docstringFromLine.getLength()));
+    }
+
+    public void testGetDocstringFromLine2() throws BadLocationException {
+        doc = new Document("def m1():\n    '''docstring\n    '''");
+        ps = new PySelection(doc);
+        DocstringInfo docstringFromLine = ps.getDocstringFromLine(1);
+        assertEquals("DocstringInfo [startLiteralOffset=14, endLiteralOffset=34, string='''docstring\n" +
+                "    ''']",
+                docstringFromLine.toString());
+        assertEquals("'''docstring\n    '''",
+                doc.get(docstringFromLine.startLiteralOffset, docstringFromLine.getLength()));
+    }
+
+    public void testGetDocstringFromLineInvalid() {
+        doc = new Document("def m1():\n    '''docstring\n    ''");
+        ps = new PySelection(doc);
+        DocstringInfo docstringFromLine = ps.getDocstringFromLine(1);
+        assertNull(docstringFromLine);
     }
 }

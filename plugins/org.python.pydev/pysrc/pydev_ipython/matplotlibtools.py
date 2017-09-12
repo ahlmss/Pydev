@@ -6,6 +6,7 @@ backends = {'tk': 'TkAgg',
             'wx': 'WXAgg',
             'qt': 'Qt4Agg', # qt3 not supported
             'qt4': 'Qt4Agg',
+            'qt5': 'Qt5Agg',
             'osx': 'MacOSX'}
 
 # We also need a reverse backends2guis mapping that will properly choose which
@@ -69,8 +70,8 @@ def patch_use(enable_gui_function):
         gui, backend = find_gui_and_backend()
         enable_gui_function(gui)
 
-    setattr(matplotlib, "real_use", getattr(matplotlib, "use"))
-    setattr(matplotlib, "use", patched_use)
+    matplotlib.real_use = matplotlib.use
+    matplotlib.use = patched_use
 
 
 def patch_is_interactive():
@@ -79,8 +80,8 @@ def patch_is_interactive():
     def patched_is_interactive():
         return matplotlib.rcParams['interactive']
 
-    setattr(matplotlib, "real_is_interactive", getattr(matplotlib, "is_interactive"))
-    setattr(matplotlib, "is_interactive", patched_is_interactive)
+    matplotlib.real_is_interactive = matplotlib.is_interactive
+    matplotlib.is_interactive = patched_is_interactive
 
 
 def activate_matplotlib(enable_gui_function):

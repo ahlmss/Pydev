@@ -14,25 +14,20 @@ package org.python.pydev.builder.pylint;
 import java.io.File;
 
 import org.eclipse.core.resources.IMarker;
-import org.eclipse.jface.dialogs.MessageDialog;
 import org.eclipse.jface.preference.BooleanFieldEditor;
-import org.eclipse.jface.preference.FieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.jface.preference.FileFieldEditor;
-import org.eclipse.jface.preference.IntegerFieldEditor;
 import org.eclipse.jface.preference.RadioGroupFieldEditor;
-import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
-import org.eclipse.swt.layout.GridData;
-import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.program.Program;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 import org.python.pydev.core.log.Log;
 import org.python.pydev.plugin.PydevPlugin;
 import org.python.pydev.plugin.preferences.PydevPrefs;
-import org.python.pydev.shared_ui.field_editors.LabelFieldEditor;
+import org.python.pydev.shared_ui.field_editors.LinkFieldEditor;
 import org.python.pydev.utils.CustomizableFieldEditor;
 
 /**
@@ -83,17 +78,12 @@ public class PyLintPrefPage extends FieldEditorPreferencePage implements IWorkbe
     //console
     public static final String USE_CONSOLE = "USE_CONSOLE";
 
-    public static final boolean DEFAULT_USE_CONSOLE = true;
+    public static final boolean DEFAULT_USE_CONSOLE = false;
 
     //args
     public static final String PYLINT_ARGS = "PYLINT_ARGS";
 
     public static final String DEFAULT_PYLINT_ARGS = "";
-
-    //delta
-    public static final String MAX_PYLINT_DELTA = "MAX_PYLINT_DELTA";
-
-    public static final int DEFAULT_MAX_PYLINT_DELTA = 4;
 
     public PyLintPrefPage() {
         super(FLAT);
@@ -103,7 +93,7 @@ public class PyLintPrefPage extends FieldEditorPreferencePage implements IWorkbe
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see org.eclipse.jface.preference.FieldEditorPreferencePage#createFieldEditors()
      */
     @Override
@@ -112,7 +102,6 @@ public class PyLintPrefPage extends FieldEditorPreferencePage implements IWorkbe
 
         addField(new BooleanFieldEditor(USE_PYLINT, "Use PyLint?", p));
         addField(new BooleanFieldEditor(USE_CONSOLE, "Redirect PyLint output to console?", p));
-        addField(new IntegerFieldEditor(MAX_PYLINT_DELTA, "Max simultaneous processes for PyLint?", p));
         FileFieldEditor fileField = new FileFieldEditor(PYLINT_FILE_LOCATION, "Location of the pylint executable:",
                 true, p);
         addField(fileField);
@@ -130,47 +119,28 @@ public class PyLintPrefPage extends FieldEditorPreferencePage implements IWorkbe
 
         CustomizableFieldEditor stringFieldEditor = new CustomizableFieldEditor(PYLINT_ARGS,
                 "Arguments to pass to the pylint command (customize its output):\n"
-                        + "Add --rcfile=.pylintrc to use an rcfile relative to the project directory.", p);
+                        + "Add --rcfile=.pylintrc to use an rcfile relative to the project directory.",
+                p);
         addField(stringFieldEditor);
+        addField(new LinkFieldEditor("PYLINT_HELP",
+                "View <a>http://www.pydev.org/manual_adv_pylint.html</a> for help.",
+                p,
+                new SelectionListener() {
 
-        String w = "";
-        Button button = new Button(p, SWT.NONE);
-        button.addSelectionListener(new SelectionListener() {
+                    @Override
+                    public void widgetSelected(SelectionEvent e) {
+                        Program.launch("http://www.pydev.org/manual_adv_pylint.html");
+                    }
 
-            @Override
-            public void widgetSelected(SelectionEvent e) {
-                final String w = "\n\nTo ignore some warning on a line in a file, you can put the comment: \n" +
-                        "#IGNORE:ID, so that the id is the warning that you want to ignore. \n" +
-                        "E.g.: if you have the code:\n\n" +
-                        "from foo import * #IGNORE:W0401\n\n" +
-                        "The wildcard import will be ignored.\n\n" +
-                        "NOTE:for warnings to appear in the problems view, you have\n" +
-                        "to set your filter to accept the org.python.pydev.pylintproblem type!\n\n" +
-                        "NOTE2: Make sure that your file is a valid module in the PYTHONPATH, because\n" +
-                        "pylint doesn't analyze the file itself, but the module itself (you should\n" +
-                        "be able to import it from python without giving the file path).";
-
-                MessageDialog.openInformation(p.getShell(), "Help", w);
-            }
-
-            @Override
-            public void widgetDefaultSelected(SelectionEvent e) {
-            }
-
-        });
-        button.setText("Click for help (ignoring errors and troubleshooting)");
-        GridData d = new GridData();
-        d.horizontalAlignment = GridData.FILL;
-        d.grabExcessHorizontalSpace = true;
-        button.setLayoutData(d);
-
-        FieldEditor fe = new LabelFieldEditor("Help", w, p);
-        addField(fe);
+                    @Override
+                    public void widgetDefaultSelected(SelectionEvent e) {
+                    }
+                }));
     }
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see org.eclipse.ui.IWorkbenchPreferencePage#init(org.eclipse.ui.IWorkbench)
      */
     @Override
@@ -189,7 +159,7 @@ public class PyLintPrefPage extends FieldEditorPreferencePage implements IWorkbe
 
     /**
      * should we use py lint?
-     * 
+     *
      * @return
      */
     public static boolean usePyLint() {
@@ -219,36 +189,12 @@ public class PyLintPrefPage extends FieldEditorPreferencePage implements IWorkbe
         return true;
     }
 
-    public static boolean useErrors() {
-        return eSeverity() != SEVERITY_IGNORE;
-    }
-
-    public static boolean useWarnings() {
-        return wSeverity() != SEVERITY_IGNORE;
-    }
-
-    public static boolean useFatal() {
-        return fSeverity() != SEVERITY_IGNORE;
-    }
-
-    public static boolean useCodingStandard() {
-        return cSeverity() != SEVERITY_IGNORE;
-    }
-
-    public static boolean useRefactorTips() {
-        return rSeverity() != SEVERITY_IGNORE;
-    }
-
     public static boolean useConsole() {
         return PydevPrefs.getPreferences().getBoolean(USE_CONSOLE);
     }
 
     public static String getPyLintArgs() {
         return PydevPrefs.getPreferences().getString(PYLINT_ARGS);
-    }
-
-    public static int getMaxPyLintDelta() {
-        return PydevPrefs.getPreferences().getInt(MAX_PYLINT_DELTA);
     }
 
     public static int wSeverity() {

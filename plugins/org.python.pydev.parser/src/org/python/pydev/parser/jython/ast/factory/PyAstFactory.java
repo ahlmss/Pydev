@@ -99,7 +99,7 @@ public class PyAstFactory {
         Attribute attribute = new Attribute(self, name, Attribute.Store);
 
         Name value = new Name("value", Name.Load, false);
-        Assign assign = new Assign(new exprType[] { attribute }, value);
+        Assign assign = new Assign(new exprType[] { attribute }, value, null);
 
         return new stmtType[] { assign };
     }
@@ -146,7 +146,7 @@ public class PyAstFactory {
         exprType[] targets = new exprType[targetsAndVal.length - 1];
         System.arraycopy(targetsAndVal, 0, targets, 0, targets.length);
         exprType value = targetsAndVal[targetsAndVal.length - 1];
-        return new Assign(targets, value);
+        return new Assign(targets, value, null);
     }
 
     public void setBody(FunctionDef functionDef, Object... body) {
@@ -174,7 +174,7 @@ public class PyAstFactory {
     }
 
     public Str createString(String string) {
-        return new Str(string, Str.TripleSingle, false, false, false);
+        return new Str(string, Str.TripleSingle, false, false, false, false);
     }
 
     public Pass createPass() {

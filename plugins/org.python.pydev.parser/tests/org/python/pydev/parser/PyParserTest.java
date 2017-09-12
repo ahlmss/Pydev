@@ -76,7 +76,7 @@ public class PyParserTest extends PyParserTestBase {
             doc.replace(0, 0, "this is a totally and completely not parseable doc\n");
         }
 
-        PyParser.ParserInfo parserInfo = new PyParser.ParserInfo(doc, IPythonNature.LATEST_GRAMMAR_VERSION);
+        PyParser.ParserInfo parserInfo = new PyParser.ParserInfo(doc, IPythonNature.LATEST_GRAMMAR_VERSION, null);
         ParseOutput reparseDocument = PyParser.reparseDocument(parserInfo);
         assertTrue(reparseDocument.ast == null);
         assertTrue(reparseDocument.error != null);
@@ -213,7 +213,7 @@ public class PyParserTest extends PyParserTestBase {
 
             @Override
             public Boolean call(Integer arg) {
-                if (arg == IGrammarVersionProvider.GRAMMAR_PYTHON_VERSION_3_0) {
+                if (arg >= IGrammarVersionProvider.GRAMMAR_PYTHON_VERSION_3_0) {
                     //yeap, invalid in python 3.0
                     parseILegalDocStr(s);
                 } else {
@@ -232,7 +232,7 @@ public class PyParserTest extends PyParserTestBase {
 
             @Override
             public Boolean call(Integer arg) {
-                if (arg == IGrammarVersionProvider.GRAMMAR_PYTHON_VERSION_3_0) {
+                if (arg >= IGrammarVersionProvider.GRAMMAR_PYTHON_VERSION_3_0) {
                     //yeap, invalid in python 3.0
                     parseILegalDocStr(s);
                 } else {
@@ -251,7 +251,7 @@ public class PyParserTest extends PyParserTestBase {
 
             @Override
             public Boolean call(Integer arg) {
-                if (arg == IGrammarVersionProvider.GRAMMAR_PYTHON_VERSION_3_0) {
+                if (arg >= IGrammarVersionProvider.GRAMMAR_PYTHON_VERSION_3_0) {
                     //yeap, invalid in python 3.0
                     parseILegalDocStr(s);
                 } else {

@@ -261,7 +261,7 @@ final class DialogNotifier extends Dialog {
 
 public class PydevShowBrowserMessage {
 
-    public static final String PYDEV_FUNDING_SHOW_AT_TIME = "PYDEV_FUNDING_SHOW_AT_TIME";
+    public static final String PYDEV_FUNDING_SHOW_AT_TIME = "PYDEV_FUNDING_SHOW_AT_TIME_2016";
     private static boolean shownInSession = false;
     public static final long ONE_DAY_IN_MILLIS = 86400000;
 

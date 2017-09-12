@@ -333,7 +333,7 @@ public class PyParser30Test extends PyParserTestBase {
                 +
                 "Set[elts=[Num[n=1, type=Int, num=1], Num[n=2, type=Int, num=2], "
                 +
-                "Num[n=3, type=Int, num=3], Num[n=4, type=Int, num=4]]]]", a0.toString());
+                "Num[n=3, type=Int, num=3], Num[n=4, type=Int, num=4]]], type=null]", a0.toString());
     }
 
     public void testDictComprehension() {
@@ -863,5 +863,26 @@ public class PyParser30Test extends PyParserTestBase {
         parseLegalDocStrWithoutTree(s);
         parseLegalDocStr(s);
 
+    }
+
+    public void testTestGrammar35() {
+        String contents = FileUtils.getFileContents(new File(TestDependent.TEST_PYDEV_PARSER_PLUGIN_LOC +
+                "/tests/org/python/pydev/parser/python_test_grammar_35.py"));
+
+        parseLegalDocStr(contents);
+        parseLegalDocStrWithoutTree(contents);
+    }
+
+    public void testAsync4() {
+        String s = "" +
+                "async def test2(session):\n" +
+                "    async with session:\n" +
+                "        async for _msg in session:\n" +
+                "            pass\n" +
+                "\n" +
+                "    # broken grammar\n" +
+                "    await session\n" +
+                "";
+        parseLegalDocStr(s);
     }
 }

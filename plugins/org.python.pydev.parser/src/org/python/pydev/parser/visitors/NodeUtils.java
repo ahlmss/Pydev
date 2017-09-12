@@ -16,6 +16,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.eclipse.core.runtime.Assert;
+import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
 import org.python.pydev.core.FullRepIterable;
 import org.python.pydev.core.IGrammarVersionProvider;
@@ -72,6 +73,7 @@ import org.python.pydev.parser.visitors.scope.EasyASTIteratorVisitor;
 import org.python.pydev.parser.visitors.scope.EasyASTIteratorWithLoop;
 import org.python.pydev.shared_core.string.FastStringBuffer;
 import org.python.pydev.shared_core.string.StringUtils;
+import org.python.pydev.shared_core.string.TextSelectionUtils;
 import org.python.pydev.shared_core.utils.Reflection;
 
 public class NodeUtils {
@@ -115,7 +117,13 @@ public class NodeUtils {
 
                         @Override
                         public int getGrammarVersion() throws MisconfigurationException {
-                            return IGrammarVersionProvider.GRAMMAR_PYTHON_VERSION_3_0;
+                            return IGrammarVersionProvider.LATEST_GRAMMAR_PY3_VERSION;
+                        }
+
+                        @Override
+                        public AdditionalGrammarVersionsToCheck getAdditionalGrammarVersions()
+                                throws MisconfigurationException {
+                            return null;
                         }
                     }, functionDef.args);
                     if (printed != null) {
@@ -1794,7 +1802,11 @@ public class NodeUtils {
         }
         if (ast instanceof org.python.pydev.parser.jython.ast.Dict) {
             org.python.pydev.parser.jython.ast.Dict dict = (org.python.pydev.parser.jython.ast.Dict) ast;
-            return new exprType[] { dict.keys[0], dict.values[0] };
+            if (dict.keys != null && dict.keys.length > 0 && dict.values != null && dict.values.length > 0) {
+                return new exprType[] { dict.keys[0], dict.values[0] };
+            } else {
+                return null;
+            }
         }
         if (ast instanceof org.python.pydev.parser.jython.ast.DictComp) {
             org.python.pydev.parser.jython.ast.DictComp dict = (org.python.pydev.parser.jython.ast.DictComp) ast;
@@ -1855,6 +1867,64 @@ public class NodeUtils {
             }
         }
         return null;
+    }
+
+    public static org.python.pydev.shared_core.structure.Tuple<Integer, Integer> getStartEndOffset(IDocument doc,
+            SimpleNode node) {
+        org.python.pydev.shared_core.structure.Tuple<Integer, Integer> ret = null;
+        if (node instanceof Import) {
+            ret = new org.python.pydev.shared_core.structure.Tuple<>(
+                    -1, -1);
+            updateStartOffset(doc, node, ret);
+            updateEndOffsetWithLastAliasPos(doc, node, ret, ((Import) node).names);
+
+        } else if (node instanceof ImportFrom) {
+            ret = new org.python.pydev.shared_core.structure.Tuple<>(
+                    -1, -1);
+            updateStartOffset(doc, node, ret);
+            updateEndOffsetWithLastAliasPos(doc, node, ret, ((ImportFrom) node).names);
+
+        } else {
+            throw new AssertionError("Node: " + node + " not handled.");
+        }
+        return ret;
+
+    }
+
+    private static void updateStartOffset(IDocument doc, SimpleNode node,
+            org.python.pydev.shared_core.structure.Tuple<Integer, Integer> ret) {
+        int offset;
+        try {
+            offset = doc.getLineOffset(node.beginLine - 1);
+        } catch (BadLocationException e) {
+            throw new RuntimeException(e);
+        }
+        int firstCharPosition = TextSelectionUtils
+                .getFirstCharPosition(PySelection.getLine(doc, node.beginLine - 1));
+        offset += firstCharPosition;
+        ret.o1 = offset;
+    }
+
+    private static void updateEndOffsetWithLastAliasPos(IDocument doc, SimpleNode node,
+            org.python.pydev.shared_core.structure.Tuple<Integer, Integer> ret, aliasType[] names)
+            throws AssertionError {
+        NameTokType last = null;
+        for (aliasType name : names) {
+            if (name == null) {
+                continue;
+            }
+            if (name.asname != null) {
+                last = name.asname;
+            } else {
+                last = name.name;
+            }
+        }
+        if (last == null) {
+            throw new AssertionError("ImportFrom or ImportFrom not complete: " + node);
+        }
+
+        ret.o2 = PySelection.getAbsoluteCursorOffset(doc, last.beginLine - 1, last.beginColumn - 1)
+                + NodeUtils.getRepresentationString(last).length();
     }
 
 }

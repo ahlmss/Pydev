@@ -57,7 +57,7 @@ public class CtxInsensitiveImportComplProposalTest extends TestCase {
 
         CtxInsensitiveImportComplProposal prop = new CtxInsensitiveImportComplProposal(replacementString,
                 replacementOffset, replacementLength, cursorPosition, image, displayString, contextInformation,
-                additionalProposalInfo, priority, realImportRep);
+                additionalProposalInfo, priority, realImportRep, null);
 
         prop.indentString = "\t";
         prop.apply(doc, '\n', 0, doc.getLength());
@@ -69,7 +69,7 @@ public class CtxInsensitiveImportComplProposalTest extends TestCase {
         Document doc = new Document("from XXX import YYY\n");
 
         CtxInsensitiveImportComplProposal prop = new CtxInsensitiveImportComplProposal("BBB", doc.getLength(), 0,
-                doc.getLength(), null, "Import BBB (from XXX)", null, null, 0, "from XXX import BBB");
+                doc.getLength(), null, "Import BBB (from XXX)", null, null, 0, "from XXX import BBB", null);
 
         prop.indentString = "\t";
         prop.apply(doc, '\n', 0, doc.getLength());
@@ -80,7 +80,7 @@ public class CtxInsensitiveImportComplProposalTest extends TestCase {
         Document doc = new Document("from XXX import (YYY, ZZZ)\n");
 
         CtxInsensitiveImportComplProposal prop = new CtxInsensitiveImportComplProposal("BBB", doc.getLength(), 0,
-                doc.getLength(), null, "Import BBB (from XXX)", null, null, 0, "from XXX import BBB");
+                doc.getLength(), null, "Import BBB (from XXX)", null, null, 0, "from XXX import BBB", null);
 
         prop.indentString = "\t";
         prop.apply(doc, '\n', 0, doc.getLength());
@@ -93,7 +93,7 @@ public class CtxInsensitiveImportComplProposalTest extends TestCase {
                 "from XXX import (YYY,                                                                     ZZZ)\n");
 
         CtxInsensitiveImportComplProposal prop = new CtxInsensitiveImportComplProposal("BBB", doc.getLength(), 0,
-                doc.getLength(), null, "Import BBB (from XXX)", null, null, 0, "from XXX import BBB");
+                doc.getLength(), null, "Import BBB (from XXX)", null, null, 0, "from XXX import BBB", null);
 
         prop.indentString = "\t";
         prop.apply(doc, '\n', 0, doc.getLength());
@@ -108,7 +108,7 @@ public class CtxInsensitiveImportComplProposalTest extends TestCase {
                 "from XXX import YYY,                                                                     ZZZ\n");
 
         CtxInsensitiveImportComplProposal prop = new CtxInsensitiveImportComplProposal("BBB", doc.getLength(), 0,
-                doc.getLength(), null, "Import BBB (from XXX)", null, null, 0, "from XXX import BBB");
+                doc.getLength(), null, "Import BBB (from XXX)", null, null, 0, "from XXX import BBB", null);
 
         prop.indentString = "\t";
         prop.apply(doc, '\n', 0, doc.getLength());
@@ -125,7 +125,7 @@ public class CtxInsensitiveImportComplProposalTest extends TestCase {
                         "from XXX import YYY,                                                                     ZZZ\n");
 
         CtxInsensitiveImportComplProposal prop = new CtxInsensitiveImportComplProposal("BBB", doc.getLength(), 0,
-                doc.getLength(), null, "Import BBB (from XXX)", null, null, 0, "from XXX import BBB");
+                doc.getLength(), null, "Import BBB (from XXX)", null, null, 0, "from XXX import BBB", null);
 
         prop.indentString = "\t";
         prop.apply(doc, '\n', 0, doc.getLength());
@@ -153,7 +153,7 @@ public class CtxInsensitiveImportComplProposalTest extends TestCase {
 
         CtxInsensitiveImportComplProposal prop = new CtxInsensitiveImportComplProposal(replacementString,
                 replacementOffset, replacementLength, cursorPosition, image, displayString, contextInformation,
-                additionalProposalInfo, priority, realImportRep);
+                additionalProposalInfo, priority, realImportRep, null);
 
         prop.indentString = "\t";
         prop.apply(doc, '\n', 0, doc.getLength());
@@ -167,7 +167,7 @@ public class CtxInsensitiveImportComplProposalTest extends TestCase {
                 "    ");
 
         CtxInsensitiveImportComplProposal prop = new CtxInsensitiveImportComplProposal("BBB", doc.getLength(), 0,
-                doc.getLength(), null, "Import BBB (from XXX)", null, null, 0, "from XXX import BBB");
+                doc.getLength(), null, "Import BBB (from XXX)", null, null, 0, "from XXX import BBB", null);
 
         prop.indentString = "\t";
         prop.apply(doc, '\n', 0, doc.getLength());
@@ -184,7 +184,7 @@ public class CtxInsensitiveImportComplProposalTest extends TestCase {
                 "    ");
 
         CtxInsensitiveImportComplProposal prop = new CtxInsensitiveImportComplProposal("BBB", doc.getLength(), 0,
-                doc.getLength(), null, "Import BBB (from XXX)", null, null, 0, "from XXX import BBB");
+                doc.getLength(), null, "Import BBB (from XXX)", null, null, 0, "from XXX import BBB", null);
 
         prop.setAddLocalImport(true);
         prop.indentString = "\t";
@@ -205,7 +205,7 @@ public class CtxInsensitiveImportComplProposalTest extends TestCase {
                 "");
 
         CtxInsensitiveImportComplProposal prop = new CtxInsensitiveImportComplProposal("BBB", doc.getLength(), 0,
-                doc.getLength(), null, "Import BBB (from XXX)", null, null, 0, "from XXX import BBB");
+                doc.getLength(), null, "Import BBB (from XXX)", null, null, 0, "from XXX import BBB", null);
 
         prop.setAddLocalImport(true);
         prop.indentString = "\t";
@@ -227,7 +227,7 @@ public class CtxInsensitiveImportComplProposalTest extends TestCase {
                 "");
 
         CtxInsensitiveImportComplProposal prop = new CtxInsensitiveImportComplProposal("BBB", doc.getLength(), 0,
-                doc.getLength(), null, "Import BBB (from XXX)", null, null, 0, "from XXX import BBB");
+                doc.getLength(), null, "Import BBB (from XXX)", null, null, 0, "from XXX import BBB", null);
 
         prop.setAddLocalImport(true);
         prop.indentString = "\t";
@@ -246,7 +246,7 @@ public class CtxInsensitiveImportComplProposalTest extends TestCase {
         Document doc = new Document("\n");
 
         CtxInsensitiveImportComplProposal prop = new CtxInsensitiveImportComplProposal("BBB", doc.getLength(), 0,
-                doc.getLength(), null, "Import BBB (from XXX)", null, null, 0, "from XXX import BBB");
+                doc.getLength(), null, "Import BBB (from XXX)", null, null, 0, "from XXX import BBB", null);
 
         prop.setAddLocalImport(true);
         prop.indentString = "\t";
@@ -261,7 +261,7 @@ public class CtxInsensitiveImportComplProposalTest extends TestCase {
         Document doc = new Document("class Bar(");
 
         CtxInsensitiveImportComplProposal prop = new CtxInsensitiveImportComplProposal("sys", doc.getLength(), 0,
-                doc.getLength(), null, "Import sys", null, null, 0, "import sys");
+                doc.getLength(), null, "Import sys", null, null, 0, "import sys", null);
 
         prop.setAddLocalImport(true);
         prop.indentString = "\t";
@@ -276,7 +276,7 @@ public class CtxInsensitiveImportComplProposalTest extends TestCase {
         Document doc = new Document("\n\nclass Bar(");
 
         CtxInsensitiveImportComplProposal prop = new CtxInsensitiveImportComplProposal("sys", doc.getLength(), 0,
-                doc.getLength(), null, "Import sys", null, null, 0, "import sys");
+                doc.getLength(), null, "Import sys", null, null, 0, "import sys", null);
 
         prop.setAddLocalImport(true);
         prop.indentString = "\t";
@@ -293,10 +293,11 @@ public class CtxInsensitiveImportComplProposalTest extends TestCase {
         Document doc = new Document("\n\nclass Bar():\n\n    s");
 
         CtxInsensitiveImportComplProposal prop = new CtxInsensitiveImportComplProposal("sys", doc.getLength(), 0,
-                doc.getLength(), null, "Import sys", null, null, 0, "import sys");
+                doc.getLength(), null, "Import sys", null, null, 0, "import sys", null);
 
         prop.setAddLocalImport(true);
         prop.indentString = "\t";
+        prop.addLocalImportsOnTopOfFunc = false;
         prop.apply(doc, '\n', 0, doc.getLength());
         assertEquals("\n\nclass Bar():\n\n    import sys\n    ssys", doc.get().replace("\r\n", "\n")
                 .replace('\r', '\n'));
@@ -306,10 +307,11 @@ public class CtxInsensitiveImportComplProposalTest extends TestCase {
         Document doc = new Document("\n\nclass Bar():\n\n    s\n    s");
 
         CtxInsensitiveImportComplProposal prop = new CtxInsensitiveImportComplProposal("sys", doc.getLength(), 0,
-                doc.getLength(), null, "Import sys", null, null, 0, "import sys");
+                doc.getLength(), null, "Import sys", null, null, 0, "import sys", null);
 
         prop.setAddLocalImport(true);
         prop.indentString = "\t";
+        prop.addLocalImportsOnTopOfFunc = false;
         prop.apply(doc, '\n', 0, doc.getLength());
         assertEquals("\n\nclass Bar():\n\n    s\n    import sys\n    ssys",
                 doc.get().replace("\r\n", "\n").replace('\r', '\n'));
@@ -325,7 +327,7 @@ public class CtxInsensitiveImportComplProposalTest extends TestCase {
         Document doc = new Document(initial);
 
         CtxInsensitiveImportComplProposal prop = new CtxInsensitiveImportComplProposal("Decimal", doc.getLength(), 0,
-                doc.getLength(), null, "Import Decimal", null, null, 0, "import Decimal");
+                doc.getLength(), null, "Import Decimal", null, null, 0, "import Decimal", null);
 
         prop.setAddLocalImport(true);
         prop.indentString = "    ";
@@ -337,7 +339,7 @@ public class CtxInsensitiveImportComplProposalTest extends TestCase {
                 "\n" +
                 "eggs = DDecimal" +
                 "", doc.get()
-                .replace("\r\n", "\n").replace('\r', '\n'));
+                        .replace("\r\n", "\n").replace('\r', '\n'));
     }
 
     public void testApplyLocal10() throws Exception {
@@ -351,10 +353,11 @@ public class CtxInsensitiveImportComplProposalTest extends TestCase {
         Document doc = new Document(initial);
 
         CtxInsensitiveImportComplProposal prop = new CtxInsensitiveImportComplProposal("Decimal", doc.getLength(), 0,
-                doc.getLength(), null, "Import Decimal", null, null, 0, "import Decimal");
+                doc.getLength(), null, "Import Decimal", null, null, 0, "import Decimal", null);
 
         prop.setAddLocalImport(true);
         prop.indentString = "    ";
+        prop.addLocalImportsOnTopOfFunc = false;
         prop.apply(doc, '\n', SWT.SHIFT, doc.getLength());
         assertEquals("" +
                 "def m1():\n" +
@@ -367,4 +370,269 @@ public class CtxInsensitiveImportComplProposalTest extends TestCase {
                 "", doc.get().replace("\r\n", "\n").replace('\r', '\n'));
     }
 
+    public void testApplyLocal11() throws Exception {
+        Document doc = new Document(
+                "def test(\n" +
+                        "        rara\n" +
+                        "    ):\n" +
+                        "    " +
+                        "");
+
+        CtxInsensitiveImportComplProposal prop = new CtxInsensitiveImportComplProposal("sys", doc.getLength(), 0,
+                doc.getLength(), null, "Import sys", null, null, 0, "import sys", null);
+
+        prop.setAddLocalImport(true);
+        prop.indentString = "    ";
+        prop.apply(doc, '\n', 0, doc.getLength());
+        assertEquals("def test(\n" +
+                "        rara\n" +
+                "    ):\n" +
+                "    import sys\n" +
+                "    sys" +
+                "",
+                doc.get().replace("\r\n", "\n").replace('\r', '\n'));
+    }
+
+    public void testApplyLocal12() throws Exception {
+        Document doc = new Document(
+                "def test(\n" +
+                        "    rara\n" +
+                        "):\n" +
+                        "    " +
+                        "");
+
+        CtxInsensitiveImportComplProposal prop = new CtxInsensitiveImportComplProposal("sys", doc.getLength(), 0,
+                doc.getLength(), null, "Import sys", null, null, 0, "import sys", null);
+
+        prop.setAddLocalImport(true);
+        prop.indentString = "    ";
+        prop.apply(doc, '\n', 0, doc.getLength());
+        assertEquals(
+                "def test(\n" +
+                        "    rara\n" +
+                        "):\n" +
+                        "    import sys\n" +
+                        "    sys" +
+                        "",
+                doc.get().replace("\r\n", "\n").replace('\r', '\n'));
+    }
+
+    public void testApplyLocal13() throws Exception {
+        Document doc = new Document(
+                "def test(\n" +
+                        "    rara\n" +
+                        "):\n" +
+                        "    '''testing\n" +
+                        "'''\n" +
+                        "    " +
+                        "");
+
+        CtxInsensitiveImportComplProposal prop = new CtxInsensitiveImportComplProposal("sys", doc.getLength(), 0,
+                doc.getLength(), null, "Import sys", null, null, 0, "import sys", null);
+
+        prop.setAddLocalImport(true);
+        prop.indentString = "    ";
+        prop.apply(doc, '\n', 0, doc.getLength());
+        assertEquals(
+                "def test(\n" +
+                        "    rara\n" +
+                        "):\n" +
+                        "    '''testing\n" +
+                        "'''\n" +
+                        "    import sys\n" +
+                        "    sys" +
+                        "",
+                doc.get().replace("\r\n", "\n").replace('\r', '\n'));
+    }
+
+    public void testApplyLocal14() throws Exception {
+        Document doc = new Document(
+                "def test(\n" +
+                        "    rara\n" +
+                        "):\n" +
+                        "\n" +
+                        "\n" +
+                        "    '''testing\n" +
+                        "'''\n" +
+                        "    import bar\n" +
+                        "    ");
+
+        CtxInsensitiveImportComplProposal prop = new CtxInsensitiveImportComplProposal("sys", doc.getLength(), 0,
+                doc.getLength(), null, "Import sys", null, null, 0, "import sys", null);
+
+        prop.setAddLocalImport(true);
+        prop.indentString = "    ";
+        prop.apply(doc, '\n', 0, doc.getLength());
+        assertEquals(
+                "def test(\n" +
+                        "    rara\n" +
+                        "):\n" +
+                        "\n" +
+                        "\n" +
+                        "    '''testing\n" +
+                        "'''\n" +
+                        "    import bar\n" +
+                        "    import sys\n" +
+                        "    sys" +
+                        "",
+                doc.get().replace("\r\n", "\n").replace('\r', '\n'));
+    }
+
+    public void testApplyLocal15() throws Exception {
+        Document doc = new Document(
+                "def test(\n" +
+                        "    rara\n" +
+                        "):\n" +
+                        "\n" +
+                        "\n" +
+                        "    '''testing\n" +
+                        "'''\n" +
+                        "    import bar\n" +
+                        "\n" +
+                        "    from x import foo\n" +
+                        "    ");
+
+        CtxInsensitiveImportComplProposal prop = new CtxInsensitiveImportComplProposal("sys", doc.getLength(), 0,
+                doc.getLength(), null, "Import sys", null, null, 0, "import sys", null);
+
+        prop.setAddLocalImport(true);
+        prop.indentString = "    ";
+        prop.apply(doc, '\n', 0, doc.getLength());
+        assertEquals(
+                "def test(\n" +
+                        "    rara\n" +
+                        "):\n" +
+                        "\n" +
+                        "\n" +
+                        "    '''testing\n" +
+                        "'''\n" +
+                        "    import bar\n" +
+                        "\n" +
+                        "    from x import foo\n" +
+                        "    import sys\n" +
+                        "    sys" +
+                        "",
+                doc.get().replace("\r\n", "\n").replace('\r', '\n'));
+    }
+
+    public void testApplyLocal16() throws Exception {
+        Document doc = new Document(
+                "def test(\n" +
+                        "    rara\n" +
+                        "):\n" +
+                        "\n" +
+                        "\n" +
+                        "    '''testing\n" +
+                        "'''\n" +
+                        "    import bar\n" +
+                        "\n" +
+                        "    from x import foo\n" +
+                        "\n" +
+                        "    ");
+
+        CtxInsensitiveImportComplProposal prop = new CtxInsensitiveImportComplProposal("sys", doc.getLength(), 0,
+                doc.getLength(), null, "Import sys", null, null, 0, "import sys", null);
+
+        prop.setAddLocalImport(true);
+        prop.indentString = "    ";
+        prop.apply(doc, '\n', 0, doc.getLength());
+        assertEquals(
+                "def test(\n" +
+                        "    rara\n" +
+                        "):\n" +
+                        "\n" +
+                        "\n" +
+                        "    '''testing\n" +
+                        "'''\n" +
+                        "    import bar\n" +
+                        "\n" +
+                        "    from x import foo\n" +
+                        "    import sys\n" +
+                        "\n" +
+                        "    sys" +
+                        "",
+                doc.get().replace("\r\n", "\n").replace('\r', '\n'));
+    }
+
+    public void testApplyLocal17() throws Exception {
+        Document doc = new Document(
+                "def test(\n" +
+                        "    rara\n" +
+                        "):\n" +
+                        "\n" +
+                        "\n" +
+                        "    '''testing\n" +
+                        "'''\n" +
+                        "    import bar\n" +
+                        "\n" +
+                        "    from x import(\n"
+                        + "    foo)\n" +
+                        "\n" +
+                        "    ");
+
+        CtxInsensitiveImportComplProposal prop = new CtxInsensitiveImportComplProposal("sys", doc.getLength(), 0,
+                doc.getLength(), null, "Import sys", null, null, 0, "import sys", null);
+
+        prop.setAddLocalImport(true);
+        prop.indentString = "    ";
+        prop.apply(doc, '\n', 0, doc.getLength());
+        assertEquals(
+                "def test(\n" +
+                        "    rara\n" +
+                        "):\n" +
+                        "\n" +
+                        "\n" +
+                        "    '''testing\n" +
+                        "'''\n" +
+                        "    import bar\n" +
+                        "\n" +
+                        "    from x import(\n"
+                        + "    foo)\n" +
+                        "    import sys\n" +
+                        "\n" +
+                        "    sys" +
+                        "",
+                doc.get().replace("\r\n", "\n").replace('\r', '\n'));
+    }
+
+    public void testApplyLocal18() throws Exception {
+        Document doc = new Document(
+                "def test(\n" +
+                        "    rara\n" +
+                        "):\n" +
+                        "\n" +
+                        "\n" +
+                        "    '''testing\n" +
+                        "'''\n" +
+                        "    import bar\n" +
+                        "\n" +
+                        "    from x import \\\n"
+                        + "    foo\n" +
+                        "\n" +
+                        "    ");
+
+        CtxInsensitiveImportComplProposal prop = new CtxInsensitiveImportComplProposal("sys", doc.getLength(), 0,
+                doc.getLength(), null, "Import sys", null, null, 0, "import sys", null);
+
+        prop.setAddLocalImport(true);
+        prop.indentString = "    ";
+        prop.apply(doc, '\n', 0, doc.getLength());
+        assertEquals(
+                "def test(\n" +
+                        "    rara\n" +
+                        "):\n" +
+                        "\n" +
+                        "\n" +
+                        "    '''testing\n" +
+                        "'''\n" +
+                        "    import bar\n" +
+                        "\n" +
+                        "    from x import \\\n"
+                        + "    foo\n" +
+                        "    import sys\n" +
+                        "\n" +
+                        "    sys" +
+                        "",
+                doc.get().replace("\r\n", "\n").replace('\r', '\n'));
+    }
 }

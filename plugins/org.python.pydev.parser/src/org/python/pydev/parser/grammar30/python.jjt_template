@@ -28,11 +28,11 @@ import org.python.pydev.parser.jython.ast.Await;
 public final class PythonGrammar30 extends AbstractPythonGrammar implements IGrammar
 {
 
-    private boolean insideAsync;
+    private int insideAsync;
 
     @Override
     public boolean getInsideAsync() {
-        return insideAsync;
+        return insideAsync != 0;
     }
 
 $COMMOM_METHODS
@@ -470,23 +470,23 @@ void parameters() #void:  {}
   $RPAREN
 }
 
-// typedargslist: 
+// typedargslist:
 // (
-//     tfpdef ['=' test] 
+//     tfpdef ['=' test]
 //     (
 //         ',' tfpdef ['=' test]
-//     )* 
+//     )*
 //     [
 //         ',' [
-//             '*' [tfpdef] (',' tfpdef ['=' test])* [',' '**' tfpdef] 
-//             | 
+//             '*' [tfpdef] (',' tfpdef ['=' test])* [',' '**' tfpdef]
+//             |
 //             '**' tfpdef
 //             ]
 //     ]
 //     |  '*' [tfpdef] (',' tfpdef ['=' test])* [',' '**' tfpdef] | '**' tfpdef
 // )
 //
-// aliases: 
+// aliases:
 //  - defaultarg2 is tfpdef ['=' test]
 //  - ExtraArgList2 is '*' [tfpdef]
 //  - ExtraKeywordList2 is '**' tfpdef
@@ -496,39 +496,39 @@ void parameters() #void:  {}
 //     defaultarg2
 //     (
 //         ',' defaultarg2
-//     )* 
+//     )*
 //     [
 //         ',' [
-//             ExtraArgList2 (',' defaultarg2)* [',' ExtraKeywordList2] 
-//             | 
+//             ExtraArgList2 (',' defaultarg2)* [',' ExtraKeywordList2]
+//             |
 //             ExtraKeywordList2
 //             ]
 //     ]
-//     |  
+//     |
 //     ExtraArgList2 (',' defaultarg2)* [',' ExtraKeywordList2] | ExtraKeywordList2
 // )
 void typedargslist() #void: {}
 {
     (
         (
-            defaultarg2() 
+            defaultarg2()
             (LOOKAHEAD(2)
                 $COMMA defaultarg2()
             )*
-        ) 
+        )
         [LOOKAHEAD(2)
-            $COMMA 
+            $COMMA
             [
             ExtraArgList2() (LOOKAHEAD(2)$COMMA onlykeywordarg2())* [$COMMA ExtraKeywordList2()]
-            | 
+            |
             ExtraKeywordList2()
-            ] 
+            ]
         ]
     )
-    | 
+    |
     (
         (ExtraArgList2() (LOOKAHEAD(2)$COMMA onlykeywordarg2())* [LOOKAHEAD(2)$COMMA ExtraKeywordList2()]) | ExtraKeywordList2()
-    ) 
+    )
 }
 
 // '*' [tfpdef]
@@ -560,7 +560,7 @@ void tfpdef(): {}
 }
 
 
-// varargslist: 
+// varargslist:
 // (
 //     vfpdef ['=' test] (',' vfpdef ['=' test])* [
 //         ',' ['*' [vfpdef] (',' vfpdef ['=' test])* [',' '**' vfpdef] | '**' vfpdef]
@@ -570,18 +570,18 @@ void tfpdef(): {}
 void varargslist() #void: {}
 {
     (
-        (defaultarg() (LOOKAHEAD(2)$COMMA defaultarg())*) 
-        [LOOKAHEAD(2)$COMMA 
+        (defaultarg() (LOOKAHEAD(2)$COMMA defaultarg())*)
+        [LOOKAHEAD(2)$COMMA
             (
-                (ExtraArgList() (LOOKAHEAD(2)$COMMA onlykeywordarg())* [$COMMA ExtraKeywordList()]) 
-                | 
-                (ExtraKeywordList()) 
+                (ExtraArgList() (LOOKAHEAD(2)$COMMA onlykeywordarg())* [$COMMA ExtraKeywordList()])
+                |
+                (ExtraKeywordList())
             )
         ]
     ) [$COMMA]
-    |  
+    |
     (ExtraArgList() (LOOKAHEAD(2)$COMMA onlykeywordarg())* [LOOKAHEAD(2)$COMMA ExtraKeywordList()]) [$COMMA]
-    |   
+    |
     ExtraKeywordList() [$COMMA]
 }
 
@@ -613,7 +613,7 @@ void stmt() #void: {}
         // So, the async_stmt() was moved from the compound_stmt to the stmt() level to be processed first (as we have to find
         // an async def/async with/ async for, while Name() would match the <async> in a single step).
         LOOKAHEAD(2)
-        
+
         async_stmt()
     |
         non_async_stmt()
@@ -629,7 +629,7 @@ void non_async_stmt() #void: {}
         }catch(ParseException e){
             handleErrorInCompountStmt(e);
         }
-    
+
 }
 
 $SIMPLE_STMT
@@ -654,7 +654,7 @@ void small_stmt() #void: {SimpleNode simpleNode;Token spStr;}
 // augassign: ('+=' | '-=' | '*=' | '@=' | '/=' | '%=' | '&=' | '|=' | '^=' |
 void expr_stmt() #void: {}
 {
-    testlist_star_expr() (
+    {grammarActions.pushStarExpr(Starred.Load);}testlist_star_expr(){grammarActions.popStarExpr();} (
     <PLUSEQ>        (yield_expr()|SmartTestList())   #aug_plus(2)
 |   <MINUSEQ>       (yield_expr()|SmartTestList())   #aug_minus(2)
 |   <MULTIPLYEQ>    (yield_expr()|SmartTestList())   #aug_multiply(2)
@@ -668,7 +668,7 @@ void expr_stmt() #void: {}
 |   <LSHIFTEQ>      (yield_expr()|SmartTestList())   #aug_lshift(2)
 |   <RSHIFTEQ>      (yield_expr()|SmartTestList())   #aug_rshift(2)
 |   <POWEREQ>       (yield_expr()|SmartTestList())   #aug_power(2)
-|  (<EQUAL>         (yield_expr()|testlist_star_expr()))* #expr_stmt(jjtree.nodeArity()+1))
+|  (<EQUAL>         (yield_expr()| {grammarActions.pushStarExpr(Starred.Store);} testlist_star_expr() {grammarActions.popStarExpr();}))* #expr_stmt(jjtree.nodeArity()+1))
 
 }
 
@@ -811,11 +811,11 @@ void compound_stmt() #void : {}
 //async_stmt: ASYNC (funcdef | with_stmt | for_stmt)
 void async_stmt() #void :{}
 {
-        {insideAsync = true;}
+        {insideAsync += 1;}
         try{
             <ASYNC> (funcdef() | with_stmt() | for_stmt())
         }finally{
-            insideAsync = false;
+            insideAsync -= 1;
         }
 }
 
@@ -833,7 +833,7 @@ $BEGIN_ELSE
 
 //for_stmt: 'for' exprlist 'in' testlist ':' suite ['else' ':' suite]
 void for_stmt(): {}
-{   <FOR> {this.markLastAsSuiteStart();} {grammarActions.addSpecialTokenToLastOpened("for ");} exprlist() $IN SmartTestList() $COLON suite()
+{   <FOR> {this.markLastAsSuiteStart();} {grammarActions.addSpecialTokenToLastOpened("for ");} {grammarActions.pushStarExpr(Starred.Store);}exprlist(){grammarActions.popStarExpr();} $IN SmartTestList() $COLON suite()
     [begin_for_else_stmt() suite()]
 
 }
@@ -984,11 +984,11 @@ void power() #void: {}
 
 //atom_expr: [AWAIT] atom trailer*
 void atom_expr() #void: {}
-{ 
+{
     {
         // getToken(1) just peeks the next token without consuming it.
         Token t = getToken(1);
-        if(insideAsync && t != null && t.kind == AWAIT){
+        if(insideAsync != 0 && t != null && t.kind == AWAIT){
             // The await statement is only valid inside an async block!
             await_atom_expr();
             return;
@@ -1000,7 +1000,7 @@ void atom_expr() #void: {}
 void await_atom_expr(): {Token spStr;}
 {
     spStr=<AWAIT> atom() (trailer())*
-    
+
     {
         this.grammarActions.addToPeek(spStr, false, Await.class);
     }
@@ -1114,17 +1114,17 @@ void testlist_star_expr() #void: {}
 void star_expr(): {}
 {<MULTIPLY> {grammarActions.addSpecialToken("*", STRATEGY_BEFORE_NEXT);} expr()}
 
-// dictorsetmaker: 
+// dictorsetmaker:
 // (
 //     (
 //         (test ':' test | '**' expr)
 //         (comp_for | (',' (test ':' test | '**' expr))* [','])
-//     ) 
+//     )
 // |
 //     (
 //         (test | star_expr)
 //         (comp_for | (',' (test | star_expr))* [','])
-//     ) 
+//     )
 // )
 void dictorsetmaker() #void: {}
 {
@@ -1148,7 +1148,7 @@ void dictorsetmaker() #void: {}
             )
             |
             (
-              (LOOKAHEAD(2) comp_for() | (LOOKAHEAD(2)$COMMA (test() | star_expr()))* #set) [$COMMA]
+              (LOOKAHEAD(2) comp_for() | (LOOKAHEAD(2)$COMMA (test() | {grammarActions.pushStarExpr(Starred.Load);}star_expr(){grammarActions.popStarExpr();}))* #set) [$COMMA]
             )
         )
     )
@@ -1161,10 +1161,10 @@ void dictorsetmaker() #void: {}
         (LOOKAHEAD(2) $COMMA ( (test()$COLON test())| (<POWER> expr())  ) )*[$COMMA]
     )
     |
-    star_expr() 
+    {grammarActions.pushStarExpr(Starred.Load);}star_expr(){grammarActions.popStarExpr();}
     (
         //Note: repeat the final construct for the set
-        (LOOKAHEAD(2) comp_for() | (LOOKAHEAD(2)$COMMA (test() | star_expr()))* #set) [$COMMA]
+        (LOOKAHEAD(2) comp_for() | (LOOKAHEAD(2)$COMMA (test() | {grammarActions.pushStarExpr(Starred.Load);}star_expr(){grammarActions.popStarExpr();}))* #set) [$COMMA]
     )
 
 }
@@ -1174,7 +1174,7 @@ void dictorsetmaker() #void: {}
 
 // testlist_comp: (test|star_expr) ( comp_for | (',' (test|star_expr))* [','] )
 void testlist_comp() #void: {}
-{ (test()|star_expr()) ( LOOKAHEAD(2)(comp_for())+ | (LOOKAHEAD(2) $COMMA (test()|star_expr()))* [Comma()] #tuple(>1)) }
+{ (test()|{grammarActions.pushStarExpr(Starred.Load);}star_expr(){grammarActions.popStarExpr();}) ( LOOKAHEAD(2)(comp_for())+ | (LOOKAHEAD(2) $COMMA (test()|{grammarActions.pushStarExpr(Starred.Load);}star_expr(){grammarActions.popStarExpr();}))* [Comma()] #tuple(>1)) }
 
 
 //comp_iter: [comp_for | comp_if]
@@ -1183,7 +1183,7 @@ void comp_iter() #void: {}
 
 //comp_for: 'for' exprlist 'in' or_test [comp_iter]
 void comp_for(): {}
-{ $FOR_COMP exprlist() $IN or_test() [comp_iter()] }
+{ $FOR_COMP {grammarActions.pushStarExpr(Starred.Store);} exprlist() {grammarActions.popStarExpr();} $IN or_test() [comp_iter()] }
 
 //comp_if: 'if' test_nocond [comp_iter]
 void comp_if()#void:{}
@@ -1199,11 +1199,11 @@ void decorated():{}
 //async_funcdef: ASYNC funcdef
 void async_funcdef() #void : {}
 {
-    {insideAsync = true;}
+    {insideAsync += 1;}
     try{
         <ASYNC> funcdef()
     }finally{
-        insideAsync=false;
+        insideAsync -= 1;
     }
 }
 
@@ -1301,18 +1301,18 @@ Token Name() #Name:
 {
     try{
         (
-            t = <NAME> 
-         | 
-            t = <ASYNC> 
-         | 
+            t = <NAME>
+         |
+            t = <ASYNC>
+         |
             t = <AWAIT>
         )
     }catch(ParseException e){
         t = handleErrorInName(e);
     }
-    
 
-        { 
+
+        {
         ((Name)jjtThis).id = t.image; return t;
         }
 

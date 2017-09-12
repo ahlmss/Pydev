@@ -727,9 +727,32 @@ public final class FastStringBuffer implements CharSequence {
 
     public void rightTrim() {
         char c;
-        //while !isEmpty && lastChar == ' ' || \t.
+        while (this.count > 0 && ((c = this.value[this.count - 1]) == ' ' || Character.isWhitespace(c))) {
+            this.count--;
+        }
+    }
+
+    public void rightTrimWhitespacesAndTabs() {
+        char c;
         while (this.count > 0 && ((c = this.value[this.count - 1]) == ' ' || c == '\t')) {
             this.count--;
+        }
+    }
+
+    public void leftTrim() {
+        char c;
+        int i = 0;
+        while (i < this.count) {
+            c = this.value[i];
+            if (c == ' ' || Character.isWhitespace(c)) {
+                i++;
+            } else {
+                break;
+            }
+        }
+        if (i > 0) {
+            System.arraycopy(value, i, value, 0, count - i);
+            count -= i;
         }
     }
 

@@ -55,14 +55,14 @@ public final class PySelection extends TextSelectionUtils {
             //      after seeing the std lib, several cases use yield at the middle of the scope
     };
 
-    public static final String[] CLASS_AND_FUNC_TOKENS = new String[] { "def", "class", };
+    public static final String[] CLASS_AND_FUNC_TOKENS = new String[] { "def", "class", "async def" };
 
-    public static final String[] FUNC_TOKEN = new String[] { "def" };
+    public static final String[] FUNC_TOKEN = new String[] { "def", "async def" };
 
     public static final String[] CLASS_TOKEN = new String[] { "class", };
 
-    public static final String[] INDENT_TOKENS = new String[] { "if", "for", "except", "def", "class", "else", "elif",
-            "while", "try", "with", "finally" };
+    public static final String[] INDENT_TOKENS = new String[] { "async", "if", "for", "except", "def", "class",
+            "else", "elif", "while", "try", "with", "finally" };
 
     public static final Set<String> STATEMENT_TOKENS = new HashSet<String>();
 
@@ -715,10 +715,6 @@ public final class PySelection extends TextSelectionUtils {
         return getNextLineThatStartsScope(indentTokens, lineToStart, mustHaveIndentLowerThan);
     }
 
-    public LineStartingScope getPreviousLineThatStartsScope(int lineToStart) {
-        return getPreviousLineThatStartsScope(PySelection.INDENT_TOKENS, lineToStart, Integer.MAX_VALUE);
-    }
-
     public static class LineStartingScope {
 
         public final String lineStartingScope;
@@ -793,10 +789,13 @@ public final class PySelection extends TextSelectionUtils {
                 foundDedent = line;
 
             } else if (foundDedent == null && trimmed.length() > 0) {
-                int firstCharPosition = getFirstCharPosition(line);
-                if (firstCharPosition < mustHaveIndentLowerThan) {
-                    mustHaveIndentLowerThan = firstCharPosition;
-                    lowestStr = line;
+                if (!trimmed.startsWith(")")
+                        && !trimmed.startsWith("'") && !trimmed.startsWith("\"")) {
+                    int firstCharPosition = getFirstCharPosition(line);
+                    if (firstCharPosition < mustHaveIndentLowerThan) {
+                        mustHaveIndentLowerThan = firstCharPosition;
+                        lowestStr = line;
+                    }
                 }
             }
 
@@ -1459,6 +1458,90 @@ public final class PySelection extends TextSelectionUtils {
             numberOfLines -= 1;
         }
         return new Tuple<Integer, Integer>(0, numberOfLines);
+    }
+
+    /**
+     * Is a digit, according to Python. (Can't use Character.isDigit as
+     * that allows unicode digits too.)
+     */
+    private static boolean isDigit(char c) {
+        return c >= '0' && c <= '9';
+    }
+
+    /**
+     * Return true if the completion is at the dot after a literal number.
+     * Literal numbers have no valid completions as they can be the first part of floats.
+     * 
+     * @param activationToken this comes from either the console's ActivationTokenAndQual
+     *      or editor's CompletionRequest
+     * @return true if this completion is for a number
+     */
+    public static boolean isCompletionForLiteralNumber(String activationToken) {
+        int length = activationToken.length();
+        if (length == 0) {
+            return false;
+        }
+        if (activationToken.charAt(length - 1) != '.') {
+            return false;
+        }
+        if (!isDigit(activationToken.charAt(0))) {
+            return false;
+        }
+        for (int i = 1; i < length - 1; i++) {
+            char c = activationToken.charAt(i);
+            if (!isDigit(c) && c != '_') {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public static final class DocstringInfo {
+
+        public final int startLiteralOffset;
+        public final int endLiteralOffset;
+        public final String string;
+
+        public DocstringInfo(int startLiteralOffset, int endLiteralOffset, String string) {
+            this.startLiteralOffset = startLiteralOffset;
+            this.endLiteralOffset = endLiteralOffset;
+            this.string = string;
+        }
+
+        @Override
+        public String toString() {
+            return "DocstringInfo [startLiteralOffset=" + startLiteralOffset + ", endLiteralOffset=" + endLiteralOffset
+                    + ", string=" + string + "]";
+        }
+
+        public int getLength() {
+            return endLiteralOffset - startLiteralOffset;
+        }
+    }
+
+    public DocstringInfo getDocstringFromLine(int line) {
+        try {
+            String lineText = this.getLine(line);
+            String trimmed = lineText.trim();
+            char c = '\0';
+            if (trimmed.startsWith("\"")) {
+                c = '"';
+            } else if (trimmed.startsWith("'")) {
+                c = '\'';
+            } else {
+                return null;
+            }
+
+            ParsingUtils parsingUtils = ParsingUtils.create(getDoc(), true);
+            int offset = getDoc().getLineInformation(line).getOffset();
+            int startLiteralOffset = parsingUtils.findNextChar(offset, c);
+            FastStringBuffer buf = new FastStringBuffer();
+            int endLiteralOffset = parsingUtils.eatLiterals(buf, startLiteralOffset) + 1;
+            return new DocstringInfo(startLiteralOffset, endLiteralOffset, buf.toString());
+        } catch (BadLocationException | SyntaxErrorException e) {
+            return null;
+        }
+
     }
 
 }

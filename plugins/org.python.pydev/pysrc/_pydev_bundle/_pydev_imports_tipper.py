@@ -1,5 +1,5 @@
-import os.path
 import inspect
+import os.path
 import sys
 
 from _pydev_bundle._pydev_tipper_common import do_find
@@ -140,10 +140,10 @@ def check_char(c):
         return '_'
     return c
 
-def generate_imports_tip_for_module(obj_to_complete, dirComps=None, getattr=getattr, filter=lambda name:True):
+def generate_imports_tip_for_module(obj_to_complete, dir_comps=None, getattr=getattr, filter=lambda name:True):
     '''
         @param obj_to_complete: the object from where we should get the completions
-        @param dirComps: if passed, we should not 'dir' the object and should just iterate those passed as a parameter
+        @param dir_comps: if passed, we should not 'dir' the object and should just iterate those passed as a parameter
         @param getattr: the way to get a given object from the obj_to_complete (used for the completer)
         @param filter: a callable that receives the name and decides if it should be appended or not to the results
         @return: list of tuples, so that each tuple represents a completion with:
@@ -151,23 +151,23 @@ def generate_imports_tip_for_module(obj_to_complete, dirComps=None, getattr=geta
     '''
     ret = []
 
-    if dirComps is None:
-        dirComps = dir(obj_to_complete)
+    if dir_comps is None:
+        dir_comps = dir(obj_to_complete)
         if hasattr(obj_to_complete, '__dict__'):
-            dirComps.append('__dict__')
+            dir_comps.append('__dict__')
         if hasattr(obj_to_complete, '__class__'):
-            dirComps.append('__class__')
+            dir_comps.append('__class__')
 
-    getCompleteInfo = True
+    get_complete_info = True
 
-    if len(dirComps) > 1000:
+    if len(dir_comps) > 1000:
         #ok, we don't want to let our users wait forever...
         #no complete info for you...
 
-        getCompleteInfo = False
+        get_complete_info = False
 
     dontGetDocsOn = (float, int, str, tuple, list)
-    for d in dirComps:
+    for d in dir_comps:
 
         if d is None:
             continue
@@ -186,7 +186,7 @@ def generate_imports_tip_for_module(obj_to_complete, dirComps=None, getattr=geta
             ret.append((d, '', args, TYPE_BUILTIN))
         else:
 
-            if getCompleteInfo:
+            if get_complete_info:
                 try:
                     retType = TYPE_BUILTIN
 
@@ -222,96 +222,7 @@ def generate_imports_tip_for_module(obj_to_complete, dirComps=None, getattr=geta
                             args = '(%s)' % (r)
                         except TypeError:
                             #ok, let's see if we can get the arguments from the doc
-                            args = '()'
-                            try:
-                                found = False
-                                if len(doc) > 0:
-                                    if IS_IPY:
-                                        #Handle case where we have the situation below
-                                        #sort(self, object cmp, object key)
-                                        #sort(self, object cmp, object key, bool reverse)
-                                        #sort(self)
-                                        #sort(self, object cmp)
-
-                                        #Or: sort(self: list, cmp: object, key: object)
-                                        #sort(self: list, cmp: object, key: object, reverse: bool)
-                                        #sort(self: list)
-                                        #sort(self: list, cmp: object)
-                                        if hasattr(obj, '__name__'):
-                                            name = obj.__name__+'('
-
-
-                                            #Fix issue where it was appearing sort(aa)sort(bb)sort(cc) in the same line.
-                                            lines = doc.splitlines()
-                                            if len(lines) == 1:
-                                                c = doc.count(name)
-                                                if c > 1:
-                                                    doc = ('\n'+name).join(doc.split(name))
-
-
-                                            major = ''
-                                            for line in doc.splitlines():
-                                                if line.startswith(name) and line.endswith(')'):
-                                                    if len(line) > len(major):
-                                                        major = line
-                                            if major:
-                                                args = major[major.index('('):]
-                                                found = True
-
-
-                                    if not found:
-                                        i = doc.find('->')
-                                        if i < 0:
-                                            i = doc.find('--')
-                                            if i < 0:
-                                                i = doc.find('\n')
-                                                if i < 0:
-                                                    i = doc.find('\r')
-
-
-                                        if i > 0:
-                                            s = doc[0:i]
-                                            s = s.strip()
-
-                                            #let's see if we have a docstring in the first line
-                                            if s[-1] == ')':
-                                                start = s.find('(')
-                                                if start >= 0:
-                                                    end = s.find('[')
-                                                    if end <= 0:
-                                                        end = s.find(')')
-                                                        if end <= 0:
-                                                            end = len(s)
-
-                                                    args = s[start:end]
-                                                    if not args[-1] == ')':
-                                                        args = args + ')'
-
-
-                                                    #now, get rid of unwanted chars
-                                                    l = len(args) - 1
-                                                    r = []
-                                                    for i in xrange(len(args)):
-                                                        if i == 0 or i == l:
-                                                            r.append(args[i])
-                                                        else:
-                                                            r.append(check_char(args[i]))
-
-                                                    args = ''.join(r)
-
-                                    if IS_IPY:
-                                        if args.startswith('(self:'):
-                                            i = args.find(',')
-                                            if i >= 0:
-                                                args = '(self'+args[i:]
-                                            else:
-                                                args = '(self)'
-                                        i = args.find(')')
-                                        if i > 0:
-                                            args = args[:i+1]
-
-                            except:
-                                pass
+                            args, doc = signature_from_docstring(doc, getattr(obj, '__name__', None))
 
                         retType = TYPE_FUNCTION
 
@@ -331,7 +242,7 @@ def generate_imports_tip_for_module(obj_to_complete, dirComps=None, getattr=geta
                 except: #just ignore and get it without aditional info
                     ret.append((d, '', args, TYPE_BUILTIN))
 
-            else: #getCompleteInfo == False
+            else: #get_complete_info == False
                 if inspect.ismethod(obj) or inspect.isbuiltin(obj) or inspect.isfunction(obj) or inspect.isroutine(obj):
                     retType = TYPE_FUNCTION
 
@@ -350,5 +261,90 @@ def generate_imports_tip_for_module(obj_to_complete, dirComps=None, getattr=geta
     return ret
 
 
+def signature_from_docstring(doc, obj_name):
+    args = '()'
+    try:
+        found = False
+        if len(doc) > 0:
+            if IS_IPY:
+                # Handle case where we have the situation below
+                # sort(self, object cmp, object key)
+                # sort(self, object cmp, object key, bool reverse)
+                # sort(self)
+                # sort(self, object cmp)
 
+                # Or: sort(self: list, cmp: object, key: object)
+                # sort(self: list, cmp: object, key: object, reverse: bool)
+                # sort(self: list)
+                # sort(self: list, cmp: object)
+                if obj_name:
+                    name = obj_name + '('
 
+                    # Fix issue where it was appearing sort(aa)sort(bb)sort(cc) in the same line.
+                    lines = doc.splitlines()
+                    if len(lines) == 1:
+                        c = doc.count(name)
+                        if c > 1:
+                            doc = ('\n' + name).join(doc.split(name))
+
+                    major = ''
+                    for line in doc.splitlines():
+                        if line.startswith(name) and line.endswith(')'):
+                            if len(line) > len(major):
+                                major = line
+                    if major:
+                        args = major[major.index('('):]
+                        found = True
+
+            if not found:
+                i = doc.find('->')
+                if i < 0:
+                    i = doc.find('--')
+                    if i < 0:
+                        i = doc.find('\n')
+                        if i < 0:
+                            i = doc.find('\r')
+
+                if i > 0:
+                    s = doc[0:i]
+                    s = s.strip()
+
+                    # let's see if we have a docstring in the first line
+                    if s[-1] == ')':
+                        start = s.find('(')
+                        if start >= 0:
+                            end = s.find('[')
+                            if end <= 0:
+                                end = s.find(')')
+                                if end <= 0:
+                                    end = len(s)
+
+                            args = s[start:end]
+                            if not args[-1] == ')':
+                                args = args + ')'
+
+                            # now, get rid of unwanted chars
+                            l = len(args) - 1
+                            r = []
+                            for i in xrange(len(args)):
+                                if i == 0 or i == l:
+                                    r.append(args[i])
+                                else:
+                                    r.append(check_char(args[i]))
+
+                            args = ''.join(r)
+
+            if IS_IPY:
+                if args.startswith('(self:'):
+                    i = args.find(',')
+                    if i >= 0:
+                        args = '(self' + args[i:]
+                    else:
+                        args = '(self)'
+                i = args.find(')')
+                if i > 0:
+                    args = args[:i + 1]
+
+    except:
+        pass
+    return args, doc

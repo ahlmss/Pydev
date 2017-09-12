@@ -36,17 +36,18 @@ public abstract class AbstractCompletionProposalExtension extends PyCompletionPr
     public boolean fLastIsPar;
 
     public AbstractCompletionProposalExtension(String replacementString, int replacementOffset,
-            int replacementLength, int cursorPosition, int priority) {
-        super(replacementString, replacementOffset, replacementLength, cursorPosition, null, null, null, null, priority);
+            int replacementLength, int cursorPosition, int priority, ICompareContext compareContext) {
+        super(replacementString, replacementOffset, replacementLength, cursorPosition, null, null, null, null, priority,
+                compareContext);
     }
 
     public AbstractCompletionProposalExtension(String replacementString, int replacementOffset,
             int replacementLength, int cursorPosition, Image image, String displayString,
             IContextInformation contextInformation, String additionalProposalInfo, int priority, int onApplyAction,
-            String args) {
+            String args, ICompareContext compareContext) {
 
         super(replacementString, replacementOffset, replacementLength, cursorPosition, image, displayString,
-                contextInformation, additionalProposalInfo, priority, onApplyAction, args);
+                contextInformation, additionalProposalInfo, priority, onApplyAction, args, compareContext);
     }
 
     /**
@@ -87,7 +88,7 @@ public abstract class AbstractCompletionProposalExtension extends PyCompletionPr
                 }
 
                 this.fLen = finalOffset - widgetCaret;
-                this.getPresentationUpdater().updateStyle(viewer, widgetCaret, this.fLen);
+                this.getPresentationUpdater().selected(viewer, widgetCaret, this.fLen);
             } catch (BadLocationException e) {
                 Log.log(e);
             }
@@ -107,7 +108,7 @@ public abstract class AbstractCompletionProposalExtension extends PyCompletionPr
 
     @Override
     public void unselected(ITextViewer viewer) {
-        this.getPresentationUpdater().repairPresentation(viewer);
+        this.getPresentationUpdater().unselected(viewer);
     }
 
     @Override

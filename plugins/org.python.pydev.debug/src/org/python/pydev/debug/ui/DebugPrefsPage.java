@@ -13,11 +13,13 @@ package org.python.pydev.debug.ui;
 import java.util.List;
 
 import org.eclipse.jface.preference.BooleanFieldEditor;
+import org.eclipse.jface.preference.ComboFieldEditor;
 import org.eclipse.jface.preference.FieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.jface.preference.IntegerFieldEditor;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Label;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 import org.python.pydev.core.ExtensionHelper;
@@ -68,8 +70,16 @@ public class DebugPrefsPage extends FieldEditorPreferencePage implements IWorkbe
                 "On a step in, skip over methods which have a @DontTrace comment?", BooleanFieldEditor.SEPARATE_LABEL,
                 p);
         c = editor.getDescriptionControl(p);
-        c.setToolTipText("When a comment: # @DontTrace is found after a method, it's skipped by the debugger if this setting is on.\n\n"
-                + "Use Ctrl+1 in a method line to add such a comment.");
+        c.setToolTipText(
+                "When a comment: # @DontTrace is found after a method, it's skipped by the debugger if this setting is on.\n\n"
+                        + "Use Ctrl+1 in a method line to add such a comment.");
+        addField(editor);
+
+        editor = new BooleanFieldEditor(PydevEditorPrefs.SHOW_RETURN_VALUES,
+                "Show return values for methods?", BooleanFieldEditor.SEPARATE_LABEL,
+                p);
+        c = editor.getDescriptionControl(p);
+        c.setToolTipText("When this option is enabled, upon returning from a method, its return value is shown.");
         addField(editor);
 
         List<IDebugPreferencesPageParticipant> participants = ExtensionHelper
@@ -86,13 +96,6 @@ public class DebugPrefsPage extends FieldEditorPreferencePage implements IWorkbe
                 + "and will attempt to automatically connect new launched processes to the debugger.");
         addField(editor);
 
-        editor = new BooleanFieldEditor(PydevEditorPrefs.KILL_SUBPROCESSES_WHEN_TERMINATING_PROCESS,
-                "When terminating process, kill subprocesses too?", BooleanFieldEditor.SEPARATE_LABEL,
-                p);
-        c = editor.getDescriptionControl(p);
-        c.setToolTipText("When this option is turned on, terminating a launch will also terminate subprocesses.");
-        addField(editor);
-
         editor = new BooleanFieldEditor(PydevEditorPrefs.GEVENT_DEBUGGING,
                 "Gevent compatible debugging?", BooleanFieldEditor.SEPARATE_LABEL,
                 p);
@@ -100,6 +103,11 @@ public class DebugPrefsPage extends FieldEditorPreferencePage implements IWorkbe
         c.setToolTipText("When this option is turned on, the debugger will be able to debug GEvent programs.");
         addField(editor);
 
+        ComboFieldEditor comboEditor = new ComboFieldEditor(PydevEditorPrefs.QT_THREADS_DEBUG_MODE, "Qt Threads:",
+                PydevEditorPrefs.ENTRIES_VALUES_QT_THREADS_DEBUG_MODE, p);
+        Label labelControl = comboEditor.getLabelControl(p);
+        labelControl.setToolTipText("Specify whether the debugger should patch Qt to debug inside QThreads.");
+        addField(comboEditor);
     }
 
     public static boolean getReloadModuleOnChange() {
@@ -110,16 +118,20 @@ public class DebugPrefsPage extends FieldEditorPreferencePage implements IWorkbe
         return PydevPrefs.getPreferences().getBoolean(PydevEditorPrefs.DONT_TRACE_ENABLED);
     }
 
+    public static boolean getShowReturnValuesEnabled() {
+        return PydevPrefs.getPreferences().getBoolean(PydevEditorPrefs.SHOW_RETURN_VALUES);
+    }
+
     public static boolean getDebugMultiprocessingEnabled() {
         return PydevPrefs.getPreferences().getBoolean(PydevEditorPrefs.DEBUG_MULTIPROCESSING_ENABLED);
     }
 
-    public static boolean getKillSubprocessesWhenTerminatingProcess() {
-        return PydevPrefs.getPreferences().getBoolean(PydevEditorPrefs.KILL_SUBPROCESSES_WHEN_TERMINATING_PROCESS);
-    }
-
     public static boolean getGeventDebugging() {
         return PydevPrefs.getPreferences().getBoolean(PydevEditorPrefs.GEVENT_DEBUGGING);
+    }
+
+    public static String getQtThreadsDebugMode() {
+        return PydevPrefs.getPreferences().getString(PydevEditorPrefs.QT_THREADS_DEBUG_MODE);
     }
 
     /**

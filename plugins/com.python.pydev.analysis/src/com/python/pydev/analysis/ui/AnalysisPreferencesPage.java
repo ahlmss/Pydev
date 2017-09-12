@@ -34,7 +34,6 @@ import org.python.pydev.shared_ui.field_editors.ScopedPreferencesFieldEditor;
 
 import com.python.pydev.analysis.AnalysisPlugin;
 import com.python.pydev.analysis.AnalysisPreferenceInitializer;
-import com.python.pydev.analysis.IAnalysisPreferences;
 import com.python.pydev.analysis.PyAnalysisScopedPreferences;
 
 public class AnalysisPreferencesPage extends ScopedFieldEditorPreferencePage implements IWorkbenchPreferencePage {
@@ -66,36 +65,35 @@ public class AnalysisPreferencesPage extends ScopedFieldEditorPreferencePage imp
 
         addField(new LabelFieldEditor(
                 "Analysis_pref_note",
-                "NOTE: Any file with the comment below will not be analyzed.\n\n#@PydevCodeAnalysisIgnore\n\nOptions:\n\n",
+                "NOTE: Any file with the comment below will not be analyzed.\n\n#@PydevCodeAnalysisIgnore\n\n",
                 p));
+
+        BooleanFieldEditor field = new BooleanFieldEditor(AnalysisPreferenceInitializer.DO_CODE_ANALYSIS,
+                "Do code analysis?",
+                BooleanFieldEditor.DEFAULT, p);
+        addField(field);
 
         TabFolder tabFolder = new TabFolder(p, SWT.NONE);
         tabFolder.setLayoutData(new GridData(GridData.FILL_BOTH));
 
-        p = createTab(tabFolder, "Options");
-        String[][] whenAnalyze = new String[][] {
-                { "Only on save", String.valueOf(IAnalysisPreferences.ANALYZE_ON_SAVE) },
-                { "On any successful parse", String.valueOf(IAnalysisPreferences.ANALYZE_ON_SUCCESFUL_PARSE) } };
-        addField(new BooleanFieldEditor(AnalysisPreferenceInitializer.DO_CODE_ANALYSIS, "Do code analysis?",
-                BooleanFieldEditor.DEFAULT, p));
-        addField(new RadioGroupFieldEditor(AnalysisPreferenceInitializer.WHEN_ANALYZE, "When do we analyze?", 2,
-                whenAnalyze, p, true));
-
-        String[][] values = new String[][] { { "Error", String.valueOf(IMarker.SEVERITY_ERROR) },
+        String[][] values = new String[][] {
+                { "Error", String.valueOf(IMarker.SEVERITY_ERROR) },
                 { "Warning", String.valueOf(IMarker.SEVERITY_WARNING) },
-                { "Ignore", String.valueOf(IMarker.SEVERITY_INFO) } };
+                { "Info", String.valueOf(IMarker.SEVERITY_INFO) },
+                { "Ignore", String.valueOf(-1) }
+        };
 
         p = createTab(tabFolder, "Unused");
-        addField(new RadioGroupFieldEditor(AnalysisPreferenceInitializer.SEVERITY_UNUSED_IMPORT, "Unused import", 3,
+        addField(new RadioGroupFieldEditor(AnalysisPreferenceInitializer.SEVERITY_UNUSED_IMPORT, "Unused import", 4,
                 values, p, true));
         addField(new RadioGroupFieldEditor(AnalysisPreferenceInitializer.SEVERITY_UNUSED_WILD_IMPORT,
-                "Unused wild import", 3, values, p, true));
+                "Unused wild import", 4, values, p, true));
         addField(new StringFieldEditor(AnalysisPreferenceInitializer.NAMES_TO_IGNORE_UNUSED_IMPORT,
                 "Don't report unused imports in modules named: (comma separated)", p));
         addField(new RadioGroupFieldEditor(AnalysisPreferenceInitializer.SEVERITY_UNUSED_PARAMETER, "Unused parameter",
-                3, values, p, true));
+                4, values, p, true));
         addField(new RadioGroupFieldEditor(AnalysisPreferenceInitializer.SEVERITY_UNUSED_VARIABLE, "Unused variable",
-                3, values, p, true));
+                4, values, p, true));
         addField(new StringFieldEditor(AnalysisPreferenceInitializer.NAMES_TO_IGNORE_UNUSED_VARIABLE,
                 "Don't report unused variable if name starts with: (comma separated)", p) {
             @Override
@@ -108,67 +106,71 @@ public class AnalysisPreferencesPage extends ScopedFieldEditorPreferencePage imp
         addField(new StringFieldEditor(AnalysisPreferenceInitializer.NAMES_TO_CONSIDER_GLOBALS,
                 "Consider the following names as globals: (comma separated)", p));
         addField(new RadioGroupFieldEditor(AnalysisPreferenceInitializer.SEVERITY_UNDEFINED_VARIABLE,
-                "Undefined variable", 3, values, p, true));
+                "Undefined variable", 4, values, p, true));
         addField(new RadioGroupFieldEditor(AnalysisPreferenceInitializer.SEVERITY_UNDEFINED_IMPORT_VARIABLE,
-                "Undefined variable from import", 3, values, p, true));
+                "Undefined variable from import", 4, values, p, true));
 
         p = createTab(tabFolder, "Imports");
-        addField(new RadioGroupFieldEditor(AnalysisPreferenceInitializer.SEVERITY_REIMPORT, "Import redefinition", 3,
+        addField(new RadioGroupFieldEditor(AnalysisPreferenceInitializer.SEVERITY_REIMPORT, "Import redefinition", 4,
                 values, p, true));
         addField(new RadioGroupFieldEditor(AnalysisPreferenceInitializer.SEVERITY_UNRESOLVED_IMPORT,
-                "Import not found", 3, values, p, true));
+                "Import not found", 4, values, p, true));
 
         p = createTab(tabFolder, "Others");
         addField(new RadioGroupFieldEditor(AnalysisPreferenceInitializer.SEVERITY_DUPLICATED_SIGNATURE,
-                "Duplicated signature", 3, values, p, true));
+                "Duplicated signature", 4, values, p, true));
         addField(new RadioGroupFieldEditor(AnalysisPreferenceInitializer.SEVERITY_NO_SELF,
-                "'self' not specified in class method", 3, values, p, true));
+                "'self' not specified in class method", 4, values, p, true));
         addField(new RadioGroupFieldEditor(AnalysisPreferenceInitializer.SEVERITY_NO_EFFECT_STMT,
-                "Statement has no effect", 3, values, p, true));
+                "Statement has no effect", 4, values, p, true));
         addField(new RadioGroupFieldEditor(AnalysisPreferenceInitializer.SEVERITY_INDENTATION_PROBLEM,
-                "Indentation problems and mixing of tabs/spaces", 3, values, p, true));
+                "Indentation problems and mixing of tabs/spaces", 4, values, p, true));
         addField(new RadioGroupFieldEditor(AnalysisPreferenceInitializer.SEVERITY_ASSIGNMENT_TO_BUILT_IN_SYMBOL,
-                "Redefinition of builtin symbols", 3, values, p, true));
+                "Redefinition of builtin symbols", 4, values, p, true));
         //TODO: Add ARGUMENTS_MISMATCH again later on
-        //addField(new RadioGroupFieldEditor(AnalysisPreferenceInitializer.SEVERITY_ARGUMENTS_MISMATCH, "Arguments mismatch", 3,values,p, true));
+        //addField(new RadioGroupFieldEditor(AnalysisPreferenceInitializer.SEVERITY_ARGUMENTS_MISMATCH, "Arguments mismatch", 4,values,p, true));
 
-        p = createTab(tabFolder, "pep8.py");
+        p = createTab(tabFolder, "pycodestyle.py (pep8)");
 
         String[][] pep8values = new String[][] { { "Error", String.valueOf(IMarker.SEVERITY_ERROR) },
                 { "Warning", String.valueOf(IMarker.SEVERITY_WARNING) },
-                { "Don't run", String.valueOf(IMarker.SEVERITY_INFO) } };
+                { "Info", String.valueOf(IMarker.SEVERITY_INFO) },
+                { "Don't run", String.valueOf(-1) } };
 
-        addField(new RadioGroupFieldEditor(AnalysisPreferenceInitializer.SEVERITY_PEP8, "Pep8", 3, pep8values, p, true) {
-            @Override
-            protected void doFillIntoGrid(Composite parent, int numColumns) {
-                super.doFillIntoGrid(parent, 3);
-                adjustForNumColumns(3);
-            }
-        });
+        addField(
+                new RadioGroupFieldEditor(AnalysisPreferenceInitializer.SEVERITY_PEP8, "Pep8", 4, pep8values, p, true) {
+                    @Override
+                    protected void doFillIntoGrid(Composite parent, int numColumns) {
+                        super.doFillIntoGrid(parent, 4);
+                        adjustForNumColumns(4);
+                    }
+                });
         if (SHOW_IN_PEP8_FEATURE_ENABLED) {
-            addField(new BooleanFieldEditor(USE_PEP8_CONSOLE, "Redirect pep8 output to console?", p) {
+            addField(new BooleanFieldEditor(USE_PEP8_CONSOLE, "Redirect pycodestyle output to console?", p) {
                 @Override
                 protected void doFillIntoGrid(Composite parent, int numColumns) {
-                    super.doFillIntoGrid(parent, 3);
-                    adjustForNumColumns(3);
+                    super.doFillIntoGrid(parent, 4);
+                    adjustForNumColumns(4);
                 }
             });
         }
-        addField(new BooleanFieldEditor(PEP8_USE_SYSTEM, "Use system interpreter", p) {
+        addField(new BooleanFieldEditor(PEP8_USE_SYSTEM, "Use system interpreter (may be faster than internal Jython)",
+                p) {
             @Override
             protected void doFillIntoGrid(Composite parent, int numColumns) {
-                super.doFillIntoGrid(parent, 3);
-                adjustForNumColumns(3);
+                super.doFillIntoGrid(parent, 4);
+                adjustForNumColumns(4);
             }
         });
 
         addField(new LinkFieldEditor(PEP8_COMMAND_LINE,
-                "Additional command line arguments (i.e.: --ignore=E5,W391). See <a>pep8 docs</a> for details.", p,
+                "Additional command line arguments (i.e.: --ignore=E5,W391). See <a>pycodestyle docs</a> for details.",
+                p,
                 new SelectionListener() {
 
                     @Override
                     public void widgetSelected(SelectionEvent e) {
-                        Program.launch("http://pypi.python.org/pypi/pep8");
+                        Program.launch("https://pycodestyle.readthedocs.io/");
                     }
 
                     @Override
@@ -178,7 +180,7 @@ public class AnalysisPreferencesPage extends ScopedFieldEditorPreferencePage imp
 
             @Override
             protected void doFillIntoGrid(Composite parent, int numColumns) {
-                numColumns = 3;
+                numColumns = 4;
                 Link linkControl = getLinkControl(parent);
                 Object layoutData = linkControl.getLayoutData();
                 if (layoutData == null) {
@@ -186,15 +188,15 @@ public class AnalysisPreferencesPage extends ScopedFieldEditorPreferencePage imp
                     linkControl.setLayoutData(layoutData);
                 }
                 ((GridData) layoutData).horizontalSpan = numColumns;
-                adjustForNumColumns(3);
+                adjustForNumColumns(4);
             }
         });
 
         addField(new StringFieldEditor(PEP8_COMMAND_LINE, "Arguments: ", p) {
             @Override
             protected void doFillIntoGrid(Composite parent, int numColumns) {
-                super.doFillIntoGrid(parent, 3);
-                adjustForNumColumns(3);
+                super.doFillIntoGrid(parent, 4);
+                adjustForNumColumns(4);
             }
         });
 

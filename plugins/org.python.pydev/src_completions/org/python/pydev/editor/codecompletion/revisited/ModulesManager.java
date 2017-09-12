@@ -902,7 +902,7 @@ public abstract class ModulesManager implements IModulesManager {
                             if (emptyModuleForZip.pathInZip.endsWith(".class") || !emptyModuleForZip.isFile) {
                                 //handle java class... (if it's a class or a folder in a jar)
                                 try {
-                                    n = JythonModulesManagerUtils.createModuleFromJar(emptyModuleForZip);
+                                    n = JythonModulesManagerUtils.createModuleFromJar(emptyModuleForZip, nature);
                                     n = decorateModule(n, nature);
                                 } catch (Throwable e1) {
                                     Log.log("Unable to create module from jar (note: JDT is required for Jython development): "
@@ -913,7 +913,7 @@ public abstract class ModulesManager implements IModulesManager {
 
                             } else if (FileTypesPreferencesPage.isValidDll(emptyModuleForZip.pathInZip)) {
                                 //.pyd
-                                n = new CompiledModule(name, this);
+                                n = new CompiledModule(name, this, nature);
                                 n = decorateModule(n, nature);
 
                             } else if (PythonPathHelper.isValidSourceFile(emptyModuleForZip.pathInZip)) {
@@ -959,7 +959,7 @@ public abstract class ModulesManager implements IModulesManager {
                 n = checkOverride(name, nature, n);
                 if (n instanceof EmptyModule) {
                     if (acceptCompiledModule) {
-                        n = new CompiledModule(name, this);
+                        n = new CompiledModule(name, this, nature);
                         n = decorateModule(n, nature);
                     } else {
                         return null;
@@ -982,7 +982,7 @@ public abstract class ModulesManager implements IModulesManager {
             //now, here's a catch... it may be a bootstrap module...
             if (sourceModule.isBootstrapModule()) {
                 //if it's a bootstrap module, we must replace it for the related compiled module.
-                n = new CompiledModule(name, this);
+                n = new CompiledModule(name, this, nature);
                 n = decorateModule(n, nature);
             }
         }
@@ -1025,7 +1025,7 @@ public abstract class ModulesManager implements IModulesManager {
                             Name name = new Name((String) objAndType[0], Name.Store, false);
                             name.beginColumn = classDef.beginColumn + 4;
                             name.beginLine = classDef.beginLine + 1;
-                            newBody[i] = new Assign(new exprType[] { name }, (exprType) objAndType[1]);
+                            newBody[i] = new Assign(new exprType[] { name }, (exprType) objAndType[1], null);
                             newBody[i].beginColumn = classDef.beginColumn + 4;
                             newBody[i].beginLine = classDef.beginLine + 1;
 
@@ -1064,7 +1064,13 @@ public abstract class ModulesManager implements IModulesManager {
 
                                 @Override
                                 public int getGrammarVersion() throws MisconfigurationException {
-                                    return IGrammarVersionProvider.GRAMMAR_PYTHON_VERSION_3_0; // Always Python 3.0 here
+                                    return IGrammarVersionProvider.LATEST_GRAMMAR_PY3_VERSION; // Always Python 3.0 here
+                                }
+
+                                @Override
+                                public AdditionalGrammarVersionsToCheck getAdditionalGrammarVersions()
+                                        throws MisconfigurationException {
+                                    return null;
                                 }
                             };
                             ParseOutput obj = PyParser.reparseDocument(new PyParser.ParserInfo(doc, provider,

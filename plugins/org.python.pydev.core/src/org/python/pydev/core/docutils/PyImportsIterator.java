@@ -72,6 +72,10 @@ public class PyImportsIterator implements Iterator<ImportHandle> {
         this(doc, addOnlyGlobalImports, false);
     }
 
+    public void setStartingOffset(int offset) {
+        this.docIterator.setStartingOffset(offset);
+    }
+
     /**
      * Pre-calculates the next return value and whether there is a next value to be returned.
      */

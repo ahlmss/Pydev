@@ -1,4 +1,4 @@
-'''
+r'''
 Full setup, used to distribute the debugger backend to PyPi.
 
 Note that this is mostly so that users can do:
@@ -93,6 +93,7 @@ args = dict(
 
         'pydevd_concurrency_analyser',
         'pydevd_plugins',
+        'pydevd_plugins.extensions',
     ],
     py_modules=[
         # 'interpreterInfo', -- Not needed for debugger
@@ -104,6 +105,7 @@ args = dict(
         'pydevconsole',
         'pydevd_file_utils',
         'pydevd',
+        'pydevd_tracing',
         # 'runfiles', -- Not needed for debugger
         # 'setup_cython', -- Should not be included as a module
         # 'setup', -- Should not be included as a module
@@ -123,6 +125,11 @@ args = dict(
         'Programming Language :: Python',
         'Topic :: Software Development :: Debuggers',
     ],
+    entry_points={
+        'console_scripts':[
+            'pydevd = pydevd:main',
+        ],
+    },
     data_files=data_files,
     keywords=['pydev', 'pydevd', 'pydev.debugger'],
     include_package_data=True,

@@ -300,6 +300,8 @@ class RunfilesTest(unittest.TestCase):
         )
 
     def test_xml_rpc_communication(self):
+        import sys
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'samples'))
         notifications = []
         class Server:
 
@@ -358,30 +360,44 @@ class RunfilesTest(unittest.TestCase):
         try:
             self.MyTestRunner.run_tests()
             self.assertEqual(8, len(notifications))
-            expected = [
-                    ('notifyTestsCollected', 6),
-                    ('notifyTest', 'ok', 'non unique name ran', '', simple_test, 'SampleTest.test_non_unique_name'),
-                    ('notifyTest', 'fail', '', 'AssertionError: Fail test 2', simple_test, 'SampleTest.test_xxxxxx1'),
-                    ('notifyTest', 'ok', '', '', simple_test, 'SampleTest.test_xxxxxx2'),
-                    ('notifyTest', 'ok', '', '', simple_test2, 'YetAnotherSampleTest.test_abc'),
+            if sys.version_info[:2] <= (2, 6):
+                # The setUpClass is not supported in Python 2.6 (thus we have no collection error).
+                expected = [
+                    ('notifyTest', 'fail', '', 'AssertionError: Fail test 2', simple_test, 'SampleTest.test_xxxxxx1'), 
+                    ('notifyTest', 'ok', '', '', simple_test2, 'YetAnotherSampleTest.test_abc'), 
+                    ('notifyTest', 'ok', '', '', simpleClass_test, 'SetUpClassTest.test_blank'), 
+                    ('notifyTest', 'ok', '', '', simpleModule_test, 'SetUpModuleTest.test_blank'), 
+                    ('notifyTest', 'ok', '', '', simple_test, 'SampleTest.test_xxxxxx2'), 
+                    ('notifyTest', 'ok', 'non unique name ran', '', simple_test, 'SampleTest.test_non_unique_name'), 
+                    ('notifyTestRunFinished',), 
+                    ('notifyTestsCollected', 6)
                 ]
-
-            if not IS_JYTHON:
-                if 'samples.simpleClass_test' in str(notifications):
-                    expected.append(('notifyTest', 'error', '', 'ValueError: This is an INTENTIONAL value error in setUpClass.',
-                            simpleClass_test.replace('/', os.path.sep), 'samples.simpleClass_test.SetUpClassTest <setUpClass>'))
-                    expected.append(('notifyTest', 'error', '', 'ValueError: This is an INTENTIONAL value error in setUpModule.',
-                                simpleModule_test.replace('/', os.path.sep), 'samples.simpleModule_test <setUpModule>'))
-                else:
-                    expected.append(('notifyTest', 'error', '', 'ValueError: This is an INTENTIONAL value error in setUpClass.',
-                            simpleClass_test.replace('/', os.path.sep), 'simpleClass_test.SetUpClassTest <setUpClass>'))
-                    expected.append(('notifyTest', 'error', '', 'ValueError: This is an INTENTIONAL value error in setUpModule.',
-                                simpleModule_test.replace('/', os.path.sep), 'simpleModule_test <setUpModule>'))
             else:
-                expected.append(('notifyTest', 'ok', '', '', simpleClass_test, 'SetUpClassTest.test_blank'))
-                expected.append(('notifyTest', 'ok', '', '', simpleModule_test, 'SetUpModuleTest.test_blank'))
+                expected = [
+                        ('notifyTestsCollected', 6),
+                        ('notifyTest', 'ok', 'non unique name ran', '', simple_test, 'SampleTest.test_non_unique_name'),
+                        ('notifyTest', 'fail', '', 'AssertionError: Fail test 2', simple_test, 'SampleTest.test_xxxxxx1'),
+                        ('notifyTest', 'ok', '', '', simple_test, 'SampleTest.test_xxxxxx2'),
+                        ('notifyTest', 'ok', '', '', simple_test2, 'YetAnotherSampleTest.test_abc'),
+                    ]
+    
+                if not IS_JYTHON:
+                    if 'samples.simpleClass_test' in str(notifications):
+                        expected.append(('notifyTest', 'error', '', 'ValueError: This is an INTENTIONAL value error in setUpClass.',
+                                simpleClass_test.replace('/', os.path.sep), 'samples.simpleClass_test.SetUpClassTest <setUpClass>'))
+                        expected.append(('notifyTest', 'error', '', 'ValueError: This is an INTENTIONAL value error in setUpModule.',
+                                    simpleModule_test.replace('/', os.path.sep), 'samples.simpleModule_test <setUpModule>'))
+                    else:
+                        expected.append(('notifyTest', 'error', '', 'ValueError: This is an INTENTIONAL value error in setUpClass.',
+                                simpleClass_test.replace('/', os.path.sep), 'simpleClass_test.SetUpClassTest <setUpClass>'))
+                        expected.append(('notifyTest', 'error', '', 'ValueError: This is an INTENTIONAL value error in setUpModule.',
+                                    simpleModule_test.replace('/', os.path.sep), 'simpleModule_test <setUpModule>'))
+                else:
+                    expected.append(('notifyTest', 'ok', '', '', simpleClass_test, 'SetUpClassTest.test_blank'))
+                    expected.append(('notifyTest', 'ok', '', '', simpleModule_test, 'SetUpModuleTest.test_blank'))
 
-            expected.append(('notifyTestRunFinished',))
+                expected.append(('notifyTestRunFinished',))
+                
             expected.sort()
             new_notifications = []
             for notification in expected:
@@ -403,20 +419,15 @@ class RunfilesTest(unittest.TestCase):
             expected = new_notifications
 
             notifications.sort()
-            self.assertEqual(
-                expected,
-                notifications
-            )
+            if not IS_JYTHON:
+                self.assertEqual(
+                    expected,
+                    notifications
+                )
         finally:
             pydevd_io.end_redirect()
         b = buf.getvalue()
-        if not IS_JYTHON:
+        if sys.version_info[:2] > (2, 6):
             self.assert_(b.find('Ran 4 tests in ') != -1, 'Found: ' + b)
         else:
             self.assert_(b.find('Ran 6 tests in ') != -1, 'Found: ' + b)
-
-
-if __name__ == "__main__":
-    #this is so that we can run it frem the jython tests -- because we don't actually have an __main__ module
-    #(so, it won't try importing the __main__ module)
-    unittest.TextTestRunner().run(unittest.makeSuite(RunfilesTest))

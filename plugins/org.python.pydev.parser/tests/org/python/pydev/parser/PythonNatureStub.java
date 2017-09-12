@@ -79,6 +79,11 @@ public class PythonNatureStub implements IPythonNature, IAdaptable {
         throw new RuntimeException("Not implemented");
     }
 
+    @Override
+    public AdditionalGrammarVersionsToCheck getAdditionalGrammarVersions() throws MisconfigurationException {
+        return null;
+    }
+
     public boolean isJython() throws CoreException {
         throw new RuntimeException("Not implemented");
     }

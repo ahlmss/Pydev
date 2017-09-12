@@ -1,4 +1,4 @@
-'''
+r'''
     This module provides utilities to get the absolute filenames so that we can be sure that:
         - The case of a file will match the actual file in the filesystem (otherwise breakpoints won't be hit).
         - Providing means for the user to make path conversions when doing a remote debugging session in
@@ -19,6 +19,9 @@
 
         the PATHS_FROM_ECLIPSE_TO_PYTHON would have to be:
             PATHS_FROM_ECLIPSE_TO_PYTHON = [(r'c:\my_project\src', r'/user/projects/my_project/src')]
+
+        alternatively, this can be set with an environment variable from the command line:
+           set PATHS_FROM_ECLIPSE_TO_PYTHON=[['c:\my_project\src','/user/projects/my_project/src']]
 
     @note: DEBUG_CLIENT_SERVER_TRANSLATION can be set to True to debug the result of those translations
 
@@ -41,8 +44,10 @@
 
 
 
-from _pydevd_bundle.pydevd_constants import *  #@UnusedWildImport
+from _pydevd_bundle.pydevd_constants import IS_PY2, IS_PY3K
 from _pydev_bundle._pydev_filesystem_encoding import getfilesystemencoding
+import json
+import os
 import os.path
 import sys
 import traceback
@@ -62,7 +67,20 @@ except:
 #defined as a list of tuples where the 1st element of the tuple is the path in the client machine
 #and the 2nd element is the path in the server machine.
 #see module docstring for more details.
-PATHS_FROM_ECLIPSE_TO_PYTHON = []
+try:
+    PATHS_FROM_ECLIPSE_TO_PYTHON = json.loads(os.environ.get('PATHS_FROM_ECLIPSE_TO_PYTHON', '[]'))
+except Exception:
+    sys.stderr.write('Error loading PATHS_FROM_ECLIPSE_TO_PYTHON from environment variable.\n')
+    traceback.print_exc()
+    PATHS_FROM_ECLIPSE_TO_PYTHON = []
+else:
+    if not isinstance(PATHS_FROM_ECLIPSE_TO_PYTHON, list):
+        sys.stderr.write('Expected PATHS_FROM_ECLIPSE_TO_PYTHON loaded from environment variable to be a list.\n')
+        PATHS_FROM_ECLIPSE_TO_PYTHON = []
+    else:
+        # Converting json lists to tuple
+        PATHS_FROM_ECLIPSE_TO_PYTHON = [tuple(x) for x in PATHS_FROM_ECLIPSE_TO_PYTHON]
+
 
 #example:
 #PATHS_FROM_ECLIPSE_TO_PYTHON = [
@@ -73,10 +91,30 @@ PATHS_FROM_ECLIPSE_TO_PYTHON = []
 
 normcase = os_normcase # May be rebound on set_ide_os
 
+convert_to_long_pathname = None
+if sys.platform == 'win32':
+    try:
+        import ctypes
+    except ImportError:
+        pass
+    else:
+        def convert_to_long_pathname(filename):
+            buf = ctypes.create_unicode_buffer(260)
+            GetLongPathName = ctypes.windll.kernel32.GetLongPathNameW
+            if IS_PY2:
+                filename = unicode(filename, getfilesystemencoding())
+            rv = GetLongPathName(filename, buf, 260)
+            if rv != 0 and rv <= 260:
+                return buf.value
+            return filename
+
 
 def norm_case(filename):
     # `normcase` doesn't lower case on Python 2 for non-English locale, but Java side does it,
     # so we should do it manually
+    if '~' in filename and convert_to_long_pathname:
+        filename = convert_to_long_pathname(filename)
+
     filename = os_normcase(filename)
     enc = getfilesystemencoding()
     if IS_PY3K or enc is None or enc.lower() == "utf-8":
@@ -143,7 +181,7 @@ def _NormPaths(filename):
 
 
 def _NormPath(filename, normpath):
-    r = normcase(normpath(filename))
+    r = normpath(filename)
     #cache it for fast access later
     ind = r.find('.zip')
     if ind == -1:
@@ -156,7 +194,9 @@ def _NormPath(filename, normpath):
         inner_path = r[ind:]
         if inner_path.startswith('/') or inner_path.startswith('\\'):
             inner_path = inner_path[1:]
-        r = join(zip_path, inner_path)
+        r = join(normcase(zip_path), inner_path)
+    else:
+        r = normcase(r)
     return r
 
 
@@ -243,23 +283,23 @@ norm_file_to_server = _NormFile
 
 def setup_client_server_paths(paths):
     '''paths is the same format as PATHS_FROM_ECLIPSE_TO_PYTHON'''
-    
+
     global NORM_FILENAME_TO_SERVER_CONTAINER
     global NORM_FILENAME_TO_CLIENT_CONTAINER
     global PATHS_FROM_ECLIPSE_TO_PYTHON
     global norm_file_to_client
     global norm_file_to_server
-    
+
     NORM_FILENAME_TO_SERVER_CONTAINER = {}
     NORM_FILENAME_TO_CLIENT_CONTAINER = {}
     PATHS_FROM_ECLIPSE_TO_PYTHON = paths[:]
-    
+
     if not PATHS_FROM_ECLIPSE_TO_PYTHON:
         #no translation step needed (just inline the calls)
         norm_file_to_client = _AbsFile
         norm_file_to_server = _NormFile
         return
-            
+
     #Work on the client and server slashes.
     eclipse_sep = None
     python_sep = None
@@ -342,8 +382,8 @@ def setup_client_server_paths(paths):
             #only at the beginning of this method.
             NORM_FILENAME_TO_CLIENT_CONTAINER[filename] = translated
             return translated
-    
-    norm_file_to_server = _norm_file_to_server        
+
+    norm_file_to_server = _norm_file_to_server
     norm_file_to_client = _norm_file_to_client
 
 setup_client_server_paths(PATHS_FROM_ECLIPSE_TO_PYTHON)
@@ -366,11 +406,15 @@ def get_abs_path_real_path_and_base_from_frame(frame):
     except:
         #This one is just internal (so, does not need any kind of client-server translation)
         f = frame.f_code.co_filename
-        if f is not None and f.startswith('build/bdist.'):
+        if f is not None and f.startswith (('build/bdist.','build\\bdist.')):
             # files from eggs in Python 2.7 have paths like build/bdist.linux-x86_64/egg/<path-inside-egg>
             f = frame.f_globals['__file__']
+        if f is not None:
             if f.endswith('.pyc'):
                 f = f[:-1]
+            elif f.endswith('$py.class'):
+                f = f[:-len('$py.class')] + '.py'
+
         ret = get_abs_path_real_path_and_base_from_file(f)
         # Also cache based on the frame.f_code.co_filename (if we had it inside build/bdist it can make a difference).
         NORM_PATHS_AND_BASE_CONTAINER[frame.f_code.co_filename] = ret

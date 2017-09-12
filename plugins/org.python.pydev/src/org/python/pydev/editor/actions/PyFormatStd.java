@@ -18,7 +18,9 @@ import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.runtime.Assert;
@@ -194,7 +196,7 @@ public class PyFormatStd extends PyAction implements IFormatter {
     public void applyFormatAction(IPyFormatStdProvider pyEdit, PySelection ps, int[] regionsToFormat,
             boolean throwSyntaxError,
             ISelectionProvider selectionProvider)
-                    throws BadLocationException, SyntaxErrorException {
+            throws BadLocationException, SyntaxErrorException {
         final IFormatter participant = getFormatter();
         final IDocument doc = ps.getDoc();
         final SelectionKeeper selectionKeeper = new SelectionKeeper(ps);
@@ -335,7 +337,7 @@ public class PyFormatStd extends PyAction implements IFormatter {
     @Override
     public void formatAll(IDocument doc, IPyFormatStdProvider edit, IFile f, boolean isOpenedFile,
             boolean throwSyntaxError)
-                    throws SyntaxErrorException {
+            throws SyntaxErrorException {
         //        Formatter formatter = new Formatter();
         //        formatter.formatAll(doc, edit);
 
@@ -429,7 +431,7 @@ public class PyFormatStd extends PyAction implements IFormatter {
     /**
      * @param fileContents the contents to be passed in the stdin.
      * @param parameters the parameters to pass. Note that a '-' is always added to the parameters to signal we'll pass the file as the input in stdin.
-     * @param script i.e.: pep8.py, autopep8.py
+     * @param script i.e.: pycodestyle.py, autopep8.py
      * @return
      */
     public static String runWithPep8BaseScript(String fileContents, String parameters, String script,
@@ -635,7 +637,7 @@ public class PyFormatStd extends PyAction implements IFormatter {
                             }
                         }
                         if (isExponential) {
-                            buf.rightTrim();
+                            buf.rightTrimWhitespacesAndTabs();
                             buf.append(c);
                             //skip the next whitespaces from the buffer
                             int initial = i;
@@ -704,7 +706,7 @@ public class PyFormatStd extends PyAction implements IFormatter {
                             buf.deleteLast();
                         }
                         if (std.trimLines) {
-                            buf.rightTrim();
+                            buf.rightTrimWhitespacesAndTabs();
                         }
                     }
                     buf.append(c);
@@ -714,7 +716,7 @@ public class PyFormatStd extends PyAction implements IFormatter {
 
         }
         if (parensLevel == 0 && std.trimLines) {
-            buf.rightTrim();
+            buf.rightTrimWhitespacesAndTabs();
         }
         return buf.toString();
     }
@@ -733,7 +735,7 @@ public class PyFormatStd extends PyAction implements IFormatter {
                 //Ok, found a non-whitespace -- if it's not a new line, we're after some
                 //code, in which case we have to put the configured amount of spaces.
                 if (cj != '\r' && cj != '\n') {
-                    buf.rightTrim();
+                    buf.rightTrimWhitespacesAndTabs();
                     buf.appendN(' ', std.spacesBeforeComment);
                 }
                 break;
@@ -751,7 +753,7 @@ public class PyFormatStd extends PyAction implements IFormatter {
                 endLine += tempBuf.lastChar();
                 tempBuf.deleteLast();
             }
-            tempBuf.rightTrim();
+            tempBuf.rightTrimWhitespacesAndTabs();
             tempBuf.append(endLine);
         }
 
@@ -817,6 +819,43 @@ public class PyFormatStd extends PyAction implements IFormatter {
         }
     }
 
+    private static Set<String> unaryWords = new HashSet<>();
+    static {
+        unaryWords.add("and");
+        unaryWords.add("as");
+        unaryWords.add("assert");
+        unaryWords.add("break");
+        unaryWords.add("class");
+        unaryWords.add("continue");
+        unaryWords.add("def");
+        unaryWords.add("del");
+        unaryWords.add("elif");
+        unaryWords.add("else");
+        unaryWords.add("except");
+        unaryWords.add("exec");
+        unaryWords.add("finally");
+        unaryWords.add("for");
+        unaryWords.add("from");
+        unaryWords.add("global");
+        unaryWords.add("if");
+        unaryWords.add("import");
+        unaryWords.add("in");
+        unaryWords.add("is");
+        unaryWords.add("lambda");
+        unaryWords.add("nonlocal");
+        unaryWords.add("not");
+        unaryWords.add("or");
+        unaryWords.add("pass");
+        unaryWords.add("print");
+        unaryWords.add("raise");
+        unaryWords.add("return");
+        unaryWords.add("try");
+        unaryWords.add("while");
+        unaryWords.add("with");
+        unaryWords.add("yield");
+
+    }
+
     /**
      * Handles having an operator
      *
@@ -838,7 +877,7 @@ public class PyFormatStd extends PyAction implements IFormatter {
         if (c == '~' || c == '+' || c == '-') {
             //could be an unary operator...
             String trimmedLastWord = buf.getLastWord().trim();
-            isUnary = trimmedLastWord.length() == 0 || PySelection.ALL_KEYWORD_TOKENS.contains(trimmedLastWord);
+            isUnary = trimmedLastWord.length() == 0 || unaryWords.contains(trimmedLastWord);
 
             if (!isUnary) {
                 for (char itChar : buf.reverseIterator()) {
@@ -978,7 +1017,7 @@ public class PyFormatStd extends PyAction implements IFormatter {
      */
     private int formatForPar(final ParsingUtils parsingUtils, final char[] cs, final int i, final FormatStd std,
             final FastStringBuffer buf, final int parensLevel, final String delimiter, boolean throwSyntaxError)
-                    throws SyntaxErrorException {
+            throws SyntaxErrorException {
         char c = ' ';
         FastStringBuffer locBuf = new FastStringBuffer();
 

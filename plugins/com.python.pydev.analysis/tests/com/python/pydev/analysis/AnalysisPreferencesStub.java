@@ -97,6 +97,10 @@ public final class AnalysisPreferencesStub extends AbstractAnalysisPreferences {
 
             case TYPE_ASSIGNMENT_TO_BUILT_IN_SYMBOL:
                 return severityForAssignmentToBuiltInSymbol;
+
+            case TYPE_FSTRING_SYNTAX_ERROR:
+                // Syntax error is always error!
+                return IMarker.SEVERITY_ERROR;
         }
         throw new RuntimeException("unable to get severity for type " + type);
     }
@@ -128,11 +132,6 @@ public final class AnalysisPreferencesStub extends AbstractAnalysisPreferences {
         Set<String> names = new HashSet<String>();
         names.add("considerGlobal");
         return names;
-    }
-
-    @Override
-    public int getWhenAnalyze() {
-        return IAnalysisPreferences.ANALYZE_ON_SUCCESFUL_PARSE;
     }
 
     @Override

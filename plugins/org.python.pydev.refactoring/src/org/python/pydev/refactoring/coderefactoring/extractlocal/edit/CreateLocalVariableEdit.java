@@ -74,7 +74,7 @@ public class CreateLocalVariableEdit extends AbstractInsertEdit {
         exprType variable = new Name(variableName, expr_contextType.Store, false);
         exprType[] target = { variable };
 
-        return new Assign(target, expression);
+        return new Assign(target, expression, null);
     }
 
     private int calculateLineForLocal() {
@@ -97,7 +97,7 @@ public class CreateLocalVariableEdit extends AbstractInsertEdit {
 
             try {
                 FindScopeVisitor scopeVisitor = new FindScopeVisitor(startLineIndexInASTCoords,
-                        selection.getCursorColumn() + 1);
+                        selection.getCursorColumn() + 1, info.getNature());
                 module.accept(scopeVisitor);
                 ILocalScope scope = scopeVisitor.scope;
                 FastStack scopeStack = scope.getScopeStack();

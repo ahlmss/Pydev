@@ -10,6 +10,7 @@
  */
 package com.python.pydev.analysis;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -152,7 +153,7 @@ public class OccurrencesAnalyzer2Test extends AnalysisTestsBase {
         doc = new Document("from extendable import * #@UnusedWildImport\n" +
                 "__path__\n");
 
-        //__path__ does not come on "import *" 
+        //__path__ does not come on "import *"
         IMessage[] messages = checkError(1);
         assertEquals("Undefined variable: __path__", messages[0].getMessage());
     }
@@ -808,6 +809,28 @@ public class OccurrencesAnalyzer2Test extends AnalysisTestsBase {
             checkError("foo.Method: arguments don't match");
         } finally {
             unregisterFindDefinitionListener("", "check.Foo", "foo.Method", "foo");
+        }
+    }
+
+    protected Closeable setGrammar(int grammarVersion) {
+        final int initial = GRAMMAR_TO_USE_FOR_PARSING;
+        GRAMMAR_TO_USE_FOR_PARSING = grammarVersion;
+        return new Closeable() {
+
+            @Override
+            public void close() throws IOException {
+                GRAMMAR_TO_USE_FOR_PARSING = initial;
+            }
+        };
+    }
+
+    public void testUsedVariable() throws Exception {
+        try (Closeable x = setGrammar(IPythonNature.GRAMMAR_PYTHON_VERSION_3_0)) {
+            doc = new Document("def foo():\n" +
+                    "    a = []\n" +
+                    "    my = [*a]\n" +
+                    "");
+            checkError("Unused variable: my");
         }
     }
 

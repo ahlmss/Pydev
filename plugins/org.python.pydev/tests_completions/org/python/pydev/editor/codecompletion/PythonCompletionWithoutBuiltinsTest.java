@@ -93,7 +93,7 @@ public class PythonCompletionWithoutBuiltinsTest extends CodeCompletionTestsBase
                     throws CompletionRecursionException {
                 ArrayList<IToken> ret = new ArrayList<>();
                 if (state.getActivationToken().endsWith("Thread")) {
-                    ret.add(new CompiledToken("run()", "", "", "", 1));
+                    ret.add(new CompiledToken("run()", "", "", "", 1, null));
                 }
                 return ret;
             }
@@ -143,7 +143,7 @@ public class PythonCompletionWithoutBuiltinsTest extends CodeCompletionTestsBase
         public Collection<IToken> getCompletionsForTokenWithUndefinedType(ICompletionState state,
                 ILocalScope localScope, Collection<IToken> interfaceForLocal) {
             ArrayList<IToken> ret = new ArrayList<IToken>();
-            ret.add(new SourceToken(null, "bar", null, null, null, IToken.TYPE_ATTR));
+            ret.add(new SourceToken(null, "bar", null, null, null, IToken.TYPE_ATTR, null));
             return ret;
         }
 
@@ -429,8 +429,8 @@ public class PythonCompletionWithoutBuiltinsTest extends CodeCompletionTestsBase
                 "from testOtherImports.f3 import test\n" +
                 "tes";
         ICompletionProposal[] p = requestCompl(s, s.length(), -1, new String[] { "test(a, b, c)" }, nature);
-        assertEquals("def test(a, b, c):    \"\"\"This is a docstring\"\"\"",
-                StringUtils.removeNewLineChars(p[0].getAdditionalProposalInfo()));
+        assertTrue(StringUtils.removeNewLineChars(p[0].getAdditionalProposalInfo())
+                .startsWith("def test(a, b, c):    \"\"\"This is a docstring\"\"\""));
     }
 
     public void testFromImportAs() throws Exception {
@@ -439,8 +439,8 @@ public class PythonCompletionWithoutBuiltinsTest extends CodeCompletionTestsBase
                 "from testOtherImports.f3 import test as AnotherTest\n" +
                 "t = AnotherTes";
         ICompletionProposal[] p = requestCompl(s, s.length(), -1, new String[] { "AnotherTest(a, b, c)" }, nature);
-        assertEquals("def test(a, b, c):    \"\"\"This is a docstring\"\"\"",
-                StringUtils.removeNewLineChars(p[0].getAdditionalProposalInfo()));
+        assertTrue(StringUtils.removeNewLineChars(p[0].getAdditionalProposalInfo()).startsWith(
+                "def test(a, b, c):    \"\"\"This is a docstring\"\"\""));
     }
 
     public void testFromImportAs2() throws Exception {
@@ -449,8 +449,8 @@ public class PythonCompletionWithoutBuiltinsTest extends CodeCompletionTestsBase
                 "from testOtherImports.f3 import Foo\n" +
                 "t = Fo";
         ICompletionProposal[] p = requestCompl(s, s.length(), -1, new String[] { "Foo" }, nature);
-        assertEquals("class SomeOtherTest(object):    '''SomeOtherTest'''    def __init__(self, a, b):        pass",
-                StringUtils.removeNewLineChars(p[0].getAdditionalProposalInfo()));
+        assertTrue(StringUtils.removeNewLineChars(p[0].getAdditionalProposalInfo()).startsWith(
+                "class SomeOtherTest(object):    '''SomeOtherTest'''    def __init__(self, a, b):        pass"));
     }
 
     public void testInnerImport() throws Exception {
@@ -3060,4 +3060,131 @@ public class PythonCompletionWithoutBuiltinsTest extends CodeCompletionTestsBase
         assertEquals(2, comps.length);
     }
 
+    public void testCodeCompletionFromAliasedImport() throws Exception {
+        String s;
+        s = "" +
+                "from import_as_aliased import Foo\n" +
+                "Foo.C";
+        ICompletionProposal[] comps = requestCompl(s, s.length(), -1, new String[] { "ClassMet()" });
+        assertEquals(1, comps.length);
+    }
+
+    public void testEnum() throws Exception {
+        String s;
+        s = "" +
+                "from enum import Enum\n" +
+                "\n" +
+                "class Color(Enum):\n" +
+                "    Black = '#000000'\n" +
+                "    White = '#ffffff'\n" +
+                "Color.Black.";
+        requestCompl(s, s.length(), -1, new String[] { "name", "value" });
+    }
+
+    public void testCallChain() throws Exception {
+        String s;
+        s = "" +
+                "class Third:\n" +
+                "\n" +
+                "    def after_third(self):\n" +
+                "        pass\n" +
+                "\n" +
+                "class Second:\n" +
+                "\n" +
+                "    def after_second(self):\n" +
+                "        return Third()\n" +
+                "\n" +
+                "class First:\n" +
+                "\n" +
+                "    def after_first(self):\n" +
+                "        return Second()\n" +
+                "\n" +
+                "f = First()\n" +
+                "f.after_first().after_second().";
+        requestCompl(s, s.length(), -1, new String[] { "after_third()" });
+    }
+
+    public void testReturnSelf() throws Exception {
+        String s;
+        s = "\n" +
+                "class Killer(object):\n" +
+                "\n" +
+                "    def method_a(self):\n" +
+                "        return self\n" +
+                "\n" +
+                "    def method_b(self):\n" +
+                "        return self\n" +
+                "\n" +
+                "killer = Killer()\n" +
+                "killer.method_a().";
+        requestCompl(s, s.length(), -1, new String[] { "method_a()", "method_b()" });
+
+    }
+
+    public void testUnpackSelfAttr() throws Exception {
+        String s;
+        s = "class Toto(object):\n" +
+                "    def dummy(self):\n" +
+                "        pass\n" +
+                "\n" +
+                "class Titi(object): \n" +
+                "    def __init__(self, l):\n" +
+                "        \"\"\"\n" +
+                "        :param list(Toto) l:\n" +
+                "        \"\"\"\n" +
+                "        self._l = l\n" +
+                "        \n" +
+                "        for p2 in self._l:\n" +
+                "            p2.";
+        requestCompl(s, s.length(), -1, new String[] { "dummy()" });
+
+    }
+
+    public void testSubClassConstructorParams() throws Exception {
+        String s;
+        String original = "" +
+                "class Foo:\n" +
+                "    def __init__(self, a, b):pass\n\n" +
+                "    def m1(self):pass\n\n" +
+                "class Bar(Foo):\n" +
+                "    pass\n\n"
+                +
+                "Bar(%s)" + //completion inside the empty parenthesis should: add the parameters in link mode (a, b) and let the calltip there.
+                "";
+        s = StringUtils.format(original, "");
+
+        ICompletionProposal[] proposals = requestCompl(s, s.length() - 1, -1, new String[] {});
+        assertEquals(1, proposals.length);
+        ICompletionProposal prop = proposals[0];
+        assertEquals("Bar(a, b)", prop.getDisplayString());
+
+        IPyCalltipsContextInformation contextInformation = (IPyCalltipsContextInformation) prop.getContextInformation();
+        assertEquals("a, b", contextInformation.getContextDisplayString());
+        assertEquals("a, b", contextInformation.getInformationDisplayString());
+
+        Document doc = new Document(s);
+        prop.apply(doc);
+        String expected = StringUtils.format(original, "a, b");
+        assertEquals(expected, doc.get());
+    }
+
+    public void testSubClassConstructorParams2() throws Exception {
+        String s;
+        String original = "" +
+                "class Foo:\n" +
+                "    def __init__(self, a, b):pass\n\n" +
+                "    def m1(self):pass\n\n" +
+                "class Bar(Foo):\n" +
+                "    pass\n\n"
+                +
+                "Bar" +
+                "";
+        s = StringUtils.format(original, "");
+
+        ICompletionProposal[] proposals = requestCompl(s, s.length() - 1, -1, new String[] {});
+        assertEquals(1, proposals.length);
+        ICompletionProposal prop = proposals[0];
+        assertEquals("Bar(a, b)", prop.getDisplayString());
+
+    }
 }

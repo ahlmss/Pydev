@@ -33,6 +33,7 @@ import org.eclipse.ui.IFileEditorInput;
 import org.eclipse.ui.texteditor.MarkerUtilities;
 import org.python.pydev.core.ExtensionHelper;
 import org.python.pydev.core.IGrammarVersionProvider;
+import org.python.pydev.core.IGrammarVersionProvider.AdditionalGrammarVersionsToCheck;
 import org.python.pydev.core.IPyEdit;
 import org.python.pydev.core.IPythonNature;
 import org.python.pydev.core.MisconfigurationException;
@@ -44,6 +45,7 @@ import org.python.pydev.parser.grammar25.PythonGrammar25;
 import org.python.pydev.parser.grammar26.PythonGrammar26;
 import org.python.pydev.parser.grammar27.PythonGrammar27;
 import org.python.pydev.parser.grammar30.PythonGrammar30;
+import org.python.pydev.parser.grammar36.PythonGrammar36;
 import org.python.pydev.parser.jython.FastCharStream;
 import org.python.pydev.parser.jython.ParseException;
 import org.python.pydev.parser.jython.SimpleNode;
@@ -114,7 +116,10 @@ public class PyParser extends BaseParser implements IPyParser {
             return "grammar: Python 2.7";
 
         } else if (grammarVersion == IGrammarVersionProvider.GRAMMAR_PYTHON_VERSION_3_0) {
-            return "grammar: Python 3.x";
+            return "grammar: Python 3.0 - 3.5";
+
+        } else if (grammarVersion == IGrammarVersionProvider.GRAMMAR_PYTHON_VERSION_3_6) {
+            return "grammar: Python 3.6";
 
         } else if (grammarVersion == IGrammarVersionProvider.GRAMMAR_PYTHON_VERSION_CYTHON) {
             return "grammar: Cython";
@@ -138,6 +143,12 @@ public class PyParser extends BaseParser implements IPyParser {
                 @Override
                 public int getGrammarVersion() {
                     return IPythonNature.LATEST_GRAMMAR_VERSION;
+                }
+
+                @Override
+                public AdditionalGrammarVersionsToCheck getAdditionalGrammarVersions()
+                        throws MisconfigurationException {
+                    return null;
                 }
             };
         }
@@ -263,14 +274,16 @@ public class PyParser extends BaseParser implements IPyParser {
 
         //get the document ast and error in object
         int version;
+        AdditionalGrammarVersionsToCheck additionalGrammarsToCheck = null;
         try {
             version = grammarVersionProvider.getGrammarVersion();
+            additionalGrammarsToCheck = grammarVersionProvider.getAdditionalGrammarVersions();
         } catch (MisconfigurationException e1) {
             //Ok, we cannot get it... let's put on the default
             version = IGrammarVersionProvider.LATEST_GRAMMAR_VERSION;
         }
         long documentTime = System.currentTimeMillis();
-        ParseOutput obj = reparseDocument(new ParserInfo(document, version, true));
+        ParseOutput obj = reparseDocument(new ParserInfo(document, version, true, additionalGrammarsToCheck));
 
         IFile original = null;
         IAdaptable adaptable = null;
@@ -375,37 +388,44 @@ public class PyParser extends BaseParser implements IPyParser {
          */
         public final boolean generateTree;
 
+        public final AdditionalGrammarVersionsToCheck additionalGrammarVersionsToCheck;
+
         /**
          * @param grammarVersion: see IPythonNature.GRAMMAR_XXX constants
          */
-        public ParserInfo(IDocument document, int grammarVersion) {
-            this(document, grammarVersion, null, null, true);
+        public ParserInfo(IDocument document, int grammarVersion,
+                AdditionalGrammarVersionsToCheck additionalGrammarVersionsToCheck) {
+            this(document, grammarVersion, null, null, true, additionalGrammarVersionsToCheck);
         }
 
         public ParserInfo(IDocument document, IGrammarVersionProvider nature) throws MisconfigurationException {
-            this(document, nature.getGrammarVersion());
+            this(document, nature.getGrammarVersion(), nature.getAdditionalGrammarVersions());
         }
 
         public ParserInfo(IDocument document, IGrammarVersionProvider nature, String moduleName, File file)
                 throws MisconfigurationException {
-            this(document, nature.getGrammarVersion(), moduleName, file, true);
+            this(document, nature.getGrammarVersion(), moduleName, file, true, nature.getAdditionalGrammarVersions());
         }
 
-        public ParserInfo(IDocument document, int grammarVersion, String name, File f, boolean generateTree) {
+        public ParserInfo(IDocument document, int grammarVersion, String name, File f, boolean generateTree,
+                AdditionalGrammarVersionsToCheck additionalGrammarVersionsToCheck) {
             this.document = document;
             this.grammarVersion = grammarVersion;
             this.moduleName = name;
             this.file = f;
             this.generateTree = generateTree;
+            this.additionalGrammarVersionsToCheck = additionalGrammarVersionsToCheck;
         }
 
         public ParserInfo(IDocument document, IGrammarVersionProvider grammarProvider, boolean generateTree)
                 throws MisconfigurationException {
-            this(document, grammarProvider.getGrammarVersion(), null, null, generateTree);
+            this(document, grammarProvider.getGrammarVersion(), null, null, generateTree,
+                    grammarProvider.getAdditionalGrammarVersions());
         }
 
-        public ParserInfo(IDocument document, int grammarVersion, boolean generateTree) {
-            this(document, grammarVersion, null, null, generateTree);
+        public ParserInfo(IDocument document, int grammarVersion, boolean generateTree,
+                AdditionalGrammarVersionsToCheck additionalGrammarVersionsToCheck) {
+            this(document, grammarVersion, null, null, generateTree, additionalGrammarVersionsToCheck);
         }
 
         @Override
@@ -458,7 +478,7 @@ public class PyParser extends BaseParser implements IPyParser {
      * Actually creates the grammar.
      * @param generateTree whether we should generate the AST or not.
      */
-    private static IGrammar createGrammar(boolean generateTree, int grammarVersion, char[] charArray) {
+    public static IGrammar createGrammar(boolean generateTree, int grammarVersion, char[] charArray) {
         IGrammar grammar;
         FastCharStream in = new FastCharStream(charArray);
         switch (grammarVersion) {
@@ -476,6 +496,9 @@ public class PyParser extends BaseParser implements IPyParser {
                 break;
             case IPythonNature.GRAMMAR_PYTHON_VERSION_3_0:
                 grammar = new PythonGrammar30(generateTree, in);
+                break;
+            case IPythonNature.GRAMMAR_PYTHON_VERSION_3_6:
+                grammar = new PythonGrammar36(generateTree, in);
                 break;
             //case CYTHON: not treated here (only in reparseDocument).
             default:
@@ -523,6 +546,7 @@ public class PyParser extends BaseParser implements IPyParser {
             //If empty, don't bother to parse!
             return new ParseOutput(new Module(new stmtType[0]), null, modifiedTime);
         }
+        Set<Integer> parsedVersions = new HashSet<>();
         char[] charArray;
         try {
             charArray = createCharArrayToParse(startDoc);
@@ -536,6 +560,7 @@ public class PyParser extends BaseParser implements IPyParser {
         Tuple<ISimpleNode, Throwable> returnVar = new Tuple<ISimpleNode, Throwable>(null, null);
         IGrammar grammar = null;
         try {
+            parsedVersions.add(info.grammarVersion);
             grammar = createGrammar(info.generateTree, info.grammarVersion, charArray);
             SimpleNode newRoot;
             try {
@@ -557,6 +582,29 @@ public class PyParser extends BaseParser implements IPyParser {
             }
 
             returnVar.o2 = grammar.getErrorOnParsing();
+
+            if (returnVar.o2 == null) {
+                AdditionalGrammarVersionsToCheck additionalGrammarVersionsToCheck = info.additionalGrammarVersionsToCheck;
+                if (additionalGrammarVersionsToCheck != null) {
+                    for (int grammarVersion : additionalGrammarVersionsToCheck.getGrammarVersions()) {
+                        if (parsedVersions.contains(grammarVersion)) {
+                            continue;
+                        }
+                        parsedVersions.add(grammarVersion);
+                        grammar = createGrammar(false, grammarVersion, charArray);
+                        try {
+                            grammar.file_input();
+                        } catch (OutOfMemoryError e) {
+                            OnExpectedOutOfMemory.clearCacheOnOutOfMemory.call(null);
+                            grammar.file_input(); //retry now with caches cleared...
+                        }
+                        returnVar.o2 = grammar.getErrorOnParsing();
+                        if (returnVar.o2 != null) {
+                            break;
+                        }
+                    }
+                }
+            }
 
         } catch (Throwable e) {
             //ok, some error happened when trying the parse... let's go and clear the local info before doing
@@ -605,7 +653,8 @@ public class PyParser extends BaseParser implements IPyParser {
         List<stmtType> classesAndFunctions = FastParser.parseCython(doc);
         return new Tuple<ISimpleNode, Throwable>(new Module(
                 classesAndFunctions.toArray(new stmtType[classesAndFunctions
-                        .size()])), null);
+                        .size()])),
+                null);
     }
 
     /**
@@ -648,10 +697,10 @@ public class PyParser extends BaseParser implements IPyParser {
 
     /**
      * Creates the error description for a given error in the parse.
-     * 
+     *
      * Must return an error!
      */
-    private static ErrorDescription createErrorDesc(Throwable error, IDocument doc) {
+    public static ErrorDescription createErrorDesc(Throwable error, IDocument doc) {
         try {
             int errorStart = -1;
             int errorEnd = -1;
@@ -708,11 +757,11 @@ public class PyParser extends BaseParser implements IPyParser {
                     //ignore (can have changed in the meanwhile)
                 }
             } else {
-                Log.log("Error, expecting ParseException or TokenMgrError. Received: " + error);
+                Log.log("Error, expecting ParseException or TokenMgrError. Received: " + error, error);
                 return new ErrorDescription("Internal PyDev Error", 0, 0, 0);
             }
             try {
-                errorLine = doc.getLineOfOffset(errorStart);
+                errorLine = doc.getLineOfOffset(errorStart) + 1;
             } catch (BadLocationException e) {
                 errorLine = tokenBeginLine;
             }

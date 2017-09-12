@@ -130,6 +130,7 @@ public class PydevPrefsInitializer extends AbstractPreferenceInitializer {
         node.putInt(PydevEditorPrefs.CONNECT_TIMEOUT, PydevEditorPrefs.DEFAULT_CONNECT_TIMEOUT);
         node.putBoolean(PydevEditorPrefs.RELOAD_MODULE_ON_CHANGE, PydevEditorPrefs.DEFAULT_RELOAD_MODULE_ON_CHANGE);
         node.putBoolean(PydevEditorPrefs.DONT_TRACE_ENABLED, PydevEditorPrefs.DEFAULT_DONT_TRACE_ENABLED);
+        node.putBoolean(PydevEditorPrefs.SHOW_RETURN_VALUES, PydevEditorPrefs.DEFAULT_SHOW_RETURN_VALUES);
         node.putBoolean(PydevEditorPrefs.DEBUG_MULTIPROCESSING_ENABLED,
                 PydevEditorPrefs.DEFAULT_DEBUG_MULTIPROCESSING_ENABLED);
         node.putBoolean(PydevEditorPrefs.KILL_SUBPROCESSES_WHEN_TERMINATING_PROCESS,
@@ -137,6 +138,7 @@ public class PydevPrefsInitializer extends AbstractPreferenceInitializer {
         node.putBoolean(PydevEditorPrefs.GEVENT_DEBUGGING, PydevEditorPrefs.DEFAULT_GEVENT_DEBUGGING);
         node.putBoolean(PydevEditorPrefs.TRACE_DJANGO_TEMPLATE_RENDER_EXCEPTIONS,
                 PydevEditorPrefs.DEFAULT_TRACE_DJANGO_TEMPLATE_RENDER_EXCEPTIONS);
+        node.put(PydevEditorPrefs.QT_THREADS_DEBUG_MODE, PydevEditorPrefs.DEFAULT_QT_THREADS_DEBUG_MODE);
 
         //pydev todo tasks
         node.put(PyTodoPrefPage.PY_TODO_TAGS, PyTodoPrefPage.DEFAULT_PY_TODO_TAGS);
@@ -282,7 +284,7 @@ public class PydevPrefsInitializer extends AbstractPreferenceInitializer {
         node.putBoolean(ImportsPreferencesPage.GROUP_IMPORTS, ImportsPreferencesPage.DEFAULT_GROUP_IMPORTS);
         node.putBoolean(ImportsPreferencesPage.MULTILINE_IMPORTS, ImportsPreferencesPage.DEFAULT_MULTILINE_IMPORTS);
         node.put(ImportsPreferencesPage.BREAK_IMPORTS_MODE, ImportsPreferencesPage.DEFAULT_BREAK_IMPORTS_MODE);
-        node.putBoolean(ImportsPreferencesPage.PEP8_IMPORTS, ImportsPreferencesPage.DEFAULT_PEP8_IMPORTS);
+        node.put(ImportsPreferencesPage.IMPORT_ENGINE, ImportsPreferencesPage.DEFAULT_IMPORT_ENGINE);
         node.putBoolean(ImportsPreferencesPage.DELETE_UNUSED_IMPORTS,
                 ImportsPreferencesPage.DEFAULT_DELETE_UNUSED_IMPORTS);
         node.putBoolean(ImportsPreferencesPage.FROM_IMPORTS_FIRST, ImportsPreferencesPage.DEFAULT_FROM_IMPORTS_FIRST);

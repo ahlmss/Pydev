@@ -157,6 +157,7 @@ def pytest_collection_modifyitems(session, config, items):
         name = item.name
 
         if f not in py_test_accept_filter:
+            # print('Skip file: %s' % (f,))
             continue  # Skip the file
 
         accept_tests = py_test_accept_filter[f]
@@ -174,16 +175,19 @@ def pytest_collection_modifyitems(session, config, items):
                 # Direct match of the test (just go on with the default
                 # loading)
                 new_items.append(item)
-                continue
+                break
 
             if class_name is not None:
                 if test == class_name + '.' + name:
                     new_items.append(item)
-                    continue
+                    break
 
                 if class_name == test:
                     new_items.append(item)
-                    continue
+                    break
+        else:
+            pass
+            # print('Skip test: %s.%s. Accept: %s' % (class_name, name, accept_tests))
 
     # Modify the original list
     items[:] = new_items
@@ -209,6 +213,36 @@ def pytest_collectreport(report):
     if error_contents:
         report_test('fail', '<collect errors>', '<collect errors>', '', error_contents, 0.0)
 
+def append_strings(s1, s2):
+    if s1.__class__ == s2.__class__:
+        return s1 + s2
+    
+    if sys.version_info[0] == 2:
+        if not isinstance(s1, basestring):
+            s1 = str(s1)
+            
+        if not isinstance(s2, basestring):
+            s2 = str(s2)
+            
+        # Prefer bytes
+        if isinstance(s1, unicode):
+            s1 = s1.encode('utf-8')
+            
+        if isinstance(s2, unicode):
+            s2 = s2.encode('utf-8')
+            
+        return s1 + s2
+    else:
+        # Prefer str
+        if isinstance(s1, bytes):
+            s1 = s1.decode('utf-8', 'replace')
+            
+        if isinstance(s2, bytes):
+            s2 = s2.decode('utf-8', 'replace')
+            
+        return s1 + s2
+            
+            
 
 def pytest_runtest_logreport(report):
     if is_in_xdist_node():
@@ -247,15 +281,15 @@ def pytest_runtest_logreport(report):
 
     # This will work if pytest is not capturing it, if it is, nothing will
     # come from here...
-    captured_output, error_contents = report.pydev_captured_output, report.pydev_error_contents
+    captured_output, error_contents = getattr(report, 'pydev_captured_output', ''), getattr(report, 'pydev_error_contents', '')
     for type_section, value in report.sections:
         if value:
             if type_section in ('err', 'stderr', 'Captured stderr call'):
-                error_contents += str(value)
+                error_contents = append_strings(error_contents, value)
             else:
-                captured_output += str(value)
+                captured_output = append_strings(error_contents, value)
 
-    filename = report.pydev_fspath_strpath
+    filename = getattr(report, 'pydev_fspath_strpath', '<unable to get>')
     test = report.location[2]
 
     if report_outcome != 'skipped':
@@ -264,8 +298,8 @@ def pytest_runtest_logreport(report):
         exc = _get_error_contents_from_report(report)
         if exc:
             if error_contents:
-                error_contents += '----------------------------- Exceptions -----------------------------\n'
-            error_contents += exc
+                error_contents = append_strings(error_contents, '----------------------------- Exceptions -----------------------------\n')
+            error_contents = append_strings(error_contents, exc)
 
     report_test(status, filename, test, captured_output, error_contents, report_duration)
 

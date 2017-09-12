@@ -13,10 +13,13 @@ package org.python.pydev.editor.codecompletion;
 
 import java.io.File;
 
+import org.eclipse.jface.text.BadLocationException;
 import org.eclipse.jface.text.IDocument;
+import org.eclipse.jface.text.IRegion;
 import org.python.pydev.core.ICompletionRequest;
 import org.python.pydev.core.IModule;
 import org.python.pydev.core.IPythonNature;
+import org.python.pydev.core.ITokenCompletionRequest;
 import org.python.pydev.core.MisconfigurationException;
 import org.python.pydev.core.docutils.PySelection;
 import org.python.pydev.core.docutils.PySelection.ActivationTokenAndQual;
@@ -28,14 +31,15 @@ import org.python.pydev.shared_core.string.FastStringBuffer;
  * 
  * @author Fabio Zadrozny
  */
-public final class CompletionRequest implements ICompletionRequest {
+public final class CompletionRequest implements ICompletionRequest, ITokenCompletionRequest {
 
     /**
      * This is used on the AssistOverride: the activationToken is pre-specified
      * for some reason
      */
     public CompletionRequest(File editorFile, IPythonNature nature, IDocument doc, String activationToken,
-            int documentOffset, int qlen, IPyCodeCompletion codeCompletion, String qualifier) {
+            int documentOffset, int qlen, IPyCodeCompletion codeCompletion, String qualifier,
+            boolean useSubstringMatchInCodeCompletion) {
 
         this.editorFile = editorFile;
         this.nature = nature;
@@ -52,6 +56,7 @@ public final class CompletionRequest implements ICompletionRequest {
         this.calltipOffset = 0;
         this.alreadyHasParams = false;
         this.offsetForKeywordParam = 0;
+        this.useSubstringMatchInCodeCompletion = useSubstringMatchInCodeCompletion;
     }
 
     /**
@@ -65,7 +70,7 @@ public final class CompletionRequest implements ICompletionRequest {
      * @param codeCompletion
      */
     public CompletionRequest(File editorFile, IPythonNature nature, IDocument doc, int documentOffset,
-            IPyCodeCompletion codeCompletion) {
+            IPyCodeCompletion codeCompletion, boolean useSubstringMatchInCodeCompletion) {
         //we need those set before requesting a py selection
         this.doc = doc;
         this.documentOffset = documentOffset;
@@ -87,11 +92,12 @@ public final class CompletionRequest implements ICompletionRequest {
         this.codeCompletion = codeCompletion;
 
         this.fullQualifier = getPySelection().getActivationTokenAndQual(true)[1];
+        this.useSubstringMatchInCodeCompletion = useSubstringMatchInCodeCompletion;
     }
 
     public CompletionRequest createCopyForKeywordParamRequest() {
         CompletionRequest request = new CompletionRequest(editorFile, nature, doc, this.offsetForKeywordParam,
-                codeCompletion);
+                codeCompletion, this.useSubstringMatchInCodeCompletion);
         request.isInMethodKeywordParam = false; //Just making sure it will not be another request for keyword params
         return request;
     }
@@ -233,6 +239,8 @@ public final class CompletionRequest implements ICompletionRequest {
      */
     private IModule module;
 
+    public final boolean useSubstringMatchInCodeCompletion;
+
     /**
      * @return the module name where the completion request took place (may be null if there is no editor file associated)
      * @throws MisconfigurationException 
@@ -256,6 +264,33 @@ public final class CompletionRequest implements ICompletionRequest {
             module = AbstractASTManager.createModule(this.editorFile, this.doc, this.nature);
         }
         return module;
+    }
+
+    @Override
+    public String getActivationToken() {
+        return this.activationToken;
+    }
+
+    @Override
+    public void setActivationToken(String activationToken) {
+        this.activationToken = activationToken;
+    }
+
+    @Override
+    public String getQualifier() {
+        return qualifier;
+    }
+
+    @Override
+    public int getLine() throws BadLocationException {
+        return doc.getLineOfOffset(documentOffset);
+    }
+
+    @Override
+    public int getCol() throws BadLocationException {
+        IRegion region = doc.getLineInformationOfOffset(documentOffset);
+        int col = documentOffset - region.getOffset();
+        return col;
     }
 
 }

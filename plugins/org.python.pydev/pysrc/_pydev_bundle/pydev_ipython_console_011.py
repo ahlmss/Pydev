@@ -111,6 +111,9 @@ class PyDevTerminalInteractiveShell(TerminalInteractiveShell):
     #   a better theme).
     colors_force = CBool(True)
     colors = Unicode("NoColor")
+    # Since IPython 5 the terminal interface is not compatible with Emacs `inferior-shell` and
+    # the `simple_prompt` flag is needed
+    simple_prompt = CBool(True)
 
     # In the PyDev Console, GUI control is done via hookable XML-RPC server
     @staticmethod
@@ -160,7 +163,7 @@ class PyDevTerminalInteractiveShell(TerminalInteractiveShell):
                              self.user_global_ns,
                              self.readline_omit__names,
                              self.alias_manager.alias_table,
-                             False)
+                             self.has_readline)
 
 
     def _new_completer_012(self):
@@ -168,10 +171,9 @@ class PyDevTerminalInteractiveShell(TerminalInteractiveShell):
                              namespace=self.user_ns,
                              global_namespace=self.user_global_ns,
                              alias_table=self.alias_manager.alias_table,
-                             use_readline=False,
+                             use_readline=self.has_readline,
                              config=self.config,
                              )
-        self.configurables.append(completer)
         return completer
 
 
@@ -180,24 +182,50 @@ class PyDevTerminalInteractiveShell(TerminalInteractiveShell):
                              namespace=self.user_ns,
                              global_namespace=self.user_global_ns,
                              alias_table=self.alias_manager.alias_table,
-                             use_readline=False,
+                             use_readline=self.has_readline,
                              parent=self,
                              )
-        self.configurables.append(completer)
         return completer
 
-    def _new_completer_200(self):
-        # As of writing this, IPython 2.0.0 is in dev mode so subject to change
+    def _new_completer_234(self):
+        # correct for IPython versions 2.x, 3.x, 4.x
         completer = PyDevIPCompleter(shell=self,
                              namespace=self.user_ns,
                              global_namespace=self.user_global_ns,
-                             use_readline=False,
+                             use_readline=self.has_readline,
                              parent=self,
                              )
-        self.configurables.append(completer)
         return completer
 
+    def _new_completer_500(self):
+        completer = PyDevIPCompleter(shell=self,
+                                     namespace=self.user_ns,
+                                     global_namespace=self.user_global_ns,
+                                     use_readline=False,
+                                     parent=self
+                                     )
+        return completer
 
+    def add_completer_hooks(self):
+        from IPython.core.completerlib import module_completer, magic_run_completer, cd_completer
+        try:
+            from IPython.core.completerlib import reset_completer
+        except ImportError:
+            # reset_completer was added for rel-0.13
+            reset_completer = None
+        self.configurables.append(self.Completer)
+
+        # Add custom completers to the basic ones built into IPCompleter
+        sdisp = self.strdispatchers.get('complete_command', StrDispatch())
+        self.strdispatchers['complete_command'] = sdisp
+        self.Completer.custom_completers = sdisp
+
+        self.set_hook('complete_command', module_completer, str_key = 'import')
+        self.set_hook('complete_command', module_completer, str_key = 'from')
+        self.set_hook('complete_command', magic_run_completer, str_key = '%run')
+        self.set_hook('complete_command', cd_completer, str_key = '%cd')
+        if reset_completer:
+            self.set_hook('complete_command', reset_completer, str_key = '%reset')
 
     def init_completer(self):
         """Initialize the completion machinery.
@@ -211,15 +239,10 @@ class PyDevTerminalInteractiveShell(TerminalInteractiveShell):
         # extra information.
         # See getCompletions for where the two sets of results are merged
 
-        from IPython.core.completerlib import magic_run_completer, cd_completer
-        try:
-            from IPython.core.completerlib import reset_completer
-        except ImportError:
-            # reset_completer was added for rel-0.13
-            reset_completer = None
-
-        if IPythonRelease._version_major >= 2:
-            self.Completer = self._new_completer_200()
+        if IPythonRelease._version_major >= 5:
+            self.Completer = self._new_completer_500()
+        elif IPythonRelease._version_major >= 2:
+            self.Completer = self._new_completer_234()
         elif IPythonRelease._version_major >= 1:
             self.Completer = self._new_completer_100()
         elif IPythonRelease._version_minor >= 12:
@@ -227,22 +250,14 @@ class PyDevTerminalInteractiveShell(TerminalInteractiveShell):
         else:
             self.Completer = self._new_completer_011()
 
-        # Add custom completers to the basic ones built into IPCompleter
-        sdisp = self.strdispatchers.get('complete_command', StrDispatch())
-        self.strdispatchers['complete_command'] = sdisp
-        self.Completer.custom_completers = sdisp
+        self.add_completer_hooks()
 
-        self.set_hook('complete_command', magic_run_completer, str_key='%run')
-        self.set_hook('complete_command', cd_completer, str_key='%cd')
-        if reset_completer:
-            self.set_hook('complete_command', reset_completer, str_key='%reset')
-
-        # Only configure readline if we truly are using readline.  IPython can
-        # do tab-completion over the network, in GUIs, etc, where readline
-        # itself may be absent
-        if False: # has_readline
-            self.set_readline_completer()
-
+        if IPythonRelease._version_major <= 3:
+            # Only configure readline if we truly are using readline.  IPython can
+            # do tab-completion over the network, in GUIs, etc, where readline
+            # itself may be absent
+            if self.has_readline:
+                self.set_readline_completer()
 
     #-------------------------------------------------------------------------
     # Things related to aliases
@@ -298,15 +313,16 @@ class _PyDevFrontEnd:
     version = release.__version__
 
     def __init__(self, show_banner=True):
-
         # Create and initialize our IPython instance.
-        self.ipython = PyDevTerminalInteractiveShell.instance()
+        if hasattr(PyDevTerminalInteractiveShell, '_instance') and PyDevTerminalInteractiveShell._instance is not None:
+            self.ipython = PyDevTerminalInteractiveShell._instance
+        else:
+            self.ipython = PyDevTerminalInteractiveShell.instance()
 
         if show_banner:
             # Display the IPython banner, this has version info and
             # help info
             self.ipython.show_banner()
-
 
         self._curr_exec_line = 0
         self._curr_exec_lines = []
@@ -316,7 +332,10 @@ class _PyDevFrontEnd:
         ns = self.ipython.user_ns
 
         for ind in ['_oh', '_ih', '_dh', '_sh', 'In', 'Out', 'get_ipython', 'exit', 'quit']:
-            locals[ind] = ns[ind]
+            try:
+                locals[ind] = ns[ind]
+            except KeyError:
+                pass # Ignore if it's not there -- #PyDev-817: Error on autocomplete with IPython on interactive console
 
         self.ipython.user_global_ns.clear()
         self.ipython.user_global_ns.update(globals)
@@ -486,4 +505,4 @@ def get_pydev_frontend(pydev_host, pydev_client_port, show_banner=True):
 
     return _PyDevFrontEndContainer._instance
 
-    
+

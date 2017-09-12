@@ -883,6 +883,7 @@ public class InterpreterInfo implements IInterpreterInfo {
         forcedLibs.add("email"); //email has some lazy imports that pydev cannot handle through the source
         forcedLibs.add("hashlib"); //depending on the Python version, hashlib cannot find md5, so, let's always leave it there.
         forcedLibs.add("pytest"); //yeap, pytest does have a structure that's pretty hard to analyze.
+        forcedLibs.add("six"); // six creates its six.moves all through deep magic.
 
         int interpreterType = getInterpreterType();
         switch (interpreterType) {
@@ -903,6 +904,7 @@ public class InterpreterInfo implements IInterpreterInfo {
                 forcedLibs.add("scipy");
                 forcedLibs.add("mock"); // mock.patch.object is not gotten if mock is not there for the mock library.
                 forcedLibs.add("Image"); //for PIL
+                forcedLibs.add("cv2"); //for OpenCV
 
                 //these are the builtins -- apparently sys.builtin_module_names is not ok in linux.
                 forcedLibs.add("_ast");
